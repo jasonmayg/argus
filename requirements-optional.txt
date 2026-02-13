@@ -1,0 +1,66 @@
+# ARGUS Optional Dependencies
+# Advanced Features and Data Analysis
+# Install with: pip install -r requirements-optional.txt
+
+# ============================================================================
+# Include production requirements
+# ============================================================================
+-r requirements.txt
+
+# ============================================================================
+# Data Analysis & Visualization
+# ============================================================================
+pandas>=2.0.0             # Data analysis and manipulation
+numpy>=1.24.0             # Numerical computing
+matplotlib>=3.7.0         # Plotting and visualization
+seaborn>=0.12.0           # Statistical data visualization
+plotly>=5.17.0            # Interactive visualization
+
+# ============================================================================
+# Advanced HTTP & Async
+# ============================================================================
+aiohttp>=3.8.0            # Async HTTP client
+asyncio-contextmanager>=1.0.0  # Async context managers
+
+# ============================================================================
+# Database & Storage
+# ============================================================================
+sqlalchemy>=2.0.0         # ORM and database toolkit
+alembic>=1.11.0           # Database migrations
+
+# ============================================================================
+# Monitoring & Logging
+# ============================================================================
+loguru>=0.7.0             # Advanced logging
+prometheus-client>=0.17.0 # Prometheus metrics
+
+# ============================================================================
+# API Documentation
+# ============================================================================
+swagger-ui>=1.1.0         # API documentation UI
+
+# ============================================================================
+# File Formats
+# ============================================================================
+openpyxl>=3.1.0           # Excel file support
+python-docx>=0.8.0        # Word document support
+
+# ============================================================================
+# Usage
+# ============================================================================
+# Install optional features:
+#   pip install -r requirements-optional.txt
+#
+# Features enabled:
+#   - Data analysis with pandas
+#   - Visualization with matplotlib/seaborn/plotly
+#   - Advanced database operations with SQLAlchemy
+#   - Enhanced logging with loguru
+#   - Export to Excel and Word documents
+#   - Prometheus metrics for monitoring
+#
+# Recommended for:
+#   - Advanced data analysis
+#   - Custom reporting and visualization
+#   - Production monitoring
+#   - Integration with data warehouses

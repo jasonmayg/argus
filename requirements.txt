@@ -1,0 +1,67 @@
+# ARGUS - Automated Risk Guardian for Universal Sensing
+# Complete Dependencies List
+# Updated: 2026-02-13
+
+# ============================================================================
+# Core Web Framework & Server
+# ============================================================================
+Flask>=3.0.0              # Web server framework
+flask-cors>=4.0.0         # Cross-origin request handling
+Werkzeug>=3.0.0           # WSGI utilities
+
+# ============================================================================
+# Web Scraping & Data Extraction
+# ============================================================================
+crawl4ai>=0.3.0           # Advanced web scraping with JavaScript rendering
+requests>=2.31.0          # HTTP library (used by crawl4ai and others)
+beautifulsoup4>=4.12.0    # HTML/XML parsing
+lxml>=4.9.0               # Fast XML processing
+
+# ============================================================================
+# AI & API Integration
+# ============================================================================
+anthropic>=0.7.0          # Claude API client
+
+# ============================================================================
+# Data Processing & Storage
+# ============================================================================
+# SQLite3 is included with Python, no installation needed
+
+# ============================================================================
+# Utilities & Configuration
+# ============================================================================
+python-dotenv>=1.0.0      # Environment variable management from .env files
+python-dateutil>=2.8.2    # Date/time utilities
+
+# ============================================================================
+# Optional: For Development & Testing
+# ============================================================================
+# Uncomment if you want to add development tools
+# pytest>=7.4.0             # Testing framework
+# pytest-asyncio>=0.21.0    # Async support for pytest
+# black>=23.0.0             # Code formatter
+# flake8>=6.0.0             # Linting
+# mypy>=1.0.0               # Type checking
+
+# ============================================================================
+# Optional: For Advanced Features
+# ============================================================================
+# Uncomment if you want additional features
+# pandas>=2.0.0             # Data analysis and manipulation
+# numpy>=1.24.0             # Numerical computing
+# matplotlib>=3.7.0         # Plotting and visualization
+# aiohttp>=3.8.0            # Async HTTP client (for concurrent requests)
+
+# ============================================================================
+# Version Notes
+# ============================================================================
+# Python 3.8+ required
+# Tested with Python 3.10+
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# Virtual Environment (recommended):
+#   python -m venv venv
+#   source venv/bin/activate  # On Windows: venv\Scripts\activate
+#   pip install -r requirements.txt

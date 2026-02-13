@@ -1,0 +1,226 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Alphabet Global Treasury Risk Classification Framework",
+    "created": "2026-02-13",
+    "language": "English",
+    "total_categories": 14,
+    "hierarchy_levels": 3
+  },
+  "risk_categories": {
+    "FINANCIAL_RISK": {
+      "core_category": "Financial Risk",
+      "subcategories": {
+        "MARKET_RISK": {
+          "intermediate": "Market Risk",
+          "outer_sources": [
+            "Equity Price",
+            "Interest Rate",
+            "Foreign Exchange",
+            "Commodity Price"
+          ],
+          "keywords": [
+            "equity", "stock", "interest rate", "forex", "foreign exchange",
+            "currency", "commodity", "price volatility", "market movement",
+            "stock market", "equity exposure", "rate change"
+          ],
+          "risk_indicators": ["stock_market_decline", "rate_increase", "currency_fluctuation"]
+        },
+        "CREDIT_RISK": {
+          "intermediate": "Credit Risk",
+          "outer_sources": [
+            "Settlement",
+            "Downgrade",
+            "Bankruptcy",
+            "Default"
+          ],
+          "keywords": [
+            "credit", "default", "downgrade", "bankruptcy", "settlement",
+            "counterparty", "credit rating", "credit quality", "credit spread",
+            "credit event", "rating downgrade", "creditworthiness"
+          ],
+          "risk_indicators": ["rating_downgrade", "default_event", "bankruptcy"]
+        },
+        "LIQUIDITY_RISK": {
+          "intermediate": "Liquidity Risk",
+          "outer_sources": [
+            "Funding Liquidity",
+            "Trading Liquidity"
+          ],
+          "keywords": [
+            "liquidity", "funding", "trading liquidity", "market liquidity",
+            "cash flow", "liquidity crisis", "illiquid", "funding pressure",
+            "cash crunch", "liquidity squeeze", "funding gap"
+          ],
+          "risk_indicators": ["liquidity_crisis", "funding_pressure", "illiquid_market"]
+        },
+        "OPERATIONAL_RISK": {
+          "intermediate": "Operational Risk",
+          "outer_sources": [
+            "Fraud",
+            "Human Error",
+            "Technology Model"
+          ],
+          "keywords": [
+            "fraud", "error", "operational", "technology", "system failure",
+            "model risk", "human error", "internal control", "compliance",
+            "operational failure", "process error", "control breakdown"
+          ],
+          "risk_indicators": ["fraud_detected", "system_failure", "model_error"]
+        }
+      }
+    },
+    "SUPPLY_CHAIN_RISK": {
+      "core_category": "Supply Chain Risk",
+      "subcategories": {
+        "SUPPLY_RISK": {
+          "intermediate": "Supply Risk",
+          "outer_sources": [
+            "Supply Quality",
+            "Supplier",
+            "Supply Quantity",
+            "Supply Delivery",
+            "Supply Price",
+            "Sourcing and Procurement",
+            "Miscommunication"
+          ],
+          "keywords": [
+            "supply", "supplier", "sourcing", "procurement", "delivery",
+            "quality", "shortage", "supply chain disruption", "vendor",
+            "supplier failure", "supply disruption"
+          ],
+          "risk_indicators": ["supplier_failure", "supply_shortage", "delivery_delay"]
+        },
+        "DEMAND_RISK": {
+          "intermediate": "Demand Risk",
+          "outer_sources": [
+            "Product Lifecycle Change",
+            "Forecasting Receivable",
+            "Consumer Preference",
+            "Demand Volatility",
+            "Price Sensitivity",
+            "Regulatory & Legal Change"
+          ],
+          "keywords": [
+            "demand", "forecasting", "consumer", "preference", "volatility",
+            "lifecycle", "product demand", "market demand", "demand decline",
+            "forecast error", "demand shock"
+          ],
+          "risk_indicators": ["demand_decline", "forecast_error", "lifecycle_change"]
+        },
+        "PROCESS_RISK": {
+          "intermediate": "Process Risk",
+          "outer_sources": [
+            "Innovation Planning",
+            "Information Labor",
+            "Cybersecurity",
+            "Coordination",
+            "Production Service",
+            "Logistics Capacity",
+            "Environmental, Social & Sustainability"
+          ],
+          "keywords": [
+            "process", "cybersecurity", "cyber", "innovation", "logistics",
+            "production", "esg", "environmental", "sustainability", "coordination",
+            "cyber attack", "data breach", "process failure"
+          ],
+          "risk_indicators": ["cyber_attack", "process_failure", "esg_issue"]
+        },
+        "BUSINESS_RISK": {
+          "intermediate": "Business Risk",
+          "outer_sources": [
+            "Legal",
+            "Strategic",
+            "Competition",
+            "Contractual"
+          ],
+          "keywords": [
+            "business", "legal", "strategic", "competition", "contract",
+            "litigation", "competitive", "strategic risk", "lawsuit",
+            "contract dispute", "legal action"
+          ],
+          "risk_indicators": ["litigation", "competition_increase", "contract_dispute"]
+        },
+        "DISASTER_RISK": {
+          "intermediate": "Disaster Risk",
+          "outer_sources": [
+            "Natural and Man-made Catastrophes"
+          ],
+          "keywords": [
+            "disaster", "catastrophe", "natural", "earthquake", "flood",
+            "pandemic", "crisis", "emergency", "contingency", "natural disaster",
+            "business continuity", "disaster recovery"
+          ],
+          "risk_indicators": ["natural_disaster", "pandemic", "emergency"]
+        }
+      }
+    },
+    "NON_COMMERCIAL_RISK": {
+      "core_category": "Non-Commercial Risk",
+      "subcategories": {
+        "POLITICAL_RISK": {
+          "intermediate": "Political Risk",
+          "outer_sources": [
+            "Politics",
+            "Trade Wars",
+            "Tariffs"
+          ],
+          "keywords": [
+            "political", "politics", "trade war", "tariff", "geopolitical",
+            "political instability", "sanctions", "trade policy", "tariff increase",
+            "trade dispute", "protectionism"
+          ],
+          "risk_indicators": ["trade_war", "tariff_increase", "geopolitical_tension"]
+        },
+        "REGULATORY_RISK": {
+          "intermediate": "Regulatory Risk",
+          "outer_sources": [
+            "Local, State, and Global Regulations"
+          ],
+          "keywords": [
+            "regulatory", "regulation", "compliance", "policy", "rule",
+            "regulatory change", "compliance risk", "government", "ban", "restriction",
+            "regulatory approval", "licensing", "enforcement"
+          ],
+          "risk_indicators": ["regulation_change", "compliance_violation", "policy_shift"]
+        },
+        "REPUTATION_RISK": {
+          "intermediate": "Reputation Risk",
+          "outer_sources": [
+            "Industry Reputation",
+            "Individual Reputation",
+            "Rumors"
+          ],
+          "keywords": [
+            "reputation", "scandal", "rumor", "public", "brand",
+            "reputation damage", "crisis communication", "social media",
+            "negative publicity", "brand damage", "public perception"
+          ],
+          "risk_indicators": ["scandal", "reputation_damage", "negative_news"]
+        },
+        "SYSTEMATIC_RISK": {
+          "intermediate": "Systematic Risk",
+          "outer_sources": [
+            "Chain Reaction",
+            "Panic Sell"
+          ],
+          "keywords": [
+            "systematic", "systemic", "chain reaction", "panic", "contagion",
+            "market crash", "financial crisis", "systemic risk", "market collapse",
+            "financial contagion", "systemic failure"
+          ],
+          "risk_indicators": ["market_crash", "financial_crisis", "panic_selling"]
+        }
+      }
+    }
+  },
+  "mapping_guide": {
+    "description": "Mapping Federal Reserve news to risk categories using keyword matching",
+    "usage": "Used for automatic classification of Fed news and mapping to risk categories",
+    "priority_keywords": {
+      "high": ["crisis", "default", "bankruptcy", "fraud", "cyber attack", "scandal"],
+      "medium": ["regulation", "tariff", "trade war", "downgrade", "liquidity"],
+      "low": ["interest rate", "market", "supply", "demand", "competition"]
+    }
+  }
+}
