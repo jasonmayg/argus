@@ -1,0 +1,296 @@
+sources:
+  gdelt:
+    tier: 1
+    enabled: true
+    type: political_conflict
+    countries: ["Global"]
+    adapter: gdelt
+    url: "https://api.gdeltproject.org/api/v2/doc/doc"
+    notes: "Global political/conflict and macro-risk news."
+  reliefweb:
+    tier: 1
+    enabled: true
+    type: physical_disaster
+    countries: ["Global"]
+    adapter: reliefweb
+    url: "https://api.reliefweb.int/v1/reports"
+    notes: "UN OCHA disaster and humanitarian alerts."
+  usgs:
+    tier: 1
+    enabled: true
+    type: physical_disaster
+    countries: ["Global"]
+    adapter: usgs
+    url: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_day.geojson"
+    notes: "Earthquake hazard early warnings."
+  fred:
+    tier: 1
+    enabled: true
+    type: economic_data
+    countries: ["US"]
+    adapter: fred
+    url: "https://api.stlouisfed.org/fred/series/observations"
+    env:
+      api_key: "FRED_API_KEY"
+    series:
+      - id: "SOFR"
+        label: "SOFR"
+        risk_hint: "funding liquidity interest rate"
+      - id: "DGS10"
+        label: "US 10Y Treasury Yield"
+        risk_hint: "interest rate bond yield"
+      - id: "CPIAUCSL"
+        label: "US CPI"
+        risk_hint: "inflation commodity price market risk"
+    notes: "FRED macro and rates indicators from your spreadsheet."
+  us_treasury_auction:
+    tier: 1
+    enabled: true
+    type: economic_data
+    countries: ["US"]
+    adapter: fiscal_data
+    url: "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/auctions_query"
+    notes: "US treasury auction and sovereign context."
+  ofac_sls:
+    tier: 1
+    enabled: true
+    type: sanctions
+    countries: ["Global"]
+    adapter: ofac_sls
+    # Endpoint placeholders, configure to your preferred official export endpoint.
+    url: "https://ofac.treasury.gov/sanctions-list-service"
+    notes: "Primary US sanctions list service."
+  uk_sanctions:
+    tier: 1
+    enabled: true
+    type: sanctions
+    countries: ["Global"]
+    adapter: uk_sanctions
+    url: "https://www.gov.uk/government/publications/the-uk-sanctions-list"
+    notes: "Primary UK sanctions source."
+  un_sanctions:
+    tier: 1
+    enabled: true
+    type: sanctions
+    countries: ["Global"]
+    adapter: un_sanctions
+    url: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list"
+    notes: "UN consolidated sanctions list source."
+  sec_edgar:
+    tier: 1
+    enabled: true
+    type: filings
+    countries: ["US"]
+    adapter: sec_edgar
+    url: "https://data.sec.gov/submissions/CIK0001652044.json"
+    headers:
+      user_agent: "AlphabetTreasuryGuardian/1.0 contact@example.com"
+    notes: "SEC filings and XBRL feeds."
+  bank_of_canada:
+    tier: 1
+    enabled: true
+    type: economic_data
+    countries: ["Canada"]
+    adapter: bank_of_canada
+    url: "https://www.bankofcanada.ca/valet/observations/group/FX_RATES_DAILY/json"
+    notes: "Bank of Canada Valet API."
+  world_bank:
+    tier: 1
+    enabled: true
+    type: macro
+    countries: ["Global"]
+    adapter: world_bank
+    url: "https://api.worldbank.org/v2/country/all/indicator/FP.CPI.TOTL.ZG?format=json"
+    notes: "Global macro baseline indicators."
+  bis:
+    tier: 1
+    enabled: true
+    type: macro
+    countries: ["Global"]
+    adapter: bis
+    url: "https://stats.bis.org/api/v1"
+    notes: "BIS data portal (requires dataset-specific queries)."
+  ecb:
+    tier: 1
+    enabled: true
+    type: macro
+    countries: ["EU"]
+    adapter: ecb
+    url: "https://data-api.ecb.europa.eu/service/data"
+    notes: "ECB data portal API (dataset key required)."
+  imf:
+    tier: 1
+    enabled: true
+    type: macro
+    countries: ["Global"]
+    adapter: imf
+    url: "https://www.imf.org/external/datamapper/api/v1"
+    notes: "IMF API and SDMX feeds (dataset-specific endpoints)."
+  eia:
+    tier: 1
+    enabled: true
+    type: commodity
+    countries: ["US", "Global"]
+    adapter: eia
+    url: "https://api.eia.gov/v2/petroleum/pri/spt/data/"
+    env:
+      api_key: "EIA_API_KEY"
+    notes: "Energy and commodity indicators."
+  un_comtrade:
+    tier: 1
+    enabled: true
+    type: trade
+    countries: ["Global"]
+    adapter: un_comtrade
+    url: "https://comtradeapi.worldbank.org/data/v1/get/C/A/HS"
+    env:
+      api_key: "UN_COMTRADE_API_KEY"
+    notes: "Trade-flow disruption indicators."
+  noaa_nws:
+    tier: 1
+    enabled: true
+    type: weather
+    countries: ["US"]
+    adapter: noaa_nws
+    url: "https://api.weather.gov/alerts/active"
+    notes: "US severe weather alerts."
+  noaa_cdo:
+    tier: 1
+    enabled: true
+    type: climate
+    countries: ["US", "Global"]
+    adapter: noaa_cdo
+    url: "https://www.ncei.noaa.gov/cdo-web/api/v2/datasets"
+    env:
+      token: "NOAA_CDO_TOKEN"
+    notes: "Historical climate and weather API."
+  nasa_eonet:
+    tier: 1
+    enabled: true
+    type: disaster
+    countries: ["Global"]
+    adapter: nasa_eonet
+    url: "https://eonet.gsfc.nasa.gov/api/v3/events"
+    notes: "Natural events feed."
+  openfema:
+    tier: 1
+    enabled: true
+    type: disaster
+    countries: ["US"]
+    adapter: openfema
+    url: "https://www.fema.gov/openfema-data-page/disaster-declarations-summaries-v2"
+    notes: "Disaster declarations and recovery context."
+
+  # Tier 2/3/4: framework-ready but disabled by default.
+  acled:
+    tier: 2
+    enabled: false
+    type: political_conflict
+    countries: ["Global"]
+    adapter: acled
+    url: "https://acleddata.com/acled-api-documentation"
+    env:
+      api_key: "ACLED_API_KEY"
+    notes: "Requires account/API setup."
+  finnhub:
+    tier: 2
+    enabled: false
+    type: market_news
+    countries: ["Global"]
+    adapter: finnhub
+    url: "https://finnhub.io/api/v1/company-news"
+    env:
+      api_key: "FINNHUB_API_KEY"
+    notes: "Market and company news."
+  newsapi:
+    tier: 2
+    enabled: false
+    type: market_news
+    countries: ["Global"]
+    adapter: newsapi
+    url: "https://newsapi.org/v2/everything"
+    env:
+      api_key: "NEWSAPI_KEY"
+    notes: "Broad news ingestion."
+  alpha_vantage:
+    tier: 2
+    enabled: false
+    type: market_data
+    countries: ["Global"]
+    adapter: alpha_vantage
+    url: "https://www.alphavantage.co/query"
+    env:
+      api_key: "ALPHA_VANTAGE_API_KEY"
+    notes: "FX and market indicators."
+  marinetraffic:
+    tier: 2
+    enabled: false
+    type: shipping
+    countries: ["Global"]
+    adapter: marinetraffic
+    url: "https://services.marinetraffic.com/api/"
+    env:
+      api_key: "MARINETRAFFIC_API_KEY"
+    notes: "Commercial shipping/port disruptions."
+  copernicus_cds:
+    tier: 2
+    enabled: false
+    type: climate
+    countries: ["Global"]
+    adapter: copernicus_cds
+    url: "https://cds.climate.copernicus.eu/api"
+    env:
+      api_key: "COPERNICUS_CDS_API_KEY"
+    notes: "Climate stress datasets."
+  cisa_kev:
+    tier: 3
+    enabled: false
+    type: cyber
+    countries: ["Global"]
+    adapter: cisa_kev
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    notes: "Known exploited vulnerabilities catalog."
+  cisa_kev_github:
+    tier: 3
+    enabled: false
+    type: cyber
+    countries: ["Global"]
+    adapter: cisa_kev_github
+    url: "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+    notes: "GitHub mirror for KEV data."
+  nvd:
+    tier: 3
+    enabled: false
+    type: cyber
+    countries: ["Global"]
+    adapter: nvd
+    url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    env:
+      api_key: "NVD_API_KEY"
+    notes: "NVD CVE API."
+  mitre_attack_taxii:
+    tier: 3
+    enabled: false
+    type: cyber
+    countries: ["Global"]
+    adapter: mitre_attack_taxii
+    url: "https://cti-taxii.mitre.org/taxii/"
+    notes: "MITRE ATT&CK TAXII server."
+  reddit:
+    tier: 4
+    enabled: false
+    type: sentiment_risk
+    countries: ["Global"]
+    adapter: reddit
+    url: "https://www.reddit.com/dev/api/"
+    notes: "Requires app credentials and moderation filters."
+  telegram:
+    tier: 4
+    enabled: false
+    type: sentiment_risk
+    countries: ["Global"]
+    adapter: telegram
+    url: "https://core.telegram.org/bots/api"
+    env:
+      bot_token: "TELEGRAM_BOT_TOKEN"
+    notes: "Requires channel list and bot token."

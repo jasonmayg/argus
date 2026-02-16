@@ -1,0 +1,98 @@
+{
+  "default": {
+    "name": "默认关键词（推荐）",
+    "description": "通用关键词，涵盖银行、利率、监管等主要风险因素",
+    "keywords": [
+      "Payment",
+      "Payments",
+      "Regulation",
+      "Regulatory",
+      "Bank",
+      "Banking",
+      "Banks",
+      "Interest",
+      "Rate",
+      "Rates",
+      "Treasury",
+      "Monetary",
+      "Financial",
+      "Risk",
+      "Stability",
+      "Crisis"
+    ]
+  },
+  "fomc_focus": {
+    "name": "FOMC 聚焦",
+    "description": "关注 FOMC 相关的政策决议和利率决定",
+    "keywords": [
+      "FOMC",
+      "Federal Open Market Committee",
+      "interest rate",
+      "rate decision",
+      "monetary policy",
+      "policy rate",
+      "discount rate"
+    ]
+  },
+  "banking_regulation": {
+    "name": "银行监管",
+    "description": "关注银行相关的监管政策和审慎要求",
+    "keywords": [
+      "Bank",
+      "Banking",
+      "Banks",
+      "Regulation",
+      "Regulatory",
+      "Prudential",
+      "Capital",
+      "Leverage",
+      "Stress test",
+      "Enforcement"
+    ]
+  },
+  "treasury_risk": {
+    "name": "国库风险（ARGUS 核心）",
+    "description": "关注国库相关的风险和金融稳定性",
+    "keywords": [
+      "Treasury",
+      "Government",
+      "Fiscal",
+      "Debt",
+      "Financial",
+      "Stability",
+      "Risk",
+      "Crisis",
+      "Liquidity",
+      "Default"
+    ]
+  },
+  "payment_systems": {
+    "name": "支付系统",
+    "description": "关注支付系统、资金转账等基础设施相关新闻",
+    "keywords": [
+      "Payment",
+      "Payments",
+      "Fedwire",
+      "Settlement",
+      "ACH",
+      "Wire transfer",
+      "Infrastructure",
+      "Clearing"
+    ]
+  },
+  "crisis_indicators": {
+    "name": "危机指标",
+    "description": "关注可能预示金融危机的信号",
+    "keywords": [
+      "Crisis",
+      "Instability",
+      "Default",
+      "Stress",
+      "Risk",
+      "Collapse",
+      "Contagion",
+      "Systemic",
+      "Emergency"
+    ]
+  }
+}

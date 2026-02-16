@@ -1,0 +1,61 @@
+{
+  "rows_total": 5350,
+  "rows_train": 4280,
+  "rows_test": 1070,
+  "target_horizon_days": 3,
+  "target_column": "target_ret_next_3d",
+  "target_quantile_20_threshold": -0.019870564001019275,
+  "selected_model": "logistic_regression",
+  "selected_model_cv_auc": 0.5356121061566593,
+  "test_auc": 0.5271619906950515,
+  "model_comparison": [
+    {
+      "model": "logistic_regression",
+      "cv_auc": 0.5356121061566593,
+      "test_auc": 0.5271619906950515
+    },
+    {
+      "model": "random_forest",
+      "cv_auc": 0.5089632783051596,
+      "test_auc": 0.5278894684900606
+    },
+    {
+      "model": "hist_gradient_boosting",
+      "cv_auc": 0.4801794252575167,
+      "test_auc": 0.5424559424784999
+    }
+  ],
+  "cv_scheme": {
+    "method": "TimeSeriesSplit",
+    "n_splits": 5
+  },
+  "classification_report": {
+    "0": {
+      "precision": 0.8162762022194822,
+      "recall": 0.7653179190751445,
+      "f1-score": 0.7899761336515513,
+      "support": 865.0
+    },
+    "1": {
+      "precision": 0.21621621621621623,
+      "recall": 0.2731707317073171,
+      "f1-score": 0.2413793103448276,
+      "support": 205.0
+    },
+    "accuracy": 0.6710280373831776,
+    "macro avg": {
+      "precision": 0.5162462092178493,
+      "recall": 0.5192443253912308,
+      "f1-score": 0.5156777219981894,
+      "support": 1070.0
+    },
+    "weighted avg": {
+      "precision": 0.7013114385459593,
+      "recall": 0.6710280373831776,
+      "f1-score": 0.6848711347937211,
+      "support": 1070.0
+    }
+  },
+  "test_period_start": "2021-08-19",
+  "test_period_end": "2025-11-20"
+}

@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARGUS - Multi-Agent Risk Analysis System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .card-content {
+            line-height: 1.6;
+        }
+
+        .agent-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .agent-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .status-idle {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .status-running {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1s infinite;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-execute {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-execute:hover:not(:disabled) {
+            background: #218838;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-reset {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #c82333;
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .pipeline-visualization {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .pipeline-stages {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .stage {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            margin: 0 10px;
+            border: 2px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .stage.active {
+            background: #fff3cd;
+            border-color: #ffc107;
+            transform: scale(1.05);
+        }
+
+        .stage.completed {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .stage h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .arrow {
+            flex-shrink: 0;
+            color: #667eea;
+            font-size: 1.5em;
+            margin: 0 10px;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .results-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .result-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 10px;
+        }
+
+        .risk-distribution {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .risk-box {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .risk-critical {
+            background: #dc3545;
+        }
+
+        .risk-high {
+            background: #fd7e14;
+        }
+
+        .risk-medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .risk-low {
+            background: #28a745;
+        }
+
+        .log-section {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 2px solid #00ff00;
+            padding-left: 10px;
+        }
+
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .log-level {
+            color: #ffff00;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .guardian-section {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 16px 36px rgba(28, 29, 67, 0.28);
+            border: 1px solid rgba(102, 126, 234, 0.22);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .guardian-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .guardian-header h2 {
+            color: #4656a5;
+            margin: 0;
+        }
+
+        .guardian-meta {
+            color: #4b5563;
+            font-size: 0.95em;
+            margin-bottom: 16px;
+        }
+
+        .guardian-refresh {
+            background: #667eea;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .guardian-refresh:hover {
+            background: #5a70d4;
+            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.35);
+        }
+
+        .btn-guardian {
+            background: #0f766e;
+            color: white;
+        }
+
+        .btn-guardian:hover {
+            background: #115e59;
+            box-shadow: 0 5px 15px rgba(15, 118, 110, 0.4);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .executive-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(180deg, #fbfcff 0%, #f4f7ff 100%);
+            border: 1px solid #d9e1ff;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .kpi-label {
+            font-size: 0.85em;
+            color: #6b7280;
+        }
+
+        .kpi-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #2b3155;
+            margin-top: 4px;
+        }
+
+        .trend-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.82em;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .trend-up {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .trend-down {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .trend-flat {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .trend-na {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .subsection-title {
+            color: #374151;
+            margin: 18px 0 10px;
+            font-size: 1.1em;
+        }
+
+        .country-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 10px;
+        }
+
+        .country-card {
+            border-radius: 10px;
+            padding: 12px;
+            border: 2px solid #d7dcf5;
+            background: linear-gradient(180deg, #ffffff 0%, #f7f8ff 100%);
+        }
+        .country-card.rank-1 {
+            border-color: #dc2626;
+            background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+        }
+        .country-card.rank-2 {
+            border-color: #ea580c;
+            background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+        }
+        .country-card.rank-3 {
+            border-color: #d97706;
+            background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+        }
+        .country-card.rank-4 {
+            border-color: #0f766e;
+            background: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 100%);
+        }
+        .country-card.rank-5 {
+            border-color: #475569;
+            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .country-name {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 6px;
+        }
+
+        .country-score {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .country-meta {
+            color: #4b5563;
+            font-size: 0.9em;
+        }
+
+        .level-high {
+            color: #b91c1c;
+            border-color: #ef4444;
+        }
+
+        .level-medium {
+            color: #b45309;
+            border-color: #f59e0b;
+        }
+
+        .level-low {
+            color: #166534;
+            border-color: #22c55e;
+        }
+
+        .level-none {
+            color: #374151;
+            border-color: #9ca3af;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid #d9e1ff;
+            border-radius: 10px;
+        }
+
+        .alerts-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 920px;
+        }
+
+        .alerts-table th, .alerts-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.92em;
+        }
+
+        .alerts-table th {
+            background: #eef2ff;
+            color: #394166;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .alert-title {
+            max-width: 380px;
+            white-space: normal;
+            line-height: 1.35;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .alerts-table a {
+            color: #4656a5;
+            text-decoration-color: rgba(70, 86, 165, 0.45);
+        }
+
+        .alerts-table a:hover {
+            color: #35418f;
+        }
+
+        .alert-action-btn {
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 0.82em;
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .alert-action-btn:hover {
+            background: #4338ca;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(33, 35, 66, 0.52);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 18px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-shell {
+            width: min(1280px, 96vw);
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .insight-card {
+            border: 1px solid #d9e1ff;
+            border-radius: 10px;
+            padding: 10px;
+            background: #f8faff;
+        }
+
+        .insight-title {
+            font-size: 0.82em;
+            color: #6b7280;
+        }
+
+        .insight-value {
+            margin-top: 4px;
+            font-size: 1.2em;
+            color: #1f2a56;
+            font-weight: 700;
+        }
+
+        .insight-body {
+            margin-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+        }
+
+        .insight-body h4 {
+            margin: 0 0 6px 0;
+            color: #374151;
+        }
+
+        .insight-body p {
+            margin: 0 0 10px 0;
+            color: #374151;
+            line-height: 1.45;
+        }
+
+        .tech-details {
+            margin-top: 16px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+        }
+
+        .tech-details summary {
+            cursor: pointer;
+            color: #4b5563;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .google-risk-card {
+            border: 1px solid #d9e1ff;
+            border-radius: 10px;
+            padding: 12px;
+            background: linear-gradient(180deg, #f7f9ff 0%, #eef3ff 100%);
+            margin-bottom: 14px;
+        }
+
+        .risk-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .warning-panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            margin-bottom: 16px;
+        }
+        .warning-head {
+            color: #475569;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        .warning-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .warning-metric {
+            border: 1px solid #dbe2ea;
+            border-radius: 8px;
+            background: #fff;
+            padding: 8px 10px;
+        }
+        .warning-metric-label {
+            color: #64748b;
+            font-size: 0.78em;
+        }
+        .warning-metric-value {
+            color: #0f172a;
+            font-size: 1.05em;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .warning-list {
+            display: grid;
+            gap: 8px;
+        }
+        .warning-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #ffffff;
+            color: #334155;
+        }
+        .warning-item.high {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        .warning-item.warn {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .warning-item.ok {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        .warning-title {
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .warning-badge {
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: #334155;
+            text-transform: uppercase;
+        }
+        .warning-item.high .warning-badge {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        .warning-item.warn .warning-badge {
+            background: #fde68a;
+            color: #92400e;
+        }
+        .warning-item.ok .warning-badge {
+            background: #bbf7d0;
+            color: #166534;
+        }
+
+        .google-risk-title {
+            font-weight: 700;
+            color: #394166;
+            margin-bottom: 6px;
+        }
+
+        .google-risk-main {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: #1f2a56;
+            margin-bottom: 4px;
+        }
+
+        .google-risk-sub {
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        .fx-list {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .fx-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .executive-grid {
+                grid-template-columns: 1fr;
+            }
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+            .risk-row {
+                grid-template-columns: 1fr;
+            }
+            .warning-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 ARGUS Multi-Agent System</h1>
+            <p>Federal Reserve News Monitoring & Risk Analysis</p>
+        </header>
+
+        <div class="alert alert-info" id="alert"></div>
+
+        <div class="controls">
+            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">
+                ▶️ Start Analysis Pipeline
+            </button>
+            <button class="btn-guardian" id="guardianBtn" onclick="openGuardianDashboard()">
+                🌍 Open Guardian Dashboard
+            </button>
+            <button class="btn-reset" id="resetBtn" onclick="resetSystem()">
+                🔄 Reset System
+            </button>
+        </div>
+
+        <!-- Pipeline Visualization -->
+        <div class="pipeline-visualization">
+            <h2>Pipeline Execution Flow</h2>
+            <div class="pipeline-stages">
+                <div class="stage" id="stage1">
+                    <h3>📰</h3>
+                    <p>News Gathering</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="stage" id="stage2">
+                    <h3>⚠️</h3>
+                    <p>Risk Classification</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="stage" id="stage3">
+                    <h3>💾</h3>
+                    <p>Database Management</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="stage" id="stage4">
+                    <h3>🔍</h3>
+                    <p>Analysis</p>
+                </div>
+                <div class="arrow">→</div>
+                <div class="stage" id="stage5">
+                    <h3>📊</h3>
+                    <p>Report Generation</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Status Dashboard -->
+        <div class="dashboard">
+            <div class="card">
+                <h2>📰 News Gatherer Agent</h2>
+                <div class="card-content" id="newsGathererStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Status</span>
+                        <span class="status-badge status-idle">Idle</span>
+                    </div>
+                    <p>Crawls Federal Reserve news from official sources</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚠️ Risk Classifier Agent</h2>
+                <div class="card-content" id="classifierStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Status</span>
+                        <span class="status-badge status-idle">Idle</span>
+                    </div>
+                    <p>Classifies news by risk categories and levels</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💾 Database Agent</h2>
+                <div class="card-content" id="databaseStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Status</span>
+                        <span class="status-badge status-idle">Idle</span>
+                    </div>
+                    <p>Manages data storage and retrieval operations</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔍 Analysis Agent</h2>
+                <div class="card-content" id="analyzerStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Status</span>
+                        <span class="status-badge status-idle">Idle</span>
+                    </div>
+                    <p>Performs comprehensive risk analysis</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Reporting Agent</h2>
+                <div class="card-content" id="reporterStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Status</span>
+                        <span class="status-badge status-idle">Idle</span>
+                    </div>
+                    <p>Generates detailed analysis reports</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ System Status</h2>
+                <div class="card-content" id="systemStatus">
+                    <div class="agent-status">
+                        <span class="agent-name">Overall Status</span>
+                        <span class="status-badge status-idle">Ready</span>
+                    </div>
+                    <p><span id="lastUpdate">Never executed</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>📈 Analysis Results</h2>
+
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchTab(event, 'summary')">Summary</button>
+                <button class="tab-button" onclick="switchTab(event, 'distribution')">Distribution</button>
+                <button class="tab-button" onclick="switchTab(event, 'details')">Details</button>
+            </div>
+
+            <div id="summary" class="tab-content active">
+                <div id="resultsSummary"></div>
+            </div>
+
+            <div id="distribution" class="tab-content">
+                <div id="riskDistribution"></div>
+            </div>
+
+            <div id="details" class="tab-content">
+                <h3>Recommendations</h3>
+                <div id="recommendationsContainer"></div>
+                <h3>Top Keywords</h3>
+                <div id="keywordsContainer"></div>
+            </div>
+        </div>
+
+        <!-- Logs Section -->
+        <div class="results-section">
+            <h2>📋 System Logs</h2>
+            <div class="log-section" id="logsContainer">
+                <div class="log-entry">
+                    <span class="log-timestamp">[System]</span>
+                    <span class="log-level">INFO</span>
+                    System initialized and ready for execution
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>ARGUS Multi-Agent System v2.0 | Federal Reserve Risk Analysis</p>
+            <p>Status: <span id="footer-status">Ready</span></p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
+        <div class="modal-shell">
+            <div class="guardian-section" onclick="event.stopPropagation()">
+                <div class="guardian-header">
+                    <h2>🌍 Global Treasury Dashboard</h2>
+                    <div>
+                        <button class="guardian-refresh" onclick="loadGuardianDashboard()">Refresh</button>
+                        <button class="guardian-refresh" style="background:#dc3545;" onclick="closeGuardianDashboard()">Close</button>
+                    </div>
+                </div>
+                <div class="guardian-meta" id="guardianMeta">Loading guardian snapshot...</div>
+                <div class="executive-grid" id="guardianExecutiveGrid"></div>
+                <div class="risk-row">
+                    <div class="google-risk-card" id="googleRiskCard"></div>
+                    <div class="google-risk-card" id="fxRiskCard"></div>
+                </div>
+                <div class="warning-panel">
+                    <div class="warning-head" id="dailyWarningHead">Daily comparison: loading...</div>
+                    <div class="warning-metrics" id="dailyWarningMetrics"></div>
+                    <div class="warning-list" id="dailyWarningsList"></div>
+                </div>
+
+                <h3 class="subsection-title">Country Alert Board</h3>
+                <div class="country-grid" id="countryBoardGrid"></div>
+
+                <h3 class="subsection-title">Top 5 Critical Alerts</h3>
+                <div class="table-wrap">
+                    <table class="alerts-table">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>Category</th>
+                                <th>Score</th>
+                                <th>Level</th>
+                                <th>Source</th>
+                                <th>Title</th>
+                                <th>Published</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="criticalAlertsTableBody"></tbody>
+                    </table>
+                </div>
+
+                <details class="tech-details">
+                    <summary>Technical Metrics</summary>
+                    <div class="kpi-grid" id="guardianKpiGrid"></div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="alertInsightModal" onclick="closeAlertInsight(event)">
+        <div class="modal-shell" style="width:min(900px,96vw);">
+            <div class="guardian-section" onclick="event.stopPropagation()">
+                <div class="guardian-header">
+                    <h2>🔎 Alert Insight Dashboard</h2>
+                    <button class="guardian-refresh" style="background:#dc3545;" onclick="closeAlertInsight()">Close</button>
+                </div>
+                <div class="guardian-meta" id="alertInsightMeta">Select an alert to inspect.</div>
+
+                <div class="insight-grid">
+                    <div class="insight-card">
+                        <div class="insight-title">Score / Level</div>
+                        <div class="insight-value" id="insightScore">-</div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-title">Country / Category</div>
+                        <div class="insight-value" id="insightCountryCategory">-</div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-title">Trigger Check</div>
+                        <div class="insight-value" id="insightTriggerCheck">-</div>
+                    </div>
+                </div>
+
+                <div class="insight-body">
+                    <h4>Headline</h4>
+                    <p id="insightTitle">-</p>
+                    <h4>Recommendation</h4>
+                    <p id="insightRecommendation">-</p>
+                    <h4>Rationale</h4>
+                    <p id="insightRationale">-</p>
+                    <h4>Source Link</h4>
+                    <p id="insightLink">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let isExecuting = false;
+        let statusUpdateInterval;
+        let guardianRefreshInterval;
+        let guardianTopAlerts = [];
+        let guardianMeta = {};
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function levelClass(level) {
+            if (!level) return 'level-none';
+            return `level-${String(level).toLowerCase()}`;
+        }
+
+        function kpiCard(label, value) {
+            return `
+                <div class="kpi-card">
+                    <div class="kpi-label">${escapeHtml(label)}</div>
+                    <div class="kpi-value">${escapeHtml(value)}</div>
+                </div>
+            `;
+        }
+
+        function trendDirectionClass(direction) {
+            if (direction === 'UP') return 'trend-up';
+            if (direction === 'DOWN') return 'trend-down';
+            if (direction === 'FLAT') return 'trend-flat';
+            return 'trend-na';
+        }
+
+        function trendText(trend) {
+            if (!trend || trend.direction === 'NA' || trend.delta === null || trend.delta === undefined) {
+                return 'No baseline';
+            }
+            if (trend.delta > 0) return `↑ +${trend.delta}`;
+            if (trend.delta < 0) return `↓ ${trend.delta}`;
+            return '→ 0';
+        }
+
+        async function loadGuardianDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/guardian/dashboard`);
+                const payload = await response.json();
+
+                if (!response.ok || payload.status !== 'success') {
+                    document.getElementById('guardianMeta').innerHTML =
+                        `<span class="muted">Guardian snapshot unavailable: ${escapeHtml(payload.message || 'unknown error')}</span>`;
+                    guardianTopAlerts = [];
+                    document.getElementById('guardianExecutiveGrid').innerHTML = '';
+                    document.getElementById('googleRiskCard').innerHTML = '';
+                    document.getElementById('fxRiskCard').innerHTML = '';
+                    document.getElementById('guardianKpiGrid').innerHTML = '';
+                    document.getElementById('countryBoardGrid').innerHTML = '';
+                    document.getElementById('criticalAlertsTableBody').innerHTML = '';
+                    document.getElementById('dailyWarningHead').textContent = 'Daily comparison unavailable';
+                    document.getElementById('dailyWarningMetrics').innerHTML = '';
+                    document.getElementById('dailyWarningsList').innerHTML = '';
+                    return;
+                }
+
+                const meta = payload.meta || {};
+                guardianMeta = meta;
+                const summary = payload.executive_summary || {};
+                const trend = summary.trend || {};
+                const trendBasis = String(trend.basis || 'triggered').toLowerCase();
+                const trendLabel = trendBasis === 'events'
+                    ? 'Event Trend (latest day vs previous day)'
+                    : 'Risk Trend (vs previous snapshot)';
+                const generatedAt = meta.generated_at_local || meta.generated_at_utc || '-';
+                const gcs = payload.gcs_status || {};
+                const dataSource = (meta.data_source || '-').toUpperCase();
+                const rawParts = Array.isArray(meta.raw_dt_segments) ? meta.raw_dt_segments : [];
+                const scope = meta.scope || 'default';
+                const globalEventCount = meta.global_event_count ?? meta.event_count ?? 0;
+                document.getElementById('guardianMeta').innerHTML =
+                    `Generated: <strong>${escapeHtml(generatedAt)}</strong> | Persona: <strong>${escapeHtml(meta.persona || '-')}</strong> | Data Mode: <strong>${escapeHtml(meta.data_mode || '-')}</strong> | Scope: <strong>${escapeHtml(scope)}</strong> | Source: <strong>${escapeHtml(dataSource)}</strong>${rawParts.length ? ` | Partitions: <strong>${escapeHtml(rawParts.length)}</strong>` : ''} | Global Events: <strong>${escapeHtml(globalEventCount)}</strong>${gcs.ok ? '' : ` | GCS: <span class="muted">${escapeHtml(gcs.message || 'fallback local')}</span>`}`;
+
+                document.getElementById('guardianExecutiveGrid').innerHTML = [
+                    kpiCard('High-Risk Countries', summary.high_risk_country_count ?? 0),
+                    `
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Risk Alerts</div>
+                            <div class="kpi-value">${escapeHtml(summary.total_risk_alert_count ?? 0)}</div>
+                            <span class="trend-pill trend-flat">high-risk ${escapeHtml(summary.high_risk_alert_count ?? 0)}</span>
+                        </div>
+                    `,
+                    `
+                        <div class="kpi-card">
+                            <div class="kpi-label">${escapeHtml(trendLabel)}</div>
+                            <div class="kpi-value">${escapeHtml(trendText(trend))}</div>
+                            <span class="trend-pill ${trendDirectionClass(trend.direction)}">
+                                ${escapeHtml(`current ${trend.current_triggered ?? '-'} | prev ${trend.previous_triggered ?? '-'}`)}
+                            </span>
+                        </div>
+                    `,
+                ].join('');
+
+                const g = payload.google_downside || {};
+                if (g.status === 'success') {
+                    const sig = (g.top_signals || []).slice(0, 3).map(x => `${x.name}: ${x.value}`).join(' | ');
+                    const staleText = g.is_stale ? ` | Stale: ${escapeHtml(g.staleness_days ?? '?')}d` : '';
+                    document.getElementById('googleRiskCard').innerHTML = `
+                        <div class="google-risk-title">Google Downside Risk</div>
+                        <div class="google-risk-main">${escapeHtml(g.percent ?? 0)}% (${escapeHtml(g.level || '-')})</div>
+                        <div class="google-risk-sub">Model: ${escapeHtml(g.model_name || '-')} | As of: ${escapeHtml(g.as_of_date || '-')}${staleText}</div>
+                        <div class="google-risk-sub">Signals: ${escapeHtml(sig || '-')}</div>
+                    `;
+                } else {
+                    document.getElementById('googleRiskCard').innerHTML = `
+                        <div class="google-risk-title">Google Downside Risk</div>
+                        <div class="google-risk-sub">Unavailable: ${escapeHtml(g.reason || 'not available')}</div>
+                    `;
+                }
+
+                const fx = payload.fx_summary || {};
+                const fxAtRisk = (fx.countries || []).filter(item => Number(item.fx_score || 0) > 0);
+                const fxTop = fxAtRisk.slice(0, 5);
+                const fxTopHtml = fxTop.map(item => `
+                    <div class="fx-item">
+                        <span>${escapeHtml(item.country)} (${escapeHtml(item.fx_level)})</span>
+                        <strong>${escapeHtml(item.fx_score)}</strong>
+                    </div>
+                `).join('');
+                document.getElementById('fxRiskCard').innerHTML = `
+                    <div class="google-risk-title">FX Risk (11 Countries)</div>
+                    <div class="google-risk-main">${escapeHtml(fxAtRisk.length ?? 0)} At-Risk Countries</div>
+                    <div class="google-risk-sub">Monitored: ${escapeHtml(fx.monitored_count ?? 11)} | Medium+: ${escapeHtml(fx.medium_or_above_country_count ?? 0)} | As of: ${escapeHtml(fx.as_of_dt || '-')}</div>
+                    <div class="google-risk-sub">High-risk countries: ${escapeHtml(fx.high_risk_country_count ?? 0)}</div>
+                    <div class="fx-list">${fxTopHtml || '<span class="muted">No at-risk countries right now.</span>'}</div>
+                `;
+
+                const cmp = payload.daily_comparison || {};
+                const latestDt = cmp.latest_dt || '-';
+                const prevDt = cmp.previous_dt || '-';
+                const latestEvents = Number(cmp.latest_events || 0);
+                const prevEvents = Number(cmp.previous_events || 0);
+                const deltaEvents = Number(cmp.delta_events || 0);
+                const changePct = prevEvents > 0 ? ((deltaEvents / prevEvents) * 100) : null;
+                document.getElementById('dailyWarningHead').textContent =
+                    `Daily Comparison Board: ${latestDt} vs ${prevDt}`;
+                document.getElementById('dailyWarningMetrics').innerHTML = [
+                    `<div class="warning-metric"><div class="warning-metric-label">Latest Events</div><div class="warning-metric-value">${escapeHtml(latestEvents)}</div></div>`,
+                    `<div class="warning-metric"><div class="warning-metric-label">Previous Events</div><div class="warning-metric-value">${escapeHtml(prevEvents)}</div></div>`,
+                    `<div class="warning-metric"><div class="warning-metric-label">Delta</div><div class="warning-metric-value">${deltaEvents > 0 ? '+' : ''}${escapeHtml(deltaEvents)}</div></div>`,
+                    `<div class="warning-metric"><div class="warning-metric-label">Change %</div><div class="warning-metric-value">${changePct === null ? 'N/A' : `${changePct.toFixed(1)}%`}</div></div>`,
+                ].join('');
+                const warnings = Array.isArray(cmp.warnings) ? cmp.warnings : [];
+                document.getElementById('dailyWarningsList').innerHTML = warnings.map((w) => `
+                    <div class="warning-item ${escapeHtml(String(w.level || 'info').toLowerCase())}">
+                        <span class="warning-badge">${escapeHtml(w.level || 'info')}</span>
+                        <span class="warning-title">${escapeHtml(w.title || 'Warning')}</span>
+                        <span>${escapeHtml(w.detail || '')}</span>
+                    </div>
+                `).join('');
+
+                document.getElementById('guardianKpiGrid').innerHTML = [
+                    kpiCard('Events', meta.event_count ?? 0),
+                    kpiCard('Alerts', meta.alert_count ?? 0),
+                    kpiCard('Triggered', meta.triggered_count ?? 0),
+                    kpiCard('Threshold', meta.threshold ?? '-'),
+                    kpiCard('Sources (Enabled)', meta.enabled_source_count ?? 0),
+                    kpiCard('Sources (Healthy)', meta.healthy_enabled_source_count ?? 0),
+                ].join('');
+
+                const board = payload.country_rank_top5 || [];
+                document.getElementById('countryBoardGrid').innerHTML = board.map((item, idx) => `
+                    <div class="country-card rank-${Math.min(idx + 1, 5)}">
+                        <div class="country-name">${escapeHtml(item.country)}</div>
+                        <div class="country-score">alerts: ${escapeHtml(item.alert_count)}</div>
+                        <div class="country-meta">top: ${escapeHtml(item.top_category || 'Unclassified')}</div>
+                    </div>
+                `).join('');
+
+                const alerts = payload.critical_alerts_top5 || [];
+                guardianTopAlerts = alerts;
+                document.getElementById('criticalAlertsTableBody').innerHTML = alerts.map((a, idx) => {
+                    const title = escapeHtml(a.title || '');
+                    const url = a.url ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">${title || 'open link'}</a>` : title;
+                    return `
+                        <tr>
+                            <td>${escapeHtml(a.country || '-')}</td>
+                            <td>${escapeHtml(a.category || '-')}</td>
+                            <td>${escapeHtml(a.score ?? 0)}</td>
+                            <td><span class="${levelClass(a.risk_level)}">${escapeHtml(a.risk_level || 'None')}</span></td>
+                            <td>${escapeHtml(a.source || '-')}</td>
+                            <td class="alert-title">${url}</td>
+                            <td>${escapeHtml(a.published_at || '-')}</td>
+                            <td><button class="alert-action-btn" onclick="openAlertInsight(${idx})">Analyze</button></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                document.getElementById('guardianMeta').innerHTML =
+                    `<span class="muted">Guardian dashboard load failed: ${escapeHtml(error.message)}</span>`;
+                document.getElementById('dailyWarningHead').textContent = 'Daily comparison unavailable';
+                document.getElementById('dailyWarningMetrics').innerHTML = '';
+                document.getElementById('dailyWarningsList').innerHTML = '';
+            }
+        }
+
+        async function openGuardianDashboard() {
+            const modal = document.getElementById('guardianModal');
+            modal.classList.add('show');
+            await loadGuardianDashboard();
+            if (!guardianRefreshInterval) {
+                guardianRefreshInterval = setInterval(() => {
+                    loadGuardianDashboard();
+                }, 30000);
+            }
+        }
+
+        function closeGuardianDashboard(event) {
+            if (event && event.target && event.target.id !== 'guardianModal') {
+                return;
+            }
+            const modal = document.getElementById('guardianModal');
+            modal.classList.remove('show');
+            if (guardianRefreshInterval) {
+                clearInterval(guardianRefreshInterval);
+                guardianRefreshInterval = null;
+            }
+        }
+
+        function openAlertInsight(index) {
+            const alert = guardianTopAlerts[index];
+            if (!alert) return;
+
+            const threshold = Number(guardianMeta.threshold ?? 40);
+            const score = Number(alert.score ?? 0);
+            const triggered = score >= threshold ? 'Triggered' : 'Not Triggered';
+
+            document.getElementById('alertInsightMeta').innerHTML =
+                `Published: <strong>${escapeHtml(alert.published_at || '-')}</strong> | Source: <strong>${escapeHtml(alert.source || '-')}</strong>`;
+            document.getElementById('insightScore').textContent = `${alert.score ?? 0} (${alert.risk_level || 'None'})`;
+            document.getElementById('insightCountryCategory').textContent = `${alert.country || '-'} / ${alert.category || '-'}`;
+            document.getElementById('insightTriggerCheck').textContent = `${triggered} (threshold ${threshold})`;
+            document.getElementById('insightTitle').textContent = alert.title || '-';
+            document.getElementById('insightRecommendation').textContent = alert.recommendation || 'No recommendation provided.';
+            document.getElementById('insightRationale').textContent = alert.rationale || `Generated by ${alert.recommendation_source || 'rule'} model; no extra rationale text.`;
+            document.getElementById('insightLink').innerHTML = alert.url
+                ? `<a href="${escapeHtml(alert.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(alert.url)}</a>`
+                : '-';
+
+            document.getElementById('alertInsightModal').classList.add('show');
+        }
+
+        function closeAlertInsight(event) {
+            if (event && event.target && event.target.id !== 'alertInsightModal') {
+                return;
+            }
+            document.getElementById('alertInsightModal').classList.remove('show');
+        }
+
+        async function executePipeline() {
+            if (isExecuting) return;
+
+            isExecuting = true;
+            document.getElementById('executeBtn').disabled = true;
+            showAlert('Starting analysis pipeline...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/execute`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.status === 'started') {
+                    updatePipelineStages();
+                    startStatusPolling();
+                }
+            } catch (error) {
+                showAlert('Error starting pipeline: ' + error.message, 'error');
+                isExecuting = false;
+                document.getElementById('executeBtn').disabled = false;
+            }
+        }
+
+        async function startStatusPolling() {
+            statusUpdateInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/status`);
+                    const status = await response.json();
+
+                    updateAgentStatuses(status.agents_status);
+
+                    if (!status.is_running && isExecuting) {
+                        isExecuting = false;
+                        document.getElementById('executeBtn').disabled = false;
+                        clearInterval(statusUpdateInterval);
+                        await loadResults();
+                        await loadGuardianDashboard();
+                        showAlert('Pipeline execution completed!', 'info');
+                    }
+                } catch (error) {
+                    console.error('Status update failed:', error);
+                }
+            }, 1000);
+        }
+
+        function updateAgentStatuses(statuses) {
+            const statusMap = {
+                'news_gatherer': 'newsGathererStatus',
+                'risk_classifier': 'classifierStatus',
+                'database_manager': 'databaseStatus',
+                'analyzer': 'analyzerStatus',
+                'reporter': 'reporterStatus'
+            };
+
+            for (const [agent, elementId] of Object.entries(statusMap)) {
+                const element = document.getElementById(elementId);
+                if (element && statuses[agent]) {
+                    const status = statuses[agent].status;
+                    const badge = element.querySelector('.status-badge');
+                    badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                    badge.className = `status-badge status-${status}`;
+                }
+            }
+        }
+
+        function updatePipelineStages() {
+            const stages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5'];
+            let currentStage = 0;
+
+            const stageInterval = setInterval(() => {
+                stages.forEach((stageId, index) => {
+                    const element = document.getElementById(stageId);
+                    element.classList.remove('active', 'completed');
+                    if (index < currentStage) {
+                        element.classList.add('completed');
+                    } else if (index === currentStage) {
+                        element.classList.add('active');
+                    }
+                });
+
+                currentStage++;
+                if (currentStage > stages.length) {
+                    clearInterval(stageInterval);
+                }
+            }, 3000);
+        }
+
+        async function loadResults() {
+            try {
+                const response = await fetch(`${API_BASE}/results`);
+                const results = await response.json();
+
+                if (results.status === 'success' && results.stages) {
+                    displayResults(results);
+                    document.getElementById('resultsSection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to load results:', error);
+            }
+        }
+
+        function displayResults(results) {
+            const stages = results.stages;
+
+            // Summary
+            let summary = '<div class="result-item">';
+            if (stages.news_gathering && stages.news_gathering.status === 'success') {
+                summary += `<p><span class="result-label">📰 News Gathered:</span> ${stages.news_gathering.count} items</p>`;
+            }
+            if (stages.risk_classification && stages.risk_classification.status === 'success') {
+                summary += `<p><span class="result-label">⚠️ Items Classified:</span> ${stages.risk_classification.count}</p>`;
+                if (stages.risk_classification.distribution) {
+                    const dist = stages.risk_classification.distribution;
+                    summary += `<p><span class="result-label">Distribution:</span> Critical: ${dist.Critical || 0}, High: ${dist.High || 0}, Medium: ${dist.Medium || 0}</p>`;
+                }
+            }
+            summary += '</div>';
+            document.getElementById('resultsSummary').innerHTML = summary;
+
+            // Distribution
+            if (stages.risk_classification && stages.risk_classification.distribution) {
+                const dist = stages.risk_classification.distribution;
+                let html = '<div class="risk-distribution">';
+                html += `<div class="risk-box risk-critical">Critical<br>${dist.Critical || 0}</div>`;
+                html += `<div class="risk-box risk-high">High<br>${dist.High || 0}</div>`;
+                html += `<div class="risk-box risk-medium">Medium<br>${dist.Medium || 0}</div>`;
+                html += `<div class="risk-box risk-low">Low<br>${dist.Low || 0}</div>`;
+                html += '</div>';
+                document.getElementById('riskDistribution').innerHTML = html;
+            }
+
+            // Load full report
+            loadReport();
+        }
+
+        async function loadReport() {
+            try {
+                const response = await fetch(`${API_BASE}/demo/report`);
+                const report = await response.json();
+
+                if (report.recommendations) {
+                    const recsHtml = report.recommendations.map(r => `<p>• ${r}</p>`).join('');
+                    document.getElementById('recommendationsContainer').innerHTML = recsHtml;
+                }
+
+                if (report.top_keywords) {
+                    const kwHtml = report.top_keywords.map(k => `<span style="display: inline-block; padding: 5px 10px; background: #667eea; color: white; border-radius: 5px; margin: 5px;">${k}</span>`).join('');
+                    document.getElementById('keywordsContainer').innerHTML = kwHtml;
+                }
+            } catch (error) {
+                console.error('Failed to load report:', error);
+            }
+        }
+
+        async function resetSystem() {
+            if (confirm('Are you sure you want to reset the system?')) {
+                try {
+                    await fetch(`${API_BASE}/reset`, { method: 'POST' });
+                    document.getElementById('resultsSection').style.display = 'none';
+                    document.getElementById('executeBtn').disabled = false;
+                    isExecuting = false;
+                    showAlert('System reset complete', 'info');
+                } catch (error) {
+                    showAlert('Reset failed: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function switchTab(event, tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        function addLog(message, level = 'INFO') {
+            const logsContainer = document.getElementById('logsContainer');
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<span class="log-timestamp">[${time}]</span><span class="log-level">${level}</span>${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // Update footer
+        setInterval(() => {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Initial page load and periodic dashboard refresh
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadResults();
+        });
+    </script>
+</body>
+</html>

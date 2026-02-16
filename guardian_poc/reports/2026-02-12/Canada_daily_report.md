@@ -1,0 +1,73 @@
+# Canada Treasury Risk Daily Report
+
+- Date (UTC): 2026-02-12
+- Persona: treasury_ops
+- Data mode: demo_fallback
+- Risk level: HIGH
+- Max score: 96.00
+- Avg score: 75.25
+- Warnings: 8 (High: 6, Medium: 2)
+- Related events: 9
+
+## Top Warnings
+- [96.00] Disaster Risk: Canada treasury risk update: hurricane alert and port closure risk | noaa_nws | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: trigger BCP checks for treasury operations and banking connectivity.
+  - Link: https://example.com/demo/canada/3
+- [84.00] Liquidity Risk: Canada treasury risk update: funding liquidity stress in money markets | bank_of_canada | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: raise local liquidity buffers and pre-fund critical payments.
+  - Link: https://example.com/demo/canada/1
+- [84.00] Regulatory Risk: Canada treasury risk update: capital controls and remittance restrictions | imf | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: validate compliance impacts and alternate cross-border routes.
+  - Link: https://example.com/demo/canada/2
+- [80.00] Political Risk: Canada treasury risk update: trade wars and border closure rhetoric | gdelt | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: increase sanctions and country-risk monitoring cadence.
+  - Link: https://example.com/demo/canada/6
+- [78.00] Credit Risk: Canada treasury risk update: credit downgrade and default concern | gdelt | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: review counterparty ratings and reduce unsecured exposure.
+  - Link: https://example.com/demo/canada/5
+- [72.00] Process Risk: Canada treasury risk update: production service interruption via attack pattern | mitre_attack_taxii | 2026-02-12 19:41
+  - Recommendation: [HIGH] Canada: harden process controls and validate cyber/logistics continuity.
+  - Link: https://example.com/demo/canada/4
+- [60.00] Business Risk: Canada treasury risk update: strategic competition pressure in core markets | gdelt | 2026-02-12 19:41
+  - Recommendation: [MEDIUM] Canada: reassess legal/contract exposure and strategic dependencies.
+  - Link: https://example.com/demo/canada/0
+- [48.00] Demand Risk: Canada treasury risk update: demand volatility and sudden order cancellations | finnhub | 2026-02-12 19:41
+  - Recommendation: [MEDIUM] Canada: adjust cash forecasts and rebalance working-capital assumptions.
+  - Link: https://example.com/demo/canada/8
+
+## Event Highlights
+- Canada treasury risk update: strategic competition pressure in core markets
+  - Source: gdelt, Time: 2026-02-12 19:41
+  - Categories: Business Risk
+  - Link: https://example.com/demo/canada/0
+- Canada treasury risk update: funding liquidity stress in money markets
+  - Source: bank_of_canada, Time: 2026-02-12 19:41
+  - Categories: Liquidity Risk
+  - Link: https://example.com/demo/canada/1
+- Canada treasury risk update: capital controls and remittance restrictions
+  - Source: imf, Time: 2026-02-12 19:41
+  - Categories: Regulatory Risk
+  - Link: https://example.com/demo/canada/2
+- Canada treasury risk update: hurricane alert and port closure risk
+  - Source: noaa_nws, Time: 2026-02-12 19:41
+  - Categories: Disaster Risk
+  - Link: https://example.com/demo/canada/3
+- Canada treasury risk update: production service interruption via attack pattern
+  - Source: mitre_attack_taxii, Time: 2026-02-12 19:41
+  - Categories: Process Risk
+  - Link: https://example.com/demo/canada/4
+- Canada treasury risk update: credit downgrade and default concern
+  - Source: gdelt, Time: 2026-02-12 19:41
+  - Categories: Credit Risk
+  - Link: https://example.com/demo/canada/5
+- Canada treasury risk update: trade wars and border closure rhetoric
+  - Source: gdelt, Time: 2026-02-12 19:41
+  - Categories: Political Risk
+  - Link: https://example.com/demo/canada/6
+- Canada treasury risk update: broad market suspension and circuit-breaker risk
+  - Source: alpha_vantage, Time: 2026-02-12 19:41
+  - Link: https://example.com/demo/canada/7
+- Canada treasury risk update: demand volatility and sudden order cancellations
+  - Source: finnhub, Time: 2026-02-12 19:41
+  - Categories: Demand Risk
+  - Link: https://example.com/demo/canada/8

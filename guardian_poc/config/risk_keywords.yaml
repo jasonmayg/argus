@@ -1,0 +1,182 @@
+risk_taxonomy:
+  market_risk:
+    label: "Market Risk"
+    primary:
+      - "equity price"
+      - "interest rate"
+      - "foreign exchange"
+      - "fx volatility"
+      - "currency devaluation"
+      - "commodity price"
+      - "bond yield spikes"
+      - "rmb depreciation"
+    high_alert:
+      - "flash crash"
+      - "currency panic"
+      - "sudden peg break"
+      - "emergency rate meeting"
+  credit_risk:
+    label: "Credit Risk"
+    primary:
+      - "downgrade"
+      - "bankruptcy"
+      - "default"
+      - "sovereign default"
+      - "credit downgrade"
+      - "counterparty risk"
+      - "non-performing loans"
+    high_alert:
+      - "payment default"
+      - "cross-default"
+      - "insolvency risk"
+  liquidity_risk:
+    label: "Liquidity Risk"
+    primary:
+      - "funding liquidity"
+      - "trading liquidity"
+      - "liquidity crunch"
+      - "bank run"
+      - "interbank lending freeze"
+      - "bank holiday"
+    high_alert:
+      - "liquidity freeze"
+      - "redemption halt"
+      - "cash withdrawal limit"
+  operational_risk:
+    label: "Operational Risk"
+    primary:
+      - "fraud"
+      - "human error"
+      - "technology outage"
+      - "model failure"
+      - "system outage"
+      - "payment system outage"
+    high_alert:
+      - "core banking outage"
+      - "critical incident"
+      - "service disruption"
+  political_risk:
+    label: "Political Risk"
+    primary:
+      - "politics"
+      - "trade wars"
+      - "tariffs"
+      - "sanctions"
+      - "export controls"
+      - "entity list expansion"
+      - "diplomatic decoupling"
+    high_alert:
+      - "military conflict"
+      - "state of emergency"
+      - "border closure"
+  regulatory_risk:
+    label: "Regulatory Risk"
+    primary:
+      - "local regulations"
+      - "global regulations"
+      - "capital controls"
+      - "remittance restrictions"
+      - "fund repatriation limits"
+      - "safe regulation"
+      - "foreign exchange quotas"
+      - "data residency"
+      - "open banking compliance"
+      - "payment license revocation"
+    high_alert:
+      - "outbound transfer freeze"
+      - "offshore transfer ban"
+      - "regulatory enforcement"
+  reputation_risk:
+    label: "Reputation Risk"
+    primary:
+      - "industry reputation"
+      - "individual reputation"
+      - "rumors"
+      - "bank run rumors"
+      - "social backlash"
+    high_alert:
+      - "viral misinformation"
+      - "boycott campaign"
+      - "confidence crisis"
+  systematic_risk:
+    label: "Systematic Risk"
+    primary:
+      - "chain reaction"
+      - "panic sell"
+      - "contagion"
+      - "systemic stress"
+      - "market-wide selloff"
+    high_alert:
+      - "circuit breaker triggered"
+      - "broad market suspension"
+      - "cross-market contagion"
+  disaster_risk:
+    label: "Disaster Risk"
+    primary:
+      - "natural catastrophe"
+      - "man-made catastrophe"
+      - "earthquake"
+      - "flood"
+      - "wildfire"
+      - "typhoon"
+      - "hurricane"
+      - "drought"
+      - "landslide"
+      - "tsunami"
+    high_alert:
+      - "critical infrastructure damage"
+      - "port closure"
+      - "power grid failure"
+      - "airport shutdown"
+  supply_risk:
+    label: "Supply Risk"
+    primary:
+      - "supply quality"
+      - "supplier disruption"
+      - "supply quantity"
+      - "supply delivery"
+      - "supply price"
+      - "sourcing and procurement"
+    high_alert:
+      - "supplier bankruptcy"
+      - "shipment delay"
+      - "raw material shortage"
+  demand_risk:
+    label: "Demand Risk"
+    primary:
+      - "product lifecycle change"
+      - "forecasting error"
+      - "consumer preference shift"
+      - "demand volatility"
+      - "price sensitivity"
+    high_alert:
+      - "demand collapse"
+      - "order cancellation spike"
+      - "inventory glut"
+  process_risk:
+    label: "Process Risk"
+    primary:
+      - "innovation planning"
+      - "information gap"
+      - "labor dispute"
+      - "cybersecurity incident"
+      - "coordination failure"
+      - "production service interruption"
+      - "logistics capacity constraints"
+      - "environmental social and sustainability"
+    high_alert:
+      - "ransomware"
+      - "factory shutdown"
+      - "logistics bottleneck"
+  business_risk:
+    label: "Business Risk"
+    primary:
+      - "legal dispute"
+      - "strategic shift"
+      - "competition pressure"
+      - "contractual breach"
+      - "miscommunication"
+    high_alert:
+      - "major litigation"
+      - "contract termination"
+      - "strategic retreat"
