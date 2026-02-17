@@ -20,12 +20,58 @@ from io import StringIO
 from collections import Counter
 from functools import lru_cache
 import unicodedata
+from json import JSONEncoder
 
 from agents_system import AgentOrchestrator
 
 
+class SafeJSONEncoder(JSONEncoder):
+    """Custom JSON encoder that safely handles None values and nested structures"""
+    def default(self, obj):
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            return {str(k): self.default(v) for k, v in obj.items() if v is not None}
+        if isinstance(obj, (list, tuple)):
+            return [self.default(item) for item in obj if item is not None]
+        return super().default(obj)
+
+
+def sanitize_for_json(obj: Any) -> Any:
+    """
+    Recursively sanitize data structure to remove None values and ensure JSON compatibility.
+    Prevents TypeError when jsonify tries to sort keys containing None values.
+    """
+    if obj is None:
+        return None
+
+    if isinstance(obj, dict):
+        # Filter out None values and recursively sanitize nested structures
+        sanitized = {}
+        for key, value in obj.items():
+            if value is not None:
+                sanitized_key = str(key) if not isinstance(key, str) else key
+                sanitized[sanitized_key] = sanitize_for_json(value)
+        return sanitized
+
+    if isinstance(obj, (list, tuple)):
+        # Recursively sanitize list items, filtering out None
+        return [sanitize_for_json(item) for item in obj if item is not None]
+
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+
+    # For other types (datetime, etc), convert to string
+    return str(obj)
+
+
 app = Flask(__name__)
 CORS(app)
+
+# Configure Flask JSON encoder to handle None values safely
+app.json_encoder = SafeJSONEncoder
+# IMPORTANT: Disable sort_keys to prevent comparison errors with None values
+app.config['JSON_SORT_KEYS'] = False
 
 GUARDIAN_SOURCE_WHITELIST = {
     "gdelt",
@@ -1419,7 +1465,7 @@ def get_guardian_dashboard():
         google_downside["staleness_days"] = stale_days
         google_downside["is_stale"] = bool(stale_days is not None and stale_days > 7)
 
-    return jsonify({
+    dashboard_data = {
         "status": "success",
         "snapshot_path": snapshot_ref,
         "meta": {
@@ -1460,7 +1506,9 @@ def get_guardian_dashboard():
         "google_downside": google_downside,
         "country_board": country_board,
         "alerts": alert_rows,
-    })
+    }
+    # Sanitize to remove None values before jsonify
+    return jsonify(sanitize_for_json(dashboard_data))
 
 
 @app.route('/')
@@ -1516,7 +1564,10 @@ def execute_pipeline():
 def get_results():
     """Get latest execution results"""
     if execution_state["result"]:
-        return jsonify(execution_state["result"])
+        # Sanitize result to remove None values before jsonify
+        # This prevents TypeError when JSON encoder tries to sort keys with None values
+        sanitized_result = sanitize_for_json(execution_state["result"])
+        return jsonify(sanitized_result)
     return jsonify({"status": "no_results"})
 
 
