@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ARGUS: Daily Federal Reserve News Monitoring
-每日自动监控美联储News，Storage到Database并进行Risk分析
+Daily automated monitoring of Federal Reserve news, storing to database and performing risk analysis
 """
 
 import asyncio
@@ -16,27 +16,27 @@ from fed_news_db import FedNewsDatabase
 
 
 class DailyMonitor:
-    """每日监控器"""
+    """Daily monitoring system for Federal Reserve news"""
 
     def __init__(self):
-        """初始化监控器"""
+        """Initialize the daily monitor"""
         self.crawler = FedNewsCrawler()
         self.db = FedNewsDatabase()
         self.current_year = datetime.now().year
 
     async def run(self, verbose: bool = True) -> Dict:
         """
-        执行每日监控
+        Execute daily monitoring
 
         Args:
-            verbose: 是否打印详细Information
+            verbose: Whether to print detailed information
 
         Returns:
-            监控Results
+            Monitoring results
         """
         if verbose:
             print("\n" + "="*70)
-            print(f"ARGUS 每日监控 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"ARGUS Daily Monitoring - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print("="*70)
 
         result = {
@@ -45,9 +45,9 @@ class DailyMonitor:
         }
 
         try:
-            # 1. 爬取News
+            # 1. Crawl news
             if verbose:
-                print("\n[1/4] 爬取News...")
+                print("\n[1/4] Crawling Federal Reserve news...")
 
             news_url = f"https://www.federalreserve.gov/newsevents/pressreleases/{self.current_year}-press.htm"
             crawl_result = await self.crawler.crawl(url=news_url)
@@ -59,19 +59,19 @@ class DailyMonitor:
 
             news_items = crawl_result['json_data']
             if verbose:
-                print(f"✓ 找到 {len(news_items)} 条News")
+                print(f"✓ Found {len(news_items)} news items")
 
-            # 2. Storage到Database
+            # 2. Store to database
             if verbose:
-                print("\n[2/4] Storage到Database...")
+                print("\n[2/4] Storing news to database...")
 
             inserted = self.db.insert_news(news_items)
             if verbose:
-                print(f"✓ Insert {inserted} 条新记录")
+                print(f"✓ Inserted {inserted} new records")
 
-            # 3. 添加Keywords匹配
+            # 3. Add keyword matching
             if verbose:
-                print("\n[3/4] 添加Keywords匹配...")
+                print("\n[3/4] Adding keyword matching...")
 
             keywords = [
                 "Payment", "Payments", "Regulation", "Regulatory",
@@ -80,9 +80,9 @@ class DailyMonitor:
             ]
             self.db.add_keyword_matches(keywords)
 
-            # 4. 统计和报告
+            # 4. Statistics and reporting
             if verbose:
-                print("\n[4/4] 生成报告...")
+                print("\n[4/4] Generating report...")
 
             stats = self.db.get_statistics()
 
@@ -95,7 +95,7 @@ class DailyMonitor:
             if verbose:
                 self._print_summary(result)
 
-            # 保存监控Logging
+            # Save monitoring logs
             self._save_log(result)
 
             return result
@@ -111,30 +111,30 @@ class DailyMonitor:
             self.db.close()
 
     def _print_summary(self, result: Dict):
-        """打印监控摘要"""
+        """Print monitoring summary"""
         print("\n" + "="*70)
-        print("监控摘要")
+        print("Monitoring Summary")
         print("="*70)
-        print(f"状态: {result['status']}")
-        print(f"本次爬取: {result['news_count']} 条")
-        print(f"新增记录: {result['inserted']} 条")
-        print(f"Database总数: {result['total_in_db']} 条")
+        print(f"Status: {result['status']}")
+        print(f"News items crawled: {result['news_count']}")
+        print(f"New records inserted: {result['inserted']}")
+        print(f"Total in database: {result['total_in_db']}")
 
         stats = result.get('statistics', {})
         if stats.get('by_year'):
-            print(f"\n按年份分布:")
+            print(f"\nDistribution by year:")
             for year in sorted(stats['by_year'].keys(), reverse=True):
-                print(f"  • {year}: {stats['by_year'][year]} 条")
+                print(f"  • {year}: {stats['by_year'][year]} items")
 
         if stats.get('top_keywords'):
-            print(f"\n热门Keywords (Top 5):")
+            print(f"\nPopular Keywords (Top 5):")
             for keyword in list(stats['top_keywords'].items())[:5]:
-                print(f"  • {keyword[0]}: {keyword[1]} 条")
+                print(f"  • {keyword[0]}: {keyword[1]} occurrences")
 
         print("="*70)
 
     def _save_log(self, result: Dict):
-        """保存监控Logging"""
+        """Save monitoring logs"""
         log_dir = Path("data/fed_news/logs")
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -143,15 +143,15 @@ class DailyMonitor:
         with open(log_file, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
-        print(f"\n✓ Logging已保存: {log_file}")
+        print(f"\n✓ Logs saved: {log_file}")
 
 
 async def main():
-    """主函数"""
+    """Main function"""
     monitor = DailyMonitor()
     result = await monitor.run(verbose=True)
 
-    # Return适当的退出码
+    # Return appropriate exit code
     sys.exit(0 if result['status'] == 'success' else 1)
 
 

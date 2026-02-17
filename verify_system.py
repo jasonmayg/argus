@@ -105,11 +105,13 @@ def main():
     print_header("3. Checking Documentation")
 
     doc_files = [
-        ("RUN_FRONTEND.md", "Frontend Deployment Guide"),
-        ("NEXT_STEPS.md", "Quick Start Guide"),
-        ("FED_CRAWLER_GUIDE.md", "Crawler Guide"),
-        ("RISK_CLASSIFICATION_GUIDE_EN.md", "Risk Classification Guide"),
-        ("IMPLEMENTATION_GUIDE.md", "Implementation Guide"),
+        ("docs/RUN_FRONTEND.md", "Frontend Deployment Guide"),
+        ("docs/NEXT_STEPS.md", "Quick Start Guide"),
+        ("docs/FED_CRAWLER_GUIDE.md", "Crawler Guide"),
+        ("docs/RISK_CLASSIFICATION_GUIDE_EN.md", "Risk Classification Guide"),
+        ("docs/IMPLEMENTATION_GUIDE.md", "Implementation Guide"),
+        ("docs/JSON_FIX_SUMMARY.md", "JSON Fix Summary"),
+        ("README.md", "Main README"),
     ]
 
     docs_ok = True
@@ -205,7 +207,7 @@ def main():
         return 0
     else:
         print_error("Some checks failed. Please review the errors above.")
-        print_info("Installation guide: See RUN_FRONTEND.md")
+        print_info("Installation guide: See docs/RUN_FRONTEND.md")
         return 1
 
 if __name__ == "__main__":
