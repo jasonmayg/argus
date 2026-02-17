@@ -105,12 +105,16 @@ def main():
     print_header("3. Checking Documentation")
 
     doc_files = [
-        ("docs/RUN_FRONTEND.md", "Frontend Deployment Guide"),
-        ("docs/NEXT_STEPS.md", "Quick Start Guide"),
-        ("docs/FED_CRAWLER_GUIDE.md", "Crawler Guide"),
-        ("docs/RISK_CLASSIFICATION_GUIDE_EN.md", "Risk Classification Guide"),
-        ("docs/IMPLEMENTATION_GUIDE.md", "Implementation Guide"),
-        ("docs/JSON_FIX_SUMMARY.md", "JSON Fix Summary"),
+        ("docs/SYSTEM_READY_EN.md", "System Ready Guide (English)"),
+        ("docs/RUN_FRONTEND_EN.md", "Frontend Deployment Guide (English)"),
+        ("docs/NEXT_STEPS_CN.md", "Quick Start Guide (Chinese)"),
+        ("docs/FED_CRAWLER_GUIDE_CN.md", "Crawler Guide (Chinese)"),
+        ("docs/RISK_CLASSIFICATION_GUIDE_EN.md", "Risk Classification Guide (English)"),
+        ("docs/RISK_CLASSIFICATION_GUIDE_CN.md", "Risk Classification Guide (Chinese)"),
+        ("docs/IMPLEMENTATION_GUIDE_CN.md", "Implementation Guide (Chinese)"),
+        ("docs/JSON_FIX_SUMMARY_EN.md", "JSON Fix Summary (English)"),
+        ("docs/LOCALIZATION_CHANGES_CN.md", "Localization Changes (Chinese)"),
+        ("docs/LANGUAGE_GUIDE_EN.md", "Language Guide (English)"),
         ("README.md", "Main README"),
     ]
 

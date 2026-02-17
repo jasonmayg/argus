@@ -13,33 +13,40 @@
    - Quick start in 5 minutes
    - Key components explained
 
-2. **SYSTEM_READY.md** - Status & Quick Start
+2. **SYSTEM_READY_EN.md** - Status & Quick Start
    - Project completion summary
    - Feature showcase
    - Quick setup in 4 steps
    - What's included
 
-3. **INSTALL_DEPENDENCIES.md** - Setup Guide
+3. **INSTALL_DEPENDENCIES_EN.md** - Setup Guide
    - Dependency installation
    - Virtual environment setup
    - Troubleshooting
 
-### 📚 CORE DOCUMENTATION
+### 📚 CORE DOCUMENTATION (English)
 
-4. **RUN_FRONTEND.md** - Web Dashboard Guide
+4. **RUN_FRONTEND_EN.md** - Web Dashboard Guide
    - Frontend deployment
    - 3 complete demo scenarios
    - API endpoints reference
    - Architecture diagram
    - Troubleshooting guide
 
-5. **NEXT_STEPS.md** - Comprehensive Getting Started
+5. **NEXT_STEPS_CN.md** - Comprehensive Getting Started (中文)
    - System architecture explained
    - Complete usage tutorial
    - Feature walkthrough
    - Best practices
 
-6. **RISK_CLASSIFICATION_GUIDE_EN.md** - Risk Framework
+6. **RISK_CLASSIFICATION_GUIDE_EN.md** - Risk Framework (English)
+   - Complete risk classification system
+   - 3-tier hierarchy explained
+   - 14 risk categories detailed
+   - 100+ keywords mapped
+   - Integration examples
+
+6a. **RISK_CLASSIFICATION_GUIDE_CN.md** - Risk Framework (中文)
    - Complete risk classification system
    - 3-tier hierarchy explained
    - 14 risk categories detailed
@@ -48,7 +55,13 @@
 
 ### 🔍 QUICK REFERENCE
 
-7. **RISK_CLASSIFICATION_QUICK_REFERENCE_EN.md**
+7. **RISK_CLASSIFICATION_QUICK_REFERENCE_EN.md** (English)
+   - One-page risk system overview
+   - Risk level mapping
+   - Common code snippets
+   - Quick lookup table
+
+7a. **RISK_CLASSIFICATION_QUICK_REFERENCE_CN.md** (中文)
    - One-page risk system overview
    - Risk level mapping
    - Common code snippets
@@ -56,14 +69,14 @@
 
 ### 🛠️ TECHNICAL REFERENCE
 
-8. **IMPLEMENTATION_GUIDE.md** - Technical Details
+8. **IMPLEMENTATION_GUIDE_CN.md** - Technical Details (中文)
    - Complete system architecture
    - Component descriptions
    - Code walkthroughs
    - Configuration guide
    - Integration patterns
 
-9. **FED_CRAWLER_GUIDE.md** - Crawler Documentation
+9. **FED_CRAWLER_GUIDE_CN.md** - Crawler Documentation (中文)
    - Crawl4AI integration details
    - URL patterns and structure
    - Keyword filtering
@@ -72,17 +85,64 @@
 
 ### 📊 PROJECT DOCUMENTATION
 
-10. **SETUP_SUMMARY.md** - Project Setup Summary
+10. **SETUP_SUMMARY_CN.md** - Project Setup Summary (中文)
     - Configuration walkthrough
     - Testing results
     - Database schema
     - Known issues and solutions
 
-11. **COMPLETION_SUMMARY.md** - Full Completion Details
+10a. **SETUP_GUIDE_EN.md** - Project Setup Guide (English)
+    - Configuration walkthrough
+    - Testing results
+    - Database schema
+    - Known issues and solutions
+
+11. **COMPLETION_SUMMARY_CN.md** - Full Completion Details (中文)
     - All deliverables listed
     - Implementation details
     - Testing summary
     - Future roadmap
+
+### 🔧 TROUBLESHOOTING & FIXES
+
+12. **SQLITE_THREADING_FIX_EN.md** - SQLite Threading Fix
+    - Problem description
+    - Solution implementation
+    - Configuration guide
+    - Testing verification
+
+13. **FLASK_JSON_FIX_EN.md** - Flask JSON None Values Fix
+    - Problem analysis
+    - Solution approaches
+    - Implementation guide
+    - Debugging tips
+
+### 📝 FIX SUMMARIES
+
+14. **JSON_FIX_README_EN.md** - JSON Fix Overview
+    - Quick navigation guide
+    - What was fixed
+    - Test results
+
+15. **JSON_FIX_SUMMARY_EN.md** - JSON Fix Details
+    - Complete fix summary
+    - Before/after comparison
+    - Usage guide
+
+16. **JSON_FIX_QUICK_REFERENCE_EN.md** - JSON Fix Quick Ref
+    - TL;DR summary
+    - Code examples
+    - Configuration options
+
+17. **LOCALIZATION_CHANGES_CN.md** - Localization Changes (中文)
+    - Localization summary
+    - Changes documentation
+    - Verification results
+
+18. **SESSION_SUMMARY_EN.md** - Session Deliverables
+    - Session summary
+    - Files created
+    - Testing results
 
 ---
 
