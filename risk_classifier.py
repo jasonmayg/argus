@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ARGUS: Risk Classification and Mapping Module
-使用详细的RiskClassification体系对News进行自动Classification
+Uses a detailed risk classification system for automatic news classification
 """
 
 import json
@@ -10,29 +10,29 @@ from pathlib import Path
 
 
 class RiskClassifier:
-    """RiskClassification器"""
+    """Risk Classification engine"""
 
     def __init__(self, config_file: str = "risk_classification.json"):
         """
-        初始化Classification器
+        Initialize the classifier
 
         Args:
-            config_file: RiskClassificationConfigurationFilePath
+            config_file: Risk classification configuration file path
         """
         self.config_file = config_file
         self.config = self._load_config()
         self.risk_map = self._build_risk_map()
 
     def _load_config(self) -> Dict:
-        """加载RiskClassificationConfiguration"""
+        """Load risk classification configuration"""
         if not Path(self.config_file).exists():
-            raise FileNotFoundError(f"ConfigurationFile不存在: {self.config_file}")
+            raise FileNotFoundError(f"Configuration file not found: {self.config_file}")
 
         with open(self.config_file, 'r', encoding='utf-8') as f:
             return json.load(f)
 
     def _build_risk_map(self) -> Dict:
-        """构建Keywords到Risk类别的映射"""
+        """Build mapping from keywords to risk categories"""
         risk_map = {}
 
         for core_category, core_data in self.config['risk_categories'].items():
@@ -48,20 +48,20 @@ class RiskClassifier:
 
     def classify_news(self, title: str, content: Optional[str] = None) -> Dict:
         """
-        Classification单条News
+        Classify a single news item
 
         Args:
-            title: News标题
-            content: News内容（可选）
+            title: News title
+            content: News content (optional)
 
         Returns:
-            ClassificationResults
+            Classification results
         """
         text = f"{title} {content or ''}".lower()
         matched_categories = {}
         matched_keywords = {}
 
-        # 搜索匹配的Keywords
+        # Search for matching keywords
         for keyword, categories in self.risk_map.items():
             if keyword in text:
                 for category in categories:
@@ -73,10 +73,10 @@ class RiskClassifier:
                         matched_keywords[keyword] = []
                     matched_keywords[keyword].append(category)
 
-        # 计算Risk评分
-        risk_score = min(len(matched_keywords) * 10, 100)  # 最高 100 分
+        # Calculate risk score
+        risk_score = min(len(matched_keywords) * 10, 100)  # Maximum 100
 
-        # 排序ClassificationResults
+        # Sort classification results
         sorted_categories = sorted(
             matched_categories.items(),
             key=lambda x: x[1],
@@ -93,7 +93,7 @@ class RiskClassifier:
         }
 
     def _get_classification_details(self, sorted_categories: List[Tuple]) -> Dict:
-        """获取Classification详情"""
+        """Get classification details"""
         if not sorted_categories:
             return {
                 "core_category": "Unknown",
@@ -115,13 +115,13 @@ class RiskClassifier:
 
     def get_risk_level(self, score: int) -> str:
         """
-        根据评分获取Risk等级
+        Get risk level based on score
 
         Args:
-            score: Risk评分 (0-100)
+            score: Risk score (0-100)
 
         Returns:
-            Risk等级: Low, Medium, High, Critical
+            Risk level: Low, Medium, High, Critical
         """
         if score >= 80:
             return "Critical"
@@ -136,18 +136,18 @@ class RiskClassifier:
 
     def get_all_keywords_by_category(self, core_category: Optional[str] = None) -> Dict:
         """
-        获取特定或所有Classification的Keywords
+        Get keywords for specific or all classifications
 
         Args:
-            core_category: 核心类别（可选）
+            core_category: Core category (optional)
 
         Returns:
-            ClassificationKeywords字典
+            Classification keywords dictionary
         """
         result = {}
 
         if core_category:
-            # 获取特定类别的Keywords
+            # Get keywords for specific category
             if core_category not in self.config['risk_categories']:
                 return {}
 
@@ -155,7 +155,7 @@ class RiskClassifier:
             for sub_cat, sub_data in core_data['subcategories'].items():
                 result[f"{core_category}::{sub_cat}"] = sub_data.get('keywords', [])
         else:
-            # 获取所有Keywords
+            # Get all keywords
             for core_cat, core_data in self.config['risk_categories'].items():
                 for sub_cat, sub_data in core_data['subcategories'].items():
                     result[f"{core_cat}::{sub_cat}"] = sub_data.get('keywords', [])
@@ -163,11 +163,11 @@ class RiskClassifier:
         return result
 
     def get_high_priority_keywords(self) -> List[str]:
-        """获取高优先级Keywords"""
+        """Get high priority keywords"""
         return self.config['mapping_guide']['priority_keywords']['high']
 
     def get_all_risk_categories(self) -> Dict:
-        """获取所有Risk类别的层级结构"""
+        """Get hierarchical structure of all risk categories"""
         return {
             "core_categories": [
                 cat_data['core_category']
@@ -179,16 +179,16 @@ class RiskClassifier:
 
 
 async def example_usage():
-    """使用Example"""
+    """Usage example"""
     print("\n" + "="*70)
-    print("ARGUS: RiskClassification系统 - 使用Example")
+    print("ARGUS: Risk Classification System - Usage Example")
     print("="*70)
 
-    # 初始化Classification器
+    # Initialize classifier
     classifier = RiskClassifier()
 
-    # Example 1: Classification单条News
-    print("\n[Example 1] Classification单条News")
+    # Example 1: Classify single news item
+    print("\n[Example 1] Classify single news item")
     print("-" * 70)
 
     news_examples = [
@@ -203,13 +203,13 @@ async def example_usage():
         result = classifier.classify_news(news)
         risk_level = classifier.get_risk_level(result['risk_score'])
 
-        print(f"\n📰 标题: {news[:70]}")
-        print(f"   Risk评分: {result['risk_score']} / 100 ({risk_level})")
-        print(f"   主要类别: {result['primary_category']}")
-        print(f"   匹配Keywords: {', '.join(result['matched_keywords'].keys())[:60]}")
+        print(f"\n📰 Title: {news[:70]}")
+        print(f"   Risk Score: {result['risk_score']} / 100 ({risk_level})")
+        print(f"   Primary Category: {result['primary_category']}")
+        print(f"   Matched Keywords: {', '.join(result['matched_keywords'].keys())[:60]}")
 
-    # Example 2: 获取所有Keywords
-    print("\n\n[Example 2] 获取 Financial Risk 的所有Keywords")
+    # Example 2: Get all keywords
+    print("\n\n[Example 2] Get all keywords for Financial Risk")
     print("-" * 70)
 
     keywords = classifier.get_all_keywords_by_category("FINANCIAL_RISK")
@@ -218,23 +218,23 @@ async def example_usage():
         print(f"\n{sub_cat}:")
         print(f"  Keywords: {', '.join(kw_list[:10])}")
 
-    # Example 3: 获取高优先级Keywords
-    print("\n\n[Example 3] 高优先级Keywords（需要立即关注）")
+    # Example 3: Get high priority keywords
+    print("\n\n[Example 3] High Priority Keywords (require immediate attention)")
     print("-" * 70)
 
     high_priority = classifier.get_high_priority_keywords()
     print(f"Keywords: {', '.join(high_priority)}")
 
-    # Example 4: 获取所有Risk类别
-    print("\n\n[Example 4] 所有Risk类别概览")
+    # Example 4: Get all risk categories
+    print("\n\n[Example 4] Overview of all risk categories")
     print("-" * 70)
 
     categories = classifier.get_all_risk_categories()
-    print(f"核心Risk类别数: {categories['total_categories']}")
-    print(f"核心类别: {', '.join(categories['core_categories'])}")
+    print(f"Number of core risk categories: {categories['total_categories']}")
+    print(f"Core categories: {', '.join(categories['core_categories'])}")
 
-    # Example 5: 批量Classification
-    print("\n\n[Example 5] 批量ClassificationResults统计")
+    # Example 5: Batch classification
+    print("\n\n[Example 5] Batch classification results summary")
     print("-" * 70)
 
     results = [classifier.classify_news(news) for news in news_examples]
@@ -246,10 +246,10 @@ async def example_usage():
             risk_distribution[level] = 0
         risk_distribution[level] += 1
 
-    print("Risk等级分布:")
+    print("Risk level distribution:")
     for level in ["Critical", "High", "Medium", "Low", "None"]:
         count = risk_distribution.get(level, 0)
-        print(f"  • {level}: {count} 条")
+        print(f"  • {level}: {count} items")
 
 
 if __name__ == "__main__":

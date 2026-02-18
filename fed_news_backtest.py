@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ARGUS: Federal Reserve News Backtest Crawler
-用于抓取历史News数据，支持多年份和Date范围Filter
+For fetching historical news data, supports multiple years and date range filtering
 """
 
 import asyncio
@@ -18,54 +18,54 @@ async def crawl_multiple_years(
     output_file: Optional[str] = None
 ) -> List[Dict]:
     """
-    抓取多个年份的News数据
+    Crawl news data from multiple years
 
     Args:
-        years: 要抓取的年份列表 (例如: [2024, 2025, 2026])
-        keywords: FilterKeywords列表
-        output_file: 输出FilePath
+        years: List of years to crawl (e.g., [2024, 2025, 2026])
+        keywords: List of filter keywords
+        output_file: Output file path
 
     Returns:
-        所有年份的News数据列表
+        List of news data from all years
     """
     crawler = FedNewsCrawler(keywords=keywords)
     all_news = []
 
-    print(f"开始抓取 {len(years)} 个年份的News数据...")
-    print(f"年份: {years}")
+    print(f"Starting to crawl news data for {len(years)} years...")
+    print(f"Years: {years}")
     print(f"Keywords: {', '.join(crawler.keywords)}")
     print("="*60)
 
     for year in years:
         url = f"https://www.federalreserve.gov/newsevents/pressreleases/{year}-press.htm"
 
-        print(f"\n正在抓取 {year} 年的数据...")
+        print(f"\nCrawling data for {year}...")
         result = await crawler.crawl(url=url)
 
         if result.get("status") == "success":
             year_news = result['json_data']
             all_news.extend(year_news)
 
-            print(f"  ✓ {year} 年: 找到 {result.get('total_items_found')} 条News, "
-                  f"Filter后 {result.get('filtered_items')} 条")
+            print(f"  ✓ {year}: Found {result.get('total_items_found')} news items, "
+                  f"filtered to {result.get('filtered_items')} items")
 
-            # 添加随机延迟以避免被限制
+            # Add random delay to avoid rate limiting
             import random
             await asyncio.sleep(random.uniform(1, 2))
         else:
-            print(f"  ✗ {year} 年: 抓取失败 - {result.get('error')}")
+            print(f"  ✗ {year}: Crawl failed - {result.get('error')}")
 
-    # 按Date倒序排列
+    # Sort by date in descending order
     all_news.sort(key=lambda x: x['date'], reverse=True)
 
     print("\n" + "="*60)
-    print(f"✓ 抓取完成: 共获取 {len(all_news)} 条News")
+    print(f"✓ Crawl complete: Retrieved {len(all_news)} news items")
 
-    # 保存Results
+    # Save results
     if output_file:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(all_news, f, ensure_ascii=False, indent=2)
-        print(f"✓ 数据已保存到: {output_file}")
+        print(f"✓ Data saved to: {output_file}")
 
     return all_news
 
@@ -76,15 +76,15 @@ def filter_by_date_range(
     end_date: str
 ) -> List[Dict]:
     """
-    按Date范围FilterNews (格式: YYYY-MM-DD)
+    Filter news by date range (format: YYYY-MM-DD)
 
     Args:
-        items: News列表
-        start_date: 开始Date (YYYY-MM-DD)
-        end_date: 结束Date (YYYY-MM-DD)
+        items: List of news items
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
 
     Returns:
-        Filter后的News列表
+        Filtered list of news items
     """
     from datetime import datetime
 
@@ -101,42 +101,42 @@ def filter_by_date_range(
 
 def filter_by_keywords(items: List[Dict], keywords: List[str]) -> List[Dict]:
     """
-    按KeywordsFilterNews
+    Filter news by keywords
 
     Args:
-        items: News列表
-        keywords: Keywords列表
+        items: List of news items
+        keywords: List of keywords
 
     Returns:
-        Filter后的News列表
+        Filtered list of news items
     """
     filtered = []
 
     for item in items:
         title_lower = item['title'].lower()
 
-        # Check标题是否包含任何Keywords
+        # Check if title contains any keywords
         for keyword in keywords:
             if keyword.lower() in title_lower:
                 filtered.append(item)
-                break  # 避免重复添加
+                break  # Avoid duplicate additions
 
     return filtered
 
 
 async def main():
     """
-    Example: 抓取 2024 和 2025 年的News数据
+    Example: Crawl news data from 2024 and 2025
 
-    修改说明:
-    - 如果需要其他年份，修改 years 列表
-    - 如果需要其他Keywords，修改 keywords 列表
-    - 如果需要特定的Date范围，使用 filter_by_date_range()
+    Notes:
+    - To use different years, modify the years list
+    - To use different keywords, modify the keywords list
+    - For specific date range, use filter_by_date_range()
     """
 
-    # ===== Example 1: 抓取 2024 和 2025 年全年数据 =====
+    # ===== Example 1: Crawl full year data for 2024 and 2025 =====
     print("\n" + "="*60)
-    print("Example 1: 抓取 2024 和 2025 年的News数据")
+    print("Example 1: Crawl news data for 2024 and 2025")
     print("="*60)
 
     backtest_data = await crawl_multiple_years(
@@ -144,9 +144,9 @@ async def main():
         output_file="data/fed_news/fed_news_backtest_2024_2025.json"
     )
 
-    # ===== Example 2: Filter特定Date范围的数据 =====
+    # ===== Example 2: Filter data for specific date range =====
     print("\n" + "="*60)
-    print("Example 2: Filter 2024 年 Q4 (10-12 月) 的数据")
+    print("Example 2: Filter 2024 Q4 (Oct-Dec) data")
     print("="*60)
 
     q4_data = filter_by_date_range(
@@ -155,31 +155,31 @@ async def main():
         end_date="2024-12-31"
     )
 
-    print(f"✓ Q4 数据: {len(q4_data)} 条记录")
+    print(f"✓ Q4 data: {len(q4_data)} records")
     if q4_data:
-        print("\n前 5 条:")
+        print("\nFirst 5:")
         for item in q4_data[:5]:
             print(f"  - [{item['date']}] {item['title'][:80]}...")
 
-    # ===== Example 3: 使用自定义KeywordsFilter =====
+    # ===== Example 3: Use custom keyword filter =====
     print("\n" + "="*60)
-    print("Example 3: Filter包含特定Keywords的News")
+    print("Example 3: Filter news containing specific keywords")
     print("="*60)
 
     custom_keywords = ["FOMC", "interest", "monetary policy", "rate decision"]
     filtered_data = filter_by_keywords(backtest_data, custom_keywords)
 
-    print(f"✓ 自定义KeywordsFilter: {len(filtered_data)} 条记录")
+    print(f"✓ Custom keyword filter: {len(filtered_data)} records")
     if filtered_data:
-        print("\n前 3 条:")
+        print("\nFirst 3:")
         for item in filtered_data[:3]:
             print(f"  - [{item['date']}] {item['title']}")
 
-    # ===== Example 4: 保存Filter后的数据 =====
+    # ===== Example 4: Save filtered data =====
     output_path = "data/fed_news/fed_news_filtered_2024_2025.json"
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(filtered_data, f, ensure_ascii=False, indent=2)
-    print(f"\n✓ Filter后的数据已保存到: {output_path}")
+    print(f"\n✓ Filtered data saved to: {output_path}")
 
 
 if __name__ == "__main__":

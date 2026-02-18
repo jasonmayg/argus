@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ARGUS: Federal Reserve News Database Manager
-使用 SQLite DatabaseStorage和Management历史News数据
+Uses SQLite Database for storing and managing historical news data
 """
 
 import sqlite3
@@ -11,14 +11,14 @@ from typing import List, Dict, Optional, Tuple
 
 
 class FedNewsDatabase:
-    """美联储NewsDatabaseManagement器"""
+    """Federal Reserve News Database Manager"""
 
     def __init__(self, db_path: str = "data/fed_news/argus_news.db"):
         """
-        初始化Database
+        Initialize the database
 
         Args:
-            db_path: DatabaseFilePath
+            db_path: Database file path
         """
         self.db_path = db_path
         self.conn = None
@@ -27,18 +27,18 @@ class FedNewsDatabase:
         self._create_tables()
 
     def _connect(self):
-        """ConnectionDatabase"""
+        """Connect to the database"""
         import os
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
 
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
-        print(f"✓ DatabaseConnection: {self.db_path}")
+        print(f"✓ Database connection established: {self.db_path}")
 
     def _create_tables(self):
-        """创建数据表"""
-        # News表
+        """Create database tables"""
+        # News table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS news (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +51,7 @@ class FedNewsDatabase:
             )
         ''')
 
-        # Keywords匹配表
+        # Keyword matches table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS keyword_matches (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +62,7 @@ class FedNewsDatabase:
             )
         ''')
 
-        # Risk分析表
+        # Risk analysis table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS risk_analysis (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +75,7 @@ class FedNewsDatabase:
             )
         ''')
 
-        # 元数据表
+        # Metadata table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT PRIMARY KEY,
@@ -85,17 +85,17 @@ class FedNewsDatabase:
         ''')
 
         self.conn.commit()
-        print("✓ 数据表已创建")
+        print("✓ Database tables created")
 
     def insert_news(self, news_items: List[Dict]) -> int:
         """
-        InsertNews数据
+        Insert news data
 
         Args:
-            news_items: News列表
+            news_items: List of news items
 
         Returns:
-            Insert的记录数
+            Number of records inserted
         """
         inserted = 0
 
@@ -110,20 +110,20 @@ class FedNewsDatabase:
                 )
                 inserted += self.cursor.rowcount
             except sqlite3.IntegrityError:
-                pass  # 链接已存在，跳过
+                pass  # Link already exists, skip
 
         self.conn.commit()
-        print(f"✓ Insert {inserted} 条News记录")
+        print(f"✓ Inserted {inserted} news records")
         return inserted
 
     def add_keyword_matches(self, keywords: List[str]):
         """
-        为所有News添加Keywords匹配记录
+        Add keyword match records for all news
 
         Args:
-            keywords: Keywords列表
+            keywords: List of keywords
         """
-        # 获取所有News
+        # Fetch all news
         self.cursor.execute('SELECT id, title FROM news')
         news = self.cursor.fetchall()
 
@@ -148,7 +148,7 @@ class FedNewsDatabase:
                         pass
 
         self.conn.commit()
-        print(f"✓ 添加 {matches_count} 条Keywords匹配")
+        print(f"✓ Added {matches_count} keyword matches")
 
     def query_by_date_range(
         self,
@@ -156,14 +156,14 @@ class FedNewsDatabase:
         end_date: str
     ) -> List[Dict]:
         """
-        按Date范围查询News
+        Query news by date range
 
         Args:
-            start_date: 开始Date (YYYY-MM-DD)
-            end_date: 结束Date (YYYY-MM-DD)
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
 
         Returns:
-            News列表
+            List of news items
         """
         self.cursor.execute(
             '''
@@ -177,13 +177,13 @@ class FedNewsDatabase:
 
     def query_by_keyword(self, keyword: str) -> List[Dict]:
         """
-        按Keywords查询News
+        Query news by keyword
 
         Args:
-            keyword: Keywords
+            keyword: Keyword
 
         Returns:
-            匹配的News列表
+            List of matching news items
         """
         self.cursor.execute(
             '''
@@ -198,13 +198,13 @@ class FedNewsDatabase:
 
     def query_by_keywords(self, keywords: List[str]) -> List[Dict]:
         """
-        按多个Keywords查询News（OR 逻辑）
+        Query news by multiple keywords (OR logic)
 
         Args:
-            keywords: Keywords列表
+            keywords: List of keywords
 
         Returns:
-            匹配的News列表
+            List of matching news items
         """
         if not keywords:
             return []
@@ -229,13 +229,13 @@ class FedNewsDatabase:
         analysis_text: str
     ):
         """
-        保存Risk分析Results
+        Save risk analysis results
 
         Args:
             news_id: News ID
-            risk_category: Risk类别
-            risk_score: Risk评分 (1-10)
-            analysis_text: 分析文本
+            risk_category: Risk category
+            risk_score: Risk score (1-10)
+            analysis_text: Analysis text
         """
         self.cursor.execute(
             '''
@@ -248,18 +248,18 @@ class FedNewsDatabase:
 
     def get_statistics(self) -> Dict:
         """
-        获取Database统计Information
+        Get database statistics
 
         Returns:
-            统计Information字典
+            Dictionary of statistics
         """
         stats = {}
 
-        # 总News数
+        # Total news count
         self.cursor.execute('SELECT COUNT(*) as count FROM news')
         stats['total_news'] = self.cursor.fetchone()['count']
 
-        # Date范围
+        # Date range
         self.cursor.execute('SELECT MIN(date) as min_date, MAX(date) as max_date FROM news')
         row = self.cursor.fetchone()
         stats['date_range'] = {
@@ -267,7 +267,7 @@ class FedNewsDatabase:
             'max': row['max_date']
         }
 
-        # 按年份统计
+        # Group by year
         self.cursor.execute(
             '''
             SELECT SUBSTR(date, 1, 4) as year, COUNT(*) as count
@@ -278,7 +278,7 @@ class FedNewsDatabase:
         )
         stats['by_year'] = {row['year']: row['count'] for row in self.cursor.fetchall()}
 
-        # Keywords分布
+        # Keyword distribution
         self.cursor.execute(
             '''
             SELECT keyword, COUNT(*) as count
@@ -294,11 +294,11 @@ class FedNewsDatabase:
 
     def export_to_json(self, output_file: str, query_filter: Optional[Dict] = None):
         """
-        导出数据为 JSON
+        Export data as JSON
 
         Args:
-            output_file: 输出FilePath
-            query_filter: 查询Filter条件 (可选)
+            output_file: Output file path
+            query_filter: Query filter conditions (optional)
         """
         if query_filter and 'date_range' in query_filter:
             news = self.query_by_date_range(
@@ -314,85 +314,85 @@ class FedNewsDatabase:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(news, f, ensure_ascii=False, indent=2)
 
-        print(f"✓ 已导出 {len(news)} 条News到: {output_file}")
+        print(f"✓ Exported {len(news)} news items to: {output_file}")
 
     def close(self):
-        """CloseDatabaseConnection"""
+        """Close database connection"""
         if self.conn:
             self.conn.close()
-            print("✓ DatabaseConnection已Close")
+            print("✓ Database connection closed")
 
 
 async def example_usage():
-    """使用Example"""
+    """Usage example"""
     from fed_news_crawler import FedNewsCrawler
 
     print("\n" + "="*70)
-    print("ARGUS: 美联储NewsDatabase - 使用Example")
+    print("ARGUS: Federal Reserve News Database - Usage Example")
     print("="*70)
 
-    # 1. 爬取News
-    print("\n[步骤 1] 爬取News...")
+    # 1. Crawl news
+    print("\n[Step 1] Crawl news...")
     crawler = FedNewsCrawler()
     result = await crawler.crawl(
         url="https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm"
     )
 
     if result['status'] != 'success':
-        print(f"❌ Crawler失败")
+        print(f"❌ Crawler failed")
         return
 
-    # 2. 初始化Database
-    print("\n[步骤 2] 初始化Database...")
+    # 2. Initialize database
+    print("\n[Step 2] Initialize database...")
     db = FedNewsDatabase()
 
-    # 3. InsertNews
-    print("\n[步骤 3] InsertNews数据...")
+    # 3. Insert news
+    print("\n[Step 3] Insert news data...")
     news_items = result['json_data']
     db.insert_news(news_items)
 
-    # 4. 添加Keywords匹配
-    print("\n[步骤 4] 添加Keywords匹配...")
+    # 4. Add keyword matches
+    print("\n[Step 4] Add keyword matches...")
     keywords = [
         "Payment", "Regulation", "Bank", "Interest",
         "Rate", "Treasury", "Monetary", "Financial", "Risk"
     ]
     db.add_keyword_matches(keywords)
 
-    # 5. 查询Example
-    print("\n[步骤 5] 查询Example...")
+    # 5. Query examples
+    print("\n[Step 5] Query examples...")
 
-    # 查询所有包含 "Bank" 的News
+    # Query all news containing "Bank"
     bank_news = db.query_by_keyword("Bank")
-    print(f"\n包含 'Bank' 的News: {len(bank_news)} 条")
+    print(f"\nNews containing 'Bank': {len(bank_news)} items")
     for item in bank_news[:3]:
         print(f"  • [{item['date']}] {item['title'][:80]}...")
 
-    # 查询多个Keywords
+    # Query multiple keywords
     multi_news = db.query_by_keywords(["Interest", "Rate"])
-    print(f"\n包含 'Interest' 或 'Rate' 的News: {len(multi_news)} 条")
+    print(f"\nNews containing 'Interest' or 'Rate': {len(multi_news)} items")
 
-    # 6. 获取统计Information
-    print("\n[步骤 6] Database统计...")
+    # 6. Get statistics
+    print("\n[Step 6] Database statistics...")
     stats = db.get_statistics()
-    print(f"总News数: {stats['total_news']}")
-    print(f"Date范围: {stats['date_range']['min']} 至 {stats['date_range']['max']}")
-    print(f"\n按年份分布:")
+    print(f"Total news: {stats['total_news']}")
+    print(f"Date range: {stats['date_range']['min']} to {stats['date_range']['max']}")
+    print(f"\nDistribution by year:")
     for year, count in stats['by_year'].items():
-        print(f"  • {year}: {count} 条")
-    print(f"\n热门Keywords:")
+        print(f"  • {year}: {count} items")
+    print(f"\nTop keywords:")
     for keyword, count in list(stats['top_keywords'].items())[:5]:
-        print(f"  • {keyword}: {count} 条")
+        print(f"  • {keyword}: {count} items")
 
-    # 7. 导出数据
-    print("\n[步骤 7] 导出数据...")
+    # 7. Export data
+    print("\n[Step 7] Export data...")
     db.export_to_json("data/fed_news/database_export.json")
 
-    # 8. CloseDatabase
-    print("\n[步骤 8] CloseDatabase...")
+    # 8. Close database
+    print("\n[Step 8] Close database...")
     db.close()
 
-    print("\n✅ Example完成")
+    print("\n✅ Example completed")
 
 
 if __name__ == "__main__":

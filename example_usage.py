@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ARGUS: 美联储NewsCrawler - 使用Example
+ARGUS: Federal Reserve News Crawler - Usage Examples
 
-展示如何在实际项目中使用Crawler进行News监控和分析
+Demonstrates how to use the Crawler for news monitoring and analysis in real projects
 """
 
 import asyncio
@@ -17,44 +17,44 @@ from fed_news_backtest import (
 
 
 async def example_1_basic_crawl():
-    """Example 1: 基本Crawler用法 - 抓取当前月份News"""
+    """Example 1: Basic crawler usage - crawl current month news"""
     print("\n" + "="*70)
-    print("Example 1: 基本Crawler用法 - 抓取当前月份的News")
+    print("Example 1: Basic Crawler usage - crawl current month news")
     print("="*70)
 
     crawler = FedNewsCrawler()
 
-    # 获取 2026 年的News
+    # Get news from 2026
     result = await crawler.crawl(
         url="https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm"
     )
 
     if result['status'] == 'success':
-        # 打印统计Information
-        print(f"\n📊 统计Information:")
-        print(f"  • 找到News总数: {result['total_items_found']}")
-        print(f"  • Filter后数量: {result['filtered_items']}")
-        print(f"  • 抓取时间: {result['timestamp']}")
+        # Print statistics
+        print(f"\n📊 Statistics:")
+        print(f"  • Total news found: {result['total_items_found']}")
+        print(f"  • After filter: {result['filtered_items']}")
+        print(f"  • Crawl time: {result['timestamp']}")
 
-        # 打印Filter后的News
-        print(f"\n📰 Filter后的News (共 {len(result['json_data'])} 条):")
+        # Print filtered news
+        print(f"\n📰 Filtered news (total {len(result['json_data'])} items):")
         for i, news in enumerate(result['json_data'], 1):
             print(f"\n  {i}. [{news['date']}] {news['title']}")
             print(f"     Link: {news['link']}")
 
         return result['json_data']
     else:
-        print(f"❌ Crawler失败: {result.get('error')}")
+        print(f"❌ Crawler failed: {result.get('error')}")
         return []
 
 
 async def example_2_custom_keywords():
-    """Example 2: 使用自定义KeywordsFilter"""
+    """Example 2: Use custom keyword filter"""
     print("\n" + "="*70)
-    print("Example 2: 使用自定义KeywordsFilter - 仅保留 FOMC 和利率相关News")
+    print("Example 2: Use custom keyword filter - FOMC and interest rate related news")
     print("="*70)
 
-    # 定义自定义Keywords
+    # Define custom keywords
     fomc_keywords = [
         "FOMC", "Federal Open Market Committee",
         "interest rate", "rate decision",
@@ -68,39 +68,39 @@ async def example_2_custom_keywords():
     )
 
     if result['status'] == 'success':
-        print(f"\n使用Keywords: {', '.join(fomc_keywords)}")
-        print(f"Filter后News数: {result['filtered_items']}")
+        print(f"\nUsing keywords: {', '.join(fomc_keywords)}")
+        print(f"News count after filter: {result['filtered_items']}")
 
         if result['json_data']:
             print(f"\n📄 Results:")
             for news in result['json_data']:
                 print(f"  • {news['title']}")
         else:
-            print("⚠️ 没有找到匹配的News")
+            print("⚠️ No matching news found")
 
         return result['json_data']
     else:
-        print(f"❌ Crawler失败: {result.get('error')}")
+        print(f"❌ Crawler failed: {result.get('error')}")
         return []
 
 
 async def example_3_historical_data():
-    """Example 3: 获取历史数据用于回测"""
+    """Example 3: Get historical data for backtesting"""
     print("\n" + "="*70)
-    print("Example 3: 获取历史数据用于回测 - 抓取 2024 和 2025 年数据")
+    print("Example 3: Get historical data for backtesting - crawl 2024 and 2025 data")
     print("="*70)
 
-    # 获取多年数据
+    # Get multi-year data
     all_news = await crawl_multiple_years(
         years=[2024, 2025],
         output_file="data/fed_news/example_historical.json"
     )
 
-    # 统计Information
-    print(f"\n📊 历史数据统计:")
-    print(f"  • 总News数: {len(all_news)}")
+    # Statistics
+    print(f"\n📊 Historical data statistics:")
+    print(f"  • Total news: {len(all_news)}")
 
-    # 按年份分组
+    # Group by year
     by_year = {}
     for item in all_news:
         year = item['date'][:4]
@@ -109,76 +109,76 @@ async def example_3_historical_data():
         by_year[year].append(item)
 
     for year in sorted(by_year.keys()):
-        print(f"  • {year} 年: {len(by_year[year])} 条News")
+        print(f"  • Year {year}: {len(by_year[year])} news items")
 
     return all_news
 
 
 async def example_4_date_filtering():
-    """Example 4: 按Date范围Filter"""
+    """Example 4: Filter by date range"""
     print("\n" + "="*70)
-    print("Example 4: 按Date范围Filter - Filter 2025 年 Q4 的News")
+    print("Example 4: Filter by date range - filter 2025 Q4 news")
     print("="*70)
 
-    # 先获取数据
+    # First fetch data
     all_news = await crawl_multiple_years(
         years=[2025],
         keywords=["regulation", "bank", "interest"]
     )
 
-    # Filter Q4 (10月-12月)
+    # Filter Q4 (Oct-Dec)
     q4_news = filter_by_date_range(
         all_news,
         start_date="2025-10-01",
         end_date="2025-12-31"
     )
 
-    print(f"\n📅 Date范围Filter:")
-    print(f"  • 原始数据: {len(all_news)} 条")
-    print(f"  • Q4 数据: {len(q4_news)} 条")
+    print(f"\n📅 Date range filter:")
+    print(f"  • Original data: {len(all_news)} items")
+    print(f"  • Q4 data: {len(q4_news)} items")
 
     if q4_news:
-        print(f"\n2025 年 Q4 的News:")
-        for news in q4_news[:5]:  # 只显示前 5 条
+        print(f"\nNews from 2025 Q4:")
+        for news in q4_news[:5]:  # Show first 5 items only
             print(f"  • [{news['date']}] {news['title'][:80]}...")
 
 
 async def example_5_save_and_load():
-    """Example 5: 保存和加载CrawlerResults"""
+    """Example 5: Save and load crawler results"""
     print("\n" + "="*70)
-    print("Example 5: 保存和加载CrawlerResults")
+    print("Example 5: Save and load crawler results")
     print("="*70)
 
-    # 1. Crawler并保存
+    # 1. Crawl and save
     crawler = FedNewsCrawler(keywords=["bank", "regulation"])
     result = await crawler.crawl(
         url="https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm"
     )
 
-    # 2. 保存为 JSON
+    # 2. Save as JSON
     output_file = "data/fed_news/example_save.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(result['json_data'], f, ensure_ascii=False, indent=2)
-    print(f"\n💾 已保存到: {output_file}")
+    print(f"\n💾 Saved to: {output_file}")
 
-    # 3. 从File加载
+    # 3. Load from file
     with open(output_file, 'r', encoding='utf-8') as f:
         loaded_data = json.load(f)
-    print(f"📂 已加载 {len(loaded_data)} 条News")
+    print(f"📂 Loaded {len(loaded_data)} news items")
 
-    # 4. 对加载的数据进行处理
-    print(f"\n加载的News摘要:")
+    # 4. Process loaded data
+    print(f"\nSummary of loaded news:")
     for news in loaded_data[:3]:
         print(f"  • [{news['date']}] {news['title'][:70]}...")
 
 
 async def example_6_risk_analysis():
-    """Example 6: 用于Risk分析 - 统计Risk相关News"""
+    """Example 6: For risk analysis - count risk-related news"""
     print("\n" + "="*70)
-    print("Example 6: 用于Risk分析 - 统计Risk相关News")
+    print("Example 6: For risk analysis - count risk-related news")
     print("="*70)
 
-    # 定义Risk相关的Keywords
+    # Define risk-related keywords
     risk_keywords = [
         "risk", "crisis", "instability",
         "default", "stress test", "capital",
@@ -190,10 +190,10 @@ async def example_6_risk_analysis():
         keywords=risk_keywords
     )
 
-    print(f"\n⚠️ Risk相关News统计:")
-    print(f"  • 2024-2025 年期间找到 {len(all_news)} 条Risk相关News")
+    print(f"\n⚠️ Risk-related news statistics:")
+    print(f"  • Found {len(all_news)} risk-related news items during 2024-2025")
 
-    # 按月份统计
+    # Group by month
     by_month = {}
     for item in all_news:
         month = item['date'][:7]  # YYYY-MM
@@ -201,47 +201,47 @@ async def example_6_risk_analysis():
             by_month[month] = 0
         by_month[month] += 1
 
-    print(f"\n按月份分布:")
+    print(f"\nDistribution by month:")
     for month in sorted(by_month.keys()):
-        print(f"  • {month}: {by_month[month]} 条")
+        print(f"  • {month}: {by_month[month]} items")
 
-    # 显示最新的RiskNews
-    print(f"\n最新的Risk相关News:")
+    # Show latest risk news
+    print(f"\nLatest risk-related news:")
     for news in all_news[:5]:
         print(f"  • [{news['date']}] {news['title']}")
 
 
 async def main():
-    """运行所有Example"""
+    """Run all examples"""
     print("\n" + "🤖 "*35)
-    print("ARGUS 美联储NewsCrawler - 使用Example")
+    print("ARGUS Federal Reserve News Crawler - Usage Examples")
     print("🤖 "*35)
 
     try:
-        # 运行各个Example
-        # 注意: 取消注释以运行特定Example，或运行全部
+        # Run various examples
+        # Note: Uncomment to run specific examples, or run all
 
-        # example_1_basic_crawl()  # 基本用法
-        # await example_2_custom_keywords()  # 自定义Keywords
-        # await example_3_historical_data()  # 历史数据
-        # await example_4_date_filtering()  # DateFilter
-        # await example_5_save_and_load()  # 保存和加载
-        # await example_6_risk_analysis()  # Risk分析
+        # example_1_basic_crawl()  # Basic usage
+        # await example_2_custom_keywords()  # Custom keywords
+        # await example_3_historical_data()  # Historical data
+        # await example_4_date_filtering()  # Date filter
+        # await example_5_save_and_load()  # Save and load
+        # await example_6_risk_analysis()  # Risk analysis
 
-        # 运行Example 1: 基本Crawler
+        # Run Example 1: Basic crawler
         news_data = await example_1_basic_crawl()
 
-        # 如果想运行其他Example，取消下行注释
+        # To run other examples, uncomment the line below
         # await example_2_custom_keywords()
         # await example_3_historical_data()
 
     except Exception as e:
-        print(f"\n❌ 发生Error: {e}")
+        print(f"\n❌ Error occurred: {e}")
         import traceback
         traceback.print_exc()
 
     print("\n" + "="*70)
-    print("✅ Example运行完成")
+    print("✅ Example execution completed")
     print("="*70)
 
 
