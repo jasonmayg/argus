@@ -4,4 +4,4 @@ Add under ## Code Style or ## Core Rules section\n\nAll code, comments, variable
 
 Add under ## Core Rules or ## Output Preferences section\n\nDo not generate summary documents, recap files, or 'final summary' markdown unless explicitly asked. Focus output on deliverables: working code, tests, and commits.
 
-Add under a ## Project Context section near the top of CLAUDE.md\n\nThis is a Python RAG/Multi-Agent project using LangChain, LangGraph, Streamlit, ChromaDB, and SQLite. Always ensure .env files are loaded (via python-dotenv) before any API client initialization. When modifying database code, handle SQLite threading with check_same_thread=False.
+Make sure all generated docs except README.md are under docs/folder
