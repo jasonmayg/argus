@@ -23,6 +23,7 @@ import unicodedata
 from json import JSONEncoder
 
 from agents_system import AgentOrchestrator
+from data_dashboard import data_dashboard_bp
 
 
 class SafeJSONEncoder(JSONEncoder):
@@ -72,6 +73,8 @@ CORS(app)
 app.json_encoder = SafeJSONEncoder
 # IMPORTANT: Disable sort_keys to prevent comparison errors with None values
 app.config['JSON_SORT_KEYS'] = False
+
+app.register_blueprint(data_dashboard_bp)
 
 GUARDIAN_SOURCE_WHITELIST = {
     "gdelt",
