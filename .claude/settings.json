@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "postEdit": {
+      "command": "cd $PROJECT_DIR && python -c 'import ast; import sys; [ast.parse(open(f).read()) for f in sys.argv[1:]]' $EDITED_FILES && python -m py_compile $EDITED_FILES",
+      "description": "Syntax-check all edited Python files"
+    }
+  }
+}
