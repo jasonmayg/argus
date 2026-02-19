@@ -123,6 +123,29 @@ def _join_gcs_prefix(prefix: str, suffix: str) -> str:
     return f"{p}/{s}" if p else s
 
 
+def _init_gcs_client(storage_module) -> tuple[Any, str]:
+    """
+    Build GCS client with explicit fallback credentials.
+    Returns (client, auth_source) for diagnostics.
+    """
+    project = os.getenv("GOOGLE_CLOUD_PROJECT", "").strip() or None
+    adc_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if adc_path:
+        return storage_module.Client(project=project), f"adc:{adc_path}"
+
+    root = Path(__file__).resolve().parent
+    key_candidates = [
+        root / "keys" / "treasury-reader.json",
+        root / "keys" / "service-account.json",
+    ]
+    for key_path in key_candidates:
+        if key_path.exists():
+            client = storage_module.Client.from_service_account_json(str(key_path), project=project)
+            return client, f"service_account:{key_path}"
+
+    return storage_module.Client(project=project), "adc:default"
+
+
 def _parse_json_text(raw_text: str) -> dict | None:
     try:
         obj = json.loads(raw_text)
@@ -629,7 +652,7 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         }
 
     try:
-        client = storage.Client()
+        client, auth_source = _init_gcs_client(storage)
         bucket = client.bucket(bucket_name)
     except Exception as e:
         return {
@@ -763,7 +786,7 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         "snapshot": loaded_snapshot,
         "snapshot_ref": f"gs://{bucket_name}/{loaded_object}",
         "previous_snapshot": previous_snapshot,
-        "message": "",
+        "message": f"auth={auth_source}",
         "bucket": bucket_name,
         "prefix": prefix,
     }
