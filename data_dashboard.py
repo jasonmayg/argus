@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from io import StringIO
+
+from google.cloud import storage  # 你们 Guardian 已经在用这个
 
 from flask import Blueprint, jsonify, request, render_template_string
 
@@ -70,11 +73,32 @@ def _classify_dataset(file_stem: str) -> str:
         return "macro"
     return "other"
 
+def _get_gcs_prefix() -> str:
+    """
+    例子：gs://your-gcs-bucket/raw/dt=2026-02-18/
+    """
+    return os.getenv("DATA_DASHBOARD_GCS_PREFIX", "").strip()
+
+def _parse_gs_uri(gs_uri: str) -> Tuple[str, str]:
+    if not gs_uri.startswith("gs://"):
+        raise ValueError("DATA_DASHBOARD_GCS_PREFIX must start with gs://")
+    rest = gs_uri[5:]
+    parts = rest.split("/", 1)
+    bucket_name = parts[0]
+    prefix = parts[1] if len(parts) > 1 else ""
+    if prefix and not prefix.endswith("/"):
+        prefix += "/"
+    return bucket_name, prefix
+
+def _get_bucket() -> storage.bucket.Bucket:
+    gs = _get_gcs_prefix()
+    bucket_name, _ = _parse_gs_uri(gs)
+    client = storage.Client()
+    return client.bucket(bucket_name)
 
 def _resolve_data_dir() -> Path:
     """
-    优先用环境变量 DATA_DASHBOARD_DATA_DIR
-    否则尝试项目内常见目录：Dataset/ 或 guardian_poc/data/ 或当前目录
+    本地 fallback（只有当 DATA_DASHBOARD_GCS_PREFIX 没设置时才会用）
     """
     env_dir = os.getenv("DATA_DASHBOARD_DATA_DIR", "").strip()
     if env_dir:
@@ -84,18 +108,193 @@ def _resolve_data_dir() -> Path:
     candidates = [
         here / "Dataset",
         here / "guardian_poc" / "data",
-        here,  # fallback
+        here,
     ]
     for c in candidates:
         if c.exists() and any(c.glob("*.csv")):
             return c
     return candidates[0]
+def _get_gcs_bucket():
+    bucket_name = os.getenv("ARGUS_GCS_BUCKET", "").strip()
+    if not bucket_name:
+        raise RuntimeError("Missing env ARGUS_GCS_BUCKET")
+    client = storage.Client()  # uses GOOGLE_APPLICATION_CREDENTIALS
+    return client.bucket(bucket_name)
 
 
-def _list_csv_files(data_dir: Path) -> List[Path]:
-    if not data_dir.exists():
-        return []
-    return sorted([p for p in data_dir.glob("*.csv") if p.is_file()])
+def _gcs_latest_dt_prefix(bucket, base_prefix: str = "raw/") -> str:
+    """
+    Auto-detect latest dt=YYYY-MM-DD under base_prefix.
+    Returns like: raw/dt=2026-02-18/
+    """
+    base_prefix = base_prefix.rstrip("/") + "/"
+    dt_values = set()
+
+    # list_blobs is flat; we just parse dt=... from blob.name
+    for b in bucket.list_blobs(prefix=base_prefix):
+        m = re.search(rf"{re.escape(base_prefix)}dt=(\d{{4}}-\d{{2}}-\d{{2}})/", b.name)
+        if m:
+            dt_values.add(m.group(1))
+
+    if not dt_values:
+        return base_prefix  # fallback: raw/
+
+    latest = sorted(dt_values)[-1]
+    return f"{base_prefix}dt={latest}/"
+
+
+def _list_gcs_csv_blobs(bucket, prefix: str) -> List[Any]:
+    prefix = prefix.rstrip("/") + "/"
+    blobs = list(bucket.list_blobs(prefix=prefix))
+    return [b for b in blobs if b.name.lower().endswith(".csv")]
+
+
+def _read_gcs_csv_text(bucket, blob_name: str) -> str:
+    return bucket.blob(blob_name).download_as_text()
+
+
+def _read_csv_from_text(text: str) -> List[Dict[str, Any]]:
+    if pd is not None:
+        df = pd.read_csv(StringIO(text))
+        return df.to_dict(orient="records")
+
+    # fallback: csv.DictReader
+    rows: List[Dict[str, Any]] = []
+    reader = csv.DictReader(StringIO(text))
+    for r in reader:
+        rows.append(dict(r))
+    return rows
+
+
+def _build_series_from_text(file_name: str, text: str) -> Dict[str, Any]:
+    rows = _read_csv_from_text(text)
+    date_col, value_col = _infer_xy(rows)
+
+    points: List[Tuple[str, float]] = []
+    if date_col and value_col:
+        for r in rows:
+            d = _parse_date_any(r.get(date_col))
+            v = _safe_float(r.get(value_col))
+            if d and v is not None:
+                points.append((d, v))
+
+    points.sort(key=lambda x: x[0])
+    dates = [p[0] for p in points]
+    values = [p[1] for p in points]
+
+    return {
+        "file": file_name,
+        "date_col": date_col,
+        "value_col": value_col,
+        "points": len(points),
+        "dates": dates,
+        "values": values,
+        "min_date": dates[0] if dates else None,
+        "max_date": dates[-1] if dates else None,
+    }
+
+
+def _inventory_from_gcs(bucket, prefix: str) -> Dict[str, Any]:
+    blobs = _list_gcs_csv_blobs(bucket, prefix)
+
+    items = []
+    countries = set()
+    indicators = set()
+    min_date = None
+    max_date = None
+
+    for b in sorted(blobs, key=lambda x: x.name):
+        base = Path(b.name).name          # us_cpi.csv
+        stem = Path(b.name).stem          # us_cpi
+        ds_type = _classify_dataset(stem)
+        country = _infer_country_from_filename(stem)
+        indicator = _infer_indicator_from_filename(stem)
+        display = INDICATOR_DISPLAY.get(indicator, indicator)
+
+        if country:
+            countries.add(country)
+        if indicator:
+            indicators.add(indicator)
+
+        series_meta = {}
+        if ds_type in {"macro", "risk"}:
+            try:
+                text = _read_gcs_csv_text(bucket, b.name)
+                series_meta = _build_series_from_text(base, text)
+            except Exception:
+                series_meta = {}
+
+        d0 = series_meta.get("min_date")
+        d1 = series_meta.get("max_date")
+        if d0:
+            min_date = d0 if min_date is None else min(min_date, d0)
+        if d1:
+            max_date = d1 if max_date is None else max(max_date, d1)
+
+        items.append({
+            "file": base,           # 给前端展示+选择用
+            "blob": b.name,         # 关键：后端读数据用
+            "stem": stem,
+            "type": ds_type,
+            "country": country,
+            "indicator": indicator,
+            "indicator_display": display,
+            "size_bytes": getattr(b, "size", None),
+            "min_date": d0,
+            "max_date": d1,
+            "points": series_meta.get("points"),
+        })
+
+    return {
+        "gcs_prefix": prefix,
+        "sources": items,
+        "country_count": len(countries),
+        "indicator_count": len(indicators),
+        "source_count": len(items),
+        "min_date": min_date,
+        "max_date": max_date,
+    }
+
+
+def _list_csv_sources() -> List[Dict[str, Any]]:
+    """
+    统一返回 source 列表：
+    - GCS:  {"kind":"gcs","file":"us_cpi.csv","stem":"us_cpi","blob":"raw/dt=.../us_cpi.csv","size_bytes":123}
+    - Local:{"kind":"local","file":"us_cpi.csv","stem":"us_cpi","path":Path(...),"size_bytes":123}
+    """
+    gs = _get_gcs_prefix()
+    if gs:
+        bucket = _get_bucket()
+        _, prefix = _parse_gs_uri(gs)
+        blobs = list(bucket.list_blobs(prefix=prefix))
+        out: List[Dict[str, Any]] = []
+        for b in blobs:
+            name = str(b.name)
+            if not name.lower().endswith(".csv"):
+                continue
+            file_name = Path(name).name
+            out.append({
+                "kind": "gcs",
+                "file": file_name,
+                "stem": Path(file_name).stem,
+                "blob": name,
+                "size_bytes": getattr(b, "size", None),
+            })
+        return sorted(out, key=lambda x: x["file"])
+
+    # fallback local
+    data_dir = _resolve_data_dir()
+    out: List[Dict[str, Any]] = []
+    if data_dir.exists():
+        for p in sorted([p for p in data_dir.glob("*.csv") if p.is_file()]):
+            out.append({
+                "kind": "local",
+                "file": p.name,
+                "stem": p.stem,
+                "path": p,
+                "size_bytes": p.stat().st_size,
+            })
+    return out
 
 
 def _infer_country_from_filename(stem: str) -> Optional[str]:
@@ -166,10 +365,31 @@ def _parse_date_any(x: Any) -> Optional[str]:
     return None
 
 
-def _read_csv_any(path: Path) -> List[Dict[str, Any]]:
+def _read_csv_any(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    返回 row dict 列表（尽量兼容各种 schema）
+    source: {"kind":"gcs"...} or {"kind":"local"...}
     """
+    if source.get("kind") == "gcs":
+        bucket = _get_bucket()
+        blob = bucket.blob(source["blob"])
+        text = blob.download_as_text()
+
+        if pd is not None:
+            try:
+                df = pd.read_csv(StringIO(text))
+                return df.to_dict(orient="records")
+            except Exception:
+                pass
+
+        rows: List[Dict[str, Any]] = []
+        reader = csv.DictReader(StringIO(text))
+        for r in reader:
+            rows.append(dict(r))
+        return rows
+
+    # local
+    path: Path = source["path"]
+
     if pd is not None:
         try:
             df = pd.read_csv(path)
@@ -236,8 +456,8 @@ def _infer_xy(rows: List[Dict[str, Any]]) -> Tuple[Optional[str], Optional[str]]
     return (date_col, value_col)
 
 
-def _build_series(path: Path) -> Dict[str, Any]:
-    rows = _read_csv_any(path)
+def _build_series(source: Dict[str, Any]) -> Dict[str, Any]:
+    rows = _read_csv_any(source)
     date_col, value_col = _infer_xy(rows)
 
     points: List[Tuple[str, float]] = []
@@ -248,13 +468,12 @@ def _build_series(path: Path) -> Dict[str, Any]:
             if d and v is not None:
                 points.append((d, v))
 
-    # sort by date string
     points.sort(key=lambda x: x[0])
     dates = [p[0] for p in points]
     values = [p[1] for p in points]
 
     return {
-        "file": path.name,
+        "file": source["file"],
         "date_col": date_col,
         "value_col": value_col,
         "points": len(points),
@@ -275,7 +494,7 @@ def _normalize_100(values: List[float]) -> List[float]:
 
 
 def _inventory(data_dir: Path) -> Dict[str, Any]:
-    files = _list_csv_files(data_dir)
+    sources = _list_csv_sources()
     items = []
     countries = set()
     indicators = set()
@@ -283,8 +502,8 @@ def _inventory(data_dir: Path) -> Dict[str, Any]:
     min_date = None
     max_date = None
 
-    for fp in files:
-        stem = fp.stem
+    for src in sources:
+        stem = src["stem"]
         ds_type = _classify_dataset(stem)
         country = _infer_country_from_filename(stem)
         indicator = _infer_indicator_from_filename(stem)
@@ -295,11 +514,10 @@ def _inventory(data_dir: Path) -> Dict[str, Any]:
         if indicator:
             indicators.add(indicator)
 
-        # try lightweight peek for date range (macro/risk mostly)
         series_meta = {}
         if ds_type in {"macro", "risk"}:
             try:
-                series_meta = _build_series(fp)
+                series_meta = _build_series(src)
             except Exception:
                 series_meta = {}
 
@@ -311,20 +529,28 @@ def _inventory(data_dir: Path) -> Dict[str, Any]:
             max_date = d1 if max_date is None else max(max_date, d1)
 
         items.append({
-            "file": fp.name,
+            "file": src["file"],
             "stem": stem,
             "type": ds_type,
             "country": country,
             "indicator": indicator,
             "indicator_display": display,
-            "size_bytes": fp.stat().st_size,
+            "size_bytes": src.get("size_bytes"),
             "min_date": d0,
             "max_date": d1,
             "points": series_meta.get("points"),
+            # 关键：把 blob/path 存进去，后面画图要用
+            "kind": src.get("kind"),
+            "blob": src.get("blob"),
+            "path": str(src.get("path")) if src.get("path") else None,
         })
 
+    # data_dir 这里改成“当前数据源”
+    gs = _get_gcs_prefix()
+    data_loc = gs if gs else str(data_dir)
+
     return {
-        "data_dir": str(data_dir),
+        "data_dir": data_loc,
         "sources": items,
         "country_count": len(countries),
         "indicator_count": len(indicators),
@@ -337,8 +563,15 @@ def _inventory(data_dir: Path) -> Dict[str, Any]:
 def _coverage_matrix(inv: Dict[str, Any]) -> Dict[str, Any]:
     # only macro series considered for matrix
     sources = inv.get("sources", [])
-    countries = sorted({s["country"] for s in sources if s.get("type") == "macro" and s.get("country")})
-    indicators = sorted({s["indicator"] for s in sources if s.get("type") == "macro" and s.get("indicator")})
+    countries = sorted({
+        s["country"] for s in sources
+        if s.get("type") == "macro" and isinstance(s.get("country"), str)
+    })
+
+    indicators = sorted({
+        s["indicator"] for s in sources
+        if s.get("type") == "macro" and isinstance(s.get("indicator"), str)
+    })
 
     matrix = []
     for c in countries:
@@ -355,19 +588,37 @@ def _coverage_matrix(inv: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _find_file_for(country: str, indicator: str, inv: Dict[str, Any]) -> Optional[str]:
-    # match macro first, then risk (some are non-country)
+def _find_source_for(country: str, indicator: str, inv: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     country_norm = country.strip()
     ind_norm = indicator.strip().lower()
+
+    # macro first
     for s in inv.get("sources", []):
         if s.get("indicator") == ind_norm and s.get("country") == country_norm:
-            return s.get("file")
-    # allow non-country indicators (risk)
+            return s
+
+    # non-country (risk)
     for s in inv.get("sources", []):
         if s.get("indicator") == ind_norm and not s.get("country"):
-            return s.get("file")
+            return s
+
     return None
 
+def _to_source_dict(item: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    inv['sources'] 里的一条 item -> _build_series() 需要的 source dict
+    """
+    src = {
+        "kind": item.get("kind"),
+        "file": item["file"],
+        "stem": item.get("stem") or Path(item["file"]).stem,
+    }
+    if item.get("kind") == "gcs":
+        src["blob"] = item["blob"]
+    else:
+        # item["path"] 在 inventory 里我让你存的是 str
+        src["path"] = Path(item["path"])
+    return src
 
 # -------------------------
 # Routes / APIs
@@ -380,42 +631,65 @@ def data_page():
 
 @data_dashboard_bp.get("/api/data/inventory")
 def api_inventory():
-    data_dir = _resolve_data_dir()
-    inv = _inventory(data_dir)
+    bucket = _get_gcs_bucket()
+
+    # 如果你不想每次手动改 dt，就用 latest 自动发现
+    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
+    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip()
+    if not prefix:
+        prefix = _gcs_latest_dt_prefix(bucket, base_prefix)
+
+    inv = _inventory_from_gcs(bucket, prefix)
     return jsonify(inv)
 
 
 @data_dashboard_bp.get("/api/data/matrix")
 def api_matrix():
-    data_dir = _resolve_data_dir()
-    inv = _inventory(data_dir)
+    bucket = _get_gcs_bucket()
+    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
+    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+
+    inv = _inventory_from_gcs(bucket, prefix)
     return jsonify(_coverage_matrix(inv))
 
+def _find_blob_for(country: str, indicator: str, inv: Dict[str, Any]) -> Optional[str]:
+    country_norm = country.strip()
+    ind_norm = indicator.strip().lower()
+
+    for s in inv.get("sources", []):
+        if s.get("indicator") == ind_norm and s.get("country") == country_norm:
+            return s.get("blob")
+
+    for s in inv.get("sources", []):
+        if s.get("indicator") == ind_norm and not s.get("country"):
+            return s.get("blob")
+
+    return None
 
 @data_dashboard_bp.get("/api/data/series")
 def api_series():
-    """
-    /api/data/series?country=USA&indicator=cpi
-    /api/data/series?indicator=conflict_light  (risk dataset without country)
-    """
     country = (request.args.get("country") or "").strip()
     indicator = (request.args.get("indicator") or "").strip().lower()
 
-    data_dir = _resolve_data_dir()
-    inv = _inventory(data_dir)
-    fn = _find_file_for(country, indicator, inv)
-    if not fn:
+    bucket = _get_gcs_bucket()
+    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
+    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+
+    inv = _inventory_from_gcs(bucket, prefix)
+    blob_name = _find_blob_for(country, indicator, inv)
+    if not blob_name:
         return jsonify({"ok": False, "message": "dataset not found", "country": country, "indicator": indicator}), 404
 
-    fp = data_dir / fn
-    meta = _build_series(fp)
+    text = _read_gcs_csv_text(bucket, blob_name)
+    meta = _build_series_from_text(Path(blob_name).name, text)
 
     return jsonify({
         "ok": True,
         "country": country or None,
         "indicator": indicator,
         "indicator_display": INDICATOR_DISPLAY.get(indicator, indicator),
-        "file": fn,
+        "file": Path(blob_name).name,
+        "blob": blob_name,
         "date_col": meta["date_col"],
         "value_col": meta["value_col"],
         "min_date": meta["min_date"],
@@ -427,34 +701,38 @@ def api_series():
 
 @data_dashboard_bp.get("/api/data/compare")
 def api_compare():
-    """
-    /api/data/compare?countries=USA,Canada&indicator=cpi&normalize=1
-    """
     countries_raw = (request.args.get("countries") or "").strip()
     indicator = (request.args.get("indicator") or "").strip().lower()
-    normalize = (request.args.get("normalize") or "").strip().lower() in {"1", "true", "yes", "on"}
+    normalize = (request.args.get("normalize") or "").strip().lower() in {"1","true","yes","on"}
 
     countries = [c.strip() for c in countries_raw.split(",") if c.strip()]
     if len(countries) != 2:
         return jsonify({"ok": False, "message": "countries must have exactly 2 items"}), 400
 
-    data_dir = _resolve_data_dir()
-    inv = _inventory(data_dir)
+    bucket = _get_gcs_bucket()
+    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
+    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+
+    inv = _inventory_from_gcs(bucket, prefix)
 
     series_payload = []
     for c in countries:
-        fn = _find_file_for(c, indicator, inv)
-        if not fn:
+        blob_name = _find_blob_for(c, indicator, inv)
+        if not blob_name:
             series_payload.append({"country": c, "ok": False, "message": "dataset not found"})
             continue
-        meta = _build_series(data_dir / fn)
+
+        text = _read_gcs_csv_text(bucket, blob_name)
+        meta = _build_series_from_text(Path(blob_name).name, text)
         vals = meta["values"]
         if normalize:
             vals = _normalize_100(vals)
+
         series_payload.append({
             "country": c,
             "ok": True,
-            "file": fn,
+            "file": Path(blob_name).name,
+            "blob": blob_name,
             "dates": meta["dates"],
             "values": vals,
             "min_date": meta["min_date"],
@@ -567,8 +845,9 @@ _DATA_DASHBOARD_HTML = r"""
         <select id="single_indicator"></select>
         <button class="secondary" onclick="loadSingle()">Load Single Series</button>
       </div>
-      <div style="height: 8px;"></div>
-      <canvas id="singleChart" height="130"></canvas>
+      <div style="height:280px;">
+        <canvas id="singleChart"></canvas>
+        </div>
 
       <div style="height: 18px;"></div>
 
@@ -582,8 +861,10 @@ _DATA_DASHBOARD_HTML = r"""
         <button onclick="loadCompare()">Compare</button>
       </div>
       <div style="height: 8px;"></div>
-      <canvas id="compareChart" height="130"></canvas>
-
+      <div style="height:280px;">
+        <canvas id="compareChart"></canvas>
+        </div>
+        
       <div style="height: 12px;"></div>
       <div class="sub muted" id="chart_note"></div>
     </div>

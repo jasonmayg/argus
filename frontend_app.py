@@ -21,6 +21,7 @@ from collections import Counter
 from functools import lru_cache
 import unicodedata
 from json import JSONEncoder
+from flask_talisman import Talisman
 
 from agents_system import AgentOrchestrator
 from data_dashboard import data_dashboard_bp
@@ -1625,12 +1626,14 @@ def get_agents_summary():
     return jsonify(orchestrator.get_agent_summary())
 
 
-@app.route('/api/demo/report')
+@app.route("/api/demo/report")
 def get_demo_report():
-    """Get the latest generated report"""
-    if orchestrator.reporter.reports:
-        return jsonify(orchestrator.reporter.reports[-1])
-    return jsonify({"status": "no_report_yet"})
+    if not orchestrator.reporter.reports:
+        return jsonify({
+            "recommendations": [],
+            "top_keywords": []
+        })
+    return jsonify(orchestrator.reporter.reports[-1])
 
 
 @app.route('/api/reset', methods=['POST'])
@@ -1645,13 +1648,13 @@ def reset_system():
 
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "5000"))
+    port = int(os.getenv("PORT", "5050"))
     print("""
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║
     ║         ARGUS Multi-Agent System - Web Frontend                ║
     ║                                                                ║
-    ║  Starting Flask server on http://localhost:5000/              ║
+    ║  Starting Flask server on http://localhost:5050/              ║
     ║  Open your browser and navigate to the URL above               ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
