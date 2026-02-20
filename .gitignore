@@ -7,6 +7,9 @@
 .env.production
 keys/
 *.key.json
+*-credentials.json
+*-service-account.json
+treasury-guardian-agent-*.json
 
 # ============================================================================
 # Python
