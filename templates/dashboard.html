@@ -114,6 +114,106 @@
             color: #721c24;
         }
 
+        /* Agent card click-to-expand */
+        .card.agent-card {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card.agent-card:hover {
+            border: 1px solid #667eea;
+        }
+
+        .card-click-hint {
+            font-size: 0.75em;
+            color: #aaa;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            user-select: none;
+        }
+
+        .card-chevron {
+            display: inline-block;
+            transition: transform 0.25s ease;
+            font-style: normal;
+        }
+
+        .card.expanded .card-chevron {
+            transform: rotate(180deg);
+        }
+
+        .agent-detail {
+            display: none;
+            margin-top: 14px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+            animation: fadeSlideIn 0.2s ease;
+        }
+
+        .card.expanded .agent-detail {
+            display: block;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-section {
+            margin-bottom: 12px;
+        }
+
+        .detail-section-title {
+            font-size: 0.78em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+
+        .detail-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .detail-tag {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78em;
+            font-weight: 600;
+            background: #eef0fd;
+            color: #4a55c0;
+            border: 1px solid #c7ccf5;
+        }
+
+        .detail-tag.output {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-color: #a5d6a7;
+        }
+
+        .detail-tag.source {
+            background: #fff8e1;
+            color: #f57f17;
+            border-color: #ffe082;
+        }
+
+        .detail-tag.critical {
+            background: #fce4ec;
+            color: #880e4f;
+            border-color: #f48fb1;
+        }
+
+        .detail-description {
+            font-size: 0.85em;
+            color: #555;
+            line-height: 1.5;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -934,18 +1034,45 @@
 
         <!-- Agent Status Dashboard -->
         <div class="dashboard">
-            <div class="card">
+
+            <!-- Data Agent -->
+            <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>📰 Data Agent</h2>
                 <div class="card-content" id="newsGathererStatus">
                     <div class="agent-status">
                         <span class="agent-name">Status</span>
                         <span class="status-badge status-idle">Idle</span>
                     </div>
-                    <p>Global Data & News collecting</p>
+                    <p>Global Data &amp; News collecting</p>
+                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                </div>
+                <div class="agent-detail">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Data Sources</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag source">Federal Reserve</span>
+                            <span class="detail-tag source">Press Releases</span>
+                            <span class="detail-tag source">FOMC Statements</span>
+                            <span class="detail-tag source">Governor Speeches</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">What It Collects</div>
+                        <p class="detail-description">Crawls the Federal Reserve website for news, press releases, and policy statements. Extracts title, date, URL, and full text. Supports year-range and real-time crawling via Playwright (JavaScript rendering).</p>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Outputs</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag output">JSON news array</span>
+                            <span class="detail-tag output">Markdown report</span>
+                            <span class="detail-tag output">Item count</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Risk Classifier Agent -->
+            <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>⚠️ Risk Classifier Agent</h2>
                 <div class="card-content" id="classifierStatus">
                     <div class="agent-status">
@@ -953,10 +1080,54 @@
                         <span class="status-badge status-idle">Idle</span>
                     </div>
                     <p>Classifies news by risk categories and levels</p>
+                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                </div>
+                <div class="agent-detail">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Risk Categories</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag">Financial Risk</span>
+                            <span class="detail-tag">Market Risk</span>
+                            <span class="detail-tag">Credit Risk</span>
+                            <span class="detail-tag">Liquidity Risk</span>
+                            <span class="detail-tag">Operational Risk</span>
+                            <span class="detail-tag">Political Risk</span>
+                            <span class="detail-tag">Regulatory Risk</span>
+                            <span class="detail-tag">Supply Chain Risk</span>
+                            <span class="detail-tag">Systematic Risk</span>
+                            <span class="detail-tag">Reputation Risk</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">High-Priority Keywords</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag critical">crisis</span>
+                            <span class="detail-tag critical">default</span>
+                            <span class="detail-tag critical">bankruptcy</span>
+                            <span class="detail-tag critical">fraud</span>
+                            <span class="detail-tag critical">cyber attack</span>
+                            <span class="detail-tag critical">scandal</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Risk Levels &amp; Scoring</div>
+                        <p class="detail-description">Scores each item 0–100. Critical (80–100) → immediate escalation. High (60–79) → deep analysis. Medium (40–59) → monitor. Low (1–39) → routine.</p>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Outputs</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag output">Risk score (0–100)</span>
+                            <span class="detail-tag output">Risk level label</span>
+                            <span class="detail-tag output">Category path</span>
+                            <span class="detail-tag output">Matched keywords</span>
+                            <span class="detail-tag output">Distribution stats</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Database Agent -->
+            <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>💾 Database Agent</h2>
                 <div class="card-content" id="databaseStatus">
                     <div class="agent-status">
@@ -964,10 +1135,35 @@
                         <span class="status-badge status-idle">Idle</span>
                     </div>
                     <p>Manages data storage and retrieval operations</p>
+                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                </div>
+                <div class="agent-detail">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Database Tables</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag source">news</span>
+                            <span class="detail-tag source">keyword_matches</span>
+                            <span class="detail-tag source">risk_analysis</span>
+                            <span class="detail-tag source">metadata</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Operations</div>
+                        <p class="detail-description">Inserts classified news, persists keyword match indexes, stores risk analysis results, and queries aggregate statistics. Uses SQLite with thread-safe connections (<code>check_same_thread=False</code>).</p>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Outputs</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag output">Insert count</span>
+                            <span class="detail-tag output">DB statistics</span>
+                            <span class="detail-tag output">argus_news.db</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Analysis Agent -->
+            <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>🔍 Analysis Agent</h2>
                 <div class="card-content" id="analyzerStatus">
                     <div class="agent-status">
@@ -975,10 +1171,36 @@
                         <span class="status-badge status-idle">Idle</span>
                     </div>
                     <p>Performs comprehensive risk analysis</p>
+                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                </div>
+                <div class="agent-detail">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Analysis Dimensions</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag">By risk level</span>
+                            <span class="detail-tag">By category</span>
+                            <span class="detail-tag">Top keywords</span>
+                            <span class="detail-tag">Trend signals</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">What It Analyses</div>
+                        <p class="detail-description">Groups classified news into Critical / High / Medium buckets, aggregates by risk category, and extracts the top-10 recurring keywords. Optionally calls Claude API for AI-powered narrative analysis.</p>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Outputs</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag output">Risk breakdown</span>
+                            <span class="detail-tag output">Category counts</span>
+                            <span class="detail-tag output">Top-10 keywords</span>
+                            <span class="detail-tag output">AI narrative (optional)</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Reporting Agent -->
+            <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>📊 Reporting Agent</h2>
                 <div class="card-content" id="reporterStatus">
                     <div class="agent-status">
@@ -986,9 +1208,37 @@
                         <span class="status-badge status-idle">Idle</span>
                     </div>
                     <p>Generates detailed analysis reports</p>
+                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                </div>
+                <div class="agent-detail">
+                    <div class="detail-section">
+                        <div class="detail-section-title">Report Sections</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag">Executive Summary</span>
+                            <span class="detail-tag">Risk Distribution</span>
+                            <span class="detail-tag">Critical Alerts</span>
+                            <span class="detail-tag">High-Risk Items</span>
+                            <span class="detail-tag">Recommendations</span>
+                            <span class="detail-tag">Top Keywords</span>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Report Format</div>
+                        <p class="detail-description">Produces a timestamped JSON report titled "Federal Reserve News Risk Analysis Report". Includes per-level item lists, actionable recommendations per category, and a keyword frequency summary.</p>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Outputs</div>
+                        <div class="detail-tags">
+                            <span class="detail-tag output">JSON report</span>
+                            <span class="detail-tag output">Markdown report</span>
+                            <span class="detail-tag output">Recommendations list</span>
+                            <span class="detail-tag output">Timestamp</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- System Status (non-clickable) -->
             <div class="card">
                 <h2>⚙️ System Status</h2>
                 <div class="card-content" id="systemStatus">
@@ -1477,6 +1727,12 @@
                     console.error('Status update failed:', error);
                 }
             }, 1000);
+        }
+
+        function toggleAgentDetail(card) {
+            // Don't expand if user is selecting text
+            if (window.getSelection().toString()) return;
+            card.classList.toggle('expanded');
         }
 
         function updateAgentStatuses(statuses) {
