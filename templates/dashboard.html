@@ -148,6 +148,7 @@
             box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         }
 
+
         .btn-reset {
             background: #dc3545;
             color: white;
@@ -431,6 +432,25 @@
         .btn-guardian:hover {
             background: #115e59;
             box-shadow: 0 5px 15px rgba(15, 118, 110, 0.4);
+        }
+
+        .btn-data {
+             background: #7c3aed;
+             color: white;
+        }
+
+        .btn-data:hover {
+             background: #6d28d9;
+              box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);
+        }
+
+        /* Data modal iframe */
+        .data-iframe {
+             width: 100%;
+             height: 78vh;
+              border: none;
+              border-radius: 12px;
+              background: white;
         }
 
         .kpi-grid {
@@ -861,7 +881,7 @@
     <div class="container">
         <header>
             <h1>🤖 ARGUS Multi-Agent System</h1>
-            <p>Federal Reserve News Monitoring & Risk Analysis</p>
+            <p>Global Data & News Monitoring & Risk Analysis</p>
         </header>
 
         <div class="alert alert-info" id="alert"></div>
@@ -872,6 +892,9 @@
             </button>
             <button class="btn-guardian" id="guardianBtn" onclick="openGuardianDashboard()">
                 🌍 Open Guardian Dashboard
+            </button>
+            <button class="btn-data" id="dataBtn" onclick="openDataDashboard()">
+                 📊 Open Data Dashboard
             </button>
             <button class="btn-reset" id="resetBtn" onclick="resetSystem()">
                 🔄 Reset System
@@ -884,7 +907,7 @@
             <div class="pipeline-stages">
                 <div class="stage" id="stage1">
                     <h3>📰</h3>
-                    <p>News Gathering</p>
+                    <p>Data Gathering</p>
                 </div>
                 <div class="arrow">→</div>
                 <div class="stage" id="stage2">
@@ -912,13 +935,13 @@
         <!-- Agent Status Dashboard -->
         <div class="dashboard">
             <div class="card">
-                <h2>📰 News Gatherer Agent</h2>
+                <h2>📰 Data Agent</h2>
                 <div class="card-content" id="newsGathererStatus">
                     <div class="agent-status">
                         <span class="agent-name">Status</span>
                         <span class="status-badge status-idle">Idle</span>
                     </div>
-                    <p>Crawls Federal Reserve news from official sources</p>
+                    <p>Global Data & News collecting</p>
                 </div>
             </div>
 
@@ -1017,7 +1040,7 @@
         </div>
 
         <div class="footer">
-            <p>ARGUS Multi-Agent System v2.0 | Federal Reserve Risk Analysis</p>
+            <p>ARGUS Multi-Agent System v2.1 | Global Data & News Monitoring & Risk Analysis</p>
             <p>Status: <span id="footer-status">Ready</span></p>
         </div>
     </div>
@@ -1072,6 +1095,26 @@
                 </details>
             </div>
         </div>
+    </div>
+
+    <div class="modal-overlay" id="dataModal" onclick="closeDataDashboard(event)">
+      <div class="modal-shell">
+        <div class="guardian-section" onclick="event.stopPropagation()">
+          <div class="guardian-header">
+            <h2>📊 Data Dashboard</h2>
+            <div>
+              <button class="guardian-refresh" onclick="refreshDataDashboard()">Refresh</button>
+              <button class="guardian-refresh" style="background:#dc3545;" onclick="closeDataDashboard()">Close</button>
+            </div>
+          </div>
+
+          <div class="guardian-meta" id="dataMeta">
+            Data view is embedded from <strong>/data</strong>
+          </div>
+
+          <iframe id="dataDashboardFrame" class="data-iframe" src="/data"></iframe>
+        </div>
+      </div>
     </div>
 
     <div class="modal-overlay" id="alertInsightModal" onclick="closeAlertInsight(event)">
@@ -1330,6 +1373,24 @@
                     loadGuardianDashboard();
                 }, 30000);
             }
+        }
+
+        function openDataDashboard() {
+             const modal = document.getElementById('dataModal');
+             modal.classList.add('show');
+        }
+
+        function closeDataDashboard(event) {
+             if (event && event.target && event.target.id !== 'dataModal') {
+                 return;
+             }
+            const modal = document.getElementById('dataModal');
+             modal.classList.remove('show');
+        }
+
+        function refreshDataDashboard() {
+            const iframe = document.getElementById('dataDashboardFrame');
+            if (iframe) iframe.src = iframe.src; // reload iframe
         }
 
         function closeGuardianDashboard(event) {

@@ -21,8 +21,10 @@ from collections import Counter
 from functools import lru_cache
 import unicodedata
 from json import JSONEncoder
+from flask_talisman import Talisman
 
 from agents_system import AgentOrchestrator
+from data_dashboard import data_dashboard_bp
 
 
 class SafeJSONEncoder(JSONEncoder):
@@ -73,6 +75,8 @@ app.json_encoder = SafeJSONEncoder
 # IMPORTANT: Disable sort_keys to prevent comparison errors with None values
 app.config['JSON_SORT_KEYS'] = False
 
+app.register_blueprint(data_dashboard_bp)
+
 GUARDIAN_SOURCE_WHITELIST = {
     "gdelt",
     "reliefweb",
@@ -118,6 +122,29 @@ def _join_gcs_prefix(prefix: str, suffix: str) -> str:
     p = _normalize_gcs_prefix(prefix)
     s = suffix.lstrip("/")
     return f"{p}/{s}" if p else s
+
+
+def _init_gcs_client(storage_module) -> tuple[Any, str]:
+    """
+    Build GCS client with explicit fallback credentials.
+    Returns (client, auth_source) for diagnostics.
+    """
+    project = os.getenv("GOOGLE_CLOUD_PROJECT", "").strip() or None
+    adc_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if adc_path:
+        return storage_module.Client(project=project), f"adc:{adc_path}"
+
+    root = Path(__file__).resolve().parent
+    key_candidates = [
+        root / "keys" / "treasury-reader.json",
+        root / "keys" / "service-account.json",
+    ]
+    for key_path in key_candidates:
+        if key_path.exists():
+            client = storage_module.Client.from_service_account_json(str(key_path), project=project)
+            return client, f"service_account:{key_path}"
+
+    return storage_module.Client(project=project), "adc:default"
 
 
 def _parse_json_text(raw_text: str) -> dict | None:
@@ -626,7 +653,7 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         }
 
     try:
-        client = storage.Client()
+        client, auth_source = _init_gcs_client(storage)
         bucket = client.bucket(bucket_name)
     except Exception as e:
         return {
@@ -760,7 +787,7 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         "snapshot": loaded_snapshot,
         "snapshot_ref": f"gs://{bucket_name}/{loaded_object}",
         "previous_snapshot": previous_snapshot,
-        "message": "",
+        "message": f"auth={auth_source}",
         "bucket": bucket_name,
         "prefix": prefix,
     }
@@ -1599,12 +1626,14 @@ def get_agents_summary():
     return jsonify(orchestrator.get_agent_summary())
 
 
-@app.route('/api/demo/report')
+@app.route("/api/demo/report")
 def get_demo_report():
-    """Get the latest generated report"""
-    if orchestrator.reporter.reports:
-        return jsonify(orchestrator.reporter.reports[-1])
-    return jsonify({"status": "no_report_yet"})
+    if not orchestrator.reporter.reports:
+        return jsonify({
+            "recommendations": [],
+            "top_keywords": []
+        })
+    return jsonify(orchestrator.reporter.reports[-1])
 
 
 @app.route('/api/reset', methods=['POST'])
@@ -1619,13 +1648,13 @@ def reset_system():
 
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "5000"))
+    port = int(os.getenv("PORT", "5050"))
     print("""
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║
     ║         ARGUS Multi-Agent System - Web Frontend                ║
     ║                                                                ║
-    ║  Starting Flask server on http://localhost:5000/              ║
+    ║  Starting Flask server on http://localhost:5050/              ║
     ║  Open your browser and navigate to the URL above               ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
