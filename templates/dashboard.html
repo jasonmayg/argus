@@ -480,6 +480,106 @@
             display: block;
         }
 
+        /* ── Pipeline loading overlay inside modals ── */
+        .guardian-section {
+            position: relative; /* anchor for absolute overlay */
+        }
+
+        .modal-pipeline-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.97);
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: 48px 28px;
+            text-align: center;
+        }
+
+        .modal-pipeline-overlay.active {
+            display: flex;
+        }
+
+        .pipeline-overlay-spinner {
+            width: 52px;
+            height: 52px;
+            border: 5px solid #e0e0ff;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.85s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .pipeline-overlay-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .pipeline-overlay-subtitle {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 28px;
+            max-width: 380px;
+        }
+
+        .pipeline-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            width: 100%;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 14px;
+            border-radius: 7px;
+            font-size: 0.84em;
+            background: #f5f5f5;
+            color: #bbb;
+            transition: background 0.25s, color 0.25s;
+        }
+
+        .pipeline-step.done {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .pipeline-step.active {
+            background: #fff8e1;
+            color: #e65100;
+            font-weight: 700;
+            animation: pulse-step 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-step {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.75; }
+        }
+
+        .pipeline-step-icon {
+            width: 20px;
+            text-align: center;
+            font-style: normal;
+            flex-shrink: 0;
+        }
+
+        .pipeline-overlay-hint {
+            margin-top: 22px;
+            font-size: 0.78em;
+            color: #ccc;
+            font-style: italic;
+        }
+        /* ── End pipeline loading overlay ── */
+
         .guardian-section {
             background: white;
             border-radius: 14px;
@@ -1307,6 +1407,16 @@
     <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
         <div class="modal-shell">
             <div class="guardian-section" onclick="event.stopPropagation()">
+
+                <!-- Pipeline loading overlay: shown while agents are running -->
+                <div class="modal-pipeline-overlay" id="guardianPipelineOverlay">
+                    <div class="pipeline-overlay-spinner"></div>
+                    <div class="pipeline-overlay-title">🤖 Pipeline Running</div>
+                    <div class="pipeline-overlay-subtitle">Agents are gathering and processing data — Guardian snapshot will be ready when the pipeline completes</div>
+                    <div class="pipeline-steps" id="guardianPipelineSteps"></div>
+                    <div class="pipeline-overlay-hint">Dashboard will refresh automatically on completion</div>
+                </div>
+
                 <div class="guardian-header">
                     <h2>🌍 Global Treasury Dashboard</h2>
                     <div>
@@ -1359,6 +1469,16 @@
     <div class="modal-overlay" id="dataModal" onclick="closeDataDashboard(event)">
       <div class="modal-shell">
         <div class="guardian-section" onclick="event.stopPropagation()">
+
+          <!-- Pipeline loading overlay: shown while agents are running -->
+          <div class="modal-pipeline-overlay" id="dataPipelineOverlay">
+              <div class="pipeline-overlay-spinner"></div>
+              <div class="pipeline-overlay-title">🤖 Pipeline Running</div>
+              <div class="pipeline-overlay-subtitle">Agents are building the data inventory — the data source catalogue will populate when the pipeline completes</div>
+              <div class="pipeline-steps" id="dataPipelineSteps"></div>
+              <div class="pipeline-overlay-hint">Dashboard will refresh automatically on completion</div>
+          </div>
+
           <div class="guardian-header">
             <h2>📊 Data Dashboard</h2>
             <div>
@@ -1626,17 +1746,28 @@
         async function openGuardianDashboard() {
             const modal = document.getElementById('guardianModal');
             modal.classList.add('show');
-            await loadGuardianDashboard();
-            if (!guardianRefreshInterval) {
-                guardianRefreshInterval = setInterval(() => {
-                    loadGuardianDashboard();
-                }, 30000);
+            // If pipeline is currently running, show the loading overlay right away
+            if (isExecuting) {
+                const overlay = document.getElementById('guardianPipelineOverlay');
+                if (overlay) overlay.classList.add('active');
+            } else {
+                await loadGuardianDashboard();
+                if (!guardianRefreshInterval) {
+                    guardianRefreshInterval = setInterval(() => {
+                        loadGuardianDashboard();
+                    }, 30000);
+                }
             }
         }
 
         function openDataDashboard() {
-             const modal = document.getElementById('dataModal');
-             modal.classList.add('show');
+            const modal = document.getElementById('dataModal');
+            modal.classList.add('show');
+            // If pipeline is currently running, show the loading overlay right away
+            if (isExecuting) {
+                const overlay = document.getElementById('dataPipelineOverlay');
+                if (overlay) overlay.classList.add('active');
+            }
         }
 
         function closeDataDashboard(event) {
@@ -1694,6 +1825,49 @@
             document.getElementById('alertInsightModal').classList.remove('show');
         }
 
+        // ── Pipeline stage definitions (order matters) ──────────────────────
+        const PIPELINE_STAGE_DEFS = [
+            { key: 'news_gatherer',    stageKey: 'news_gathering',      label: 'Stage 1 — Gathering news & events',        icon: '📰' },
+            { key: 'risk_classifier',  stageKey: 'risk_classification',  label: 'Stage 2 — Classifying risks',              icon: '⚠️' },
+            { key: 'database_manager', stageKey: 'database',             label: 'Stage 3 — Storing data to database',       icon: '💾' },
+            { key: 'analyzer',         stageKey: 'analysis',             label: 'Stage 4 — Running risk analysis',          icon: '🔍' },
+            { key: 'reporter',         stageKey: 'reporting',            label: 'Stage 5 — Generating reports & snapshots', icon: '📊' },
+        ];
+
+        function renderPipelineSteps(containerId, agentStatuses) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.innerHTML = PIPELINE_STAGE_DEFS.map(def => {
+                const agentStatus = (agentStatuses || {})[def.key] || {};
+                const st = agentStatus.status || 'idle';
+                const isDone   = st === 'success';
+                const isFailed = st === 'failed';
+                const isActive = st === 'running';
+                const cls  = isDone ? 'done' : isFailed ? 'done' : isActive ? 'active' : '';
+                const icon = isDone ? '✅' : isFailed ? '❌' : isActive ? '⏳' : '○';
+                return `<div class="pipeline-step ${cls}">
+                    <i class="pipeline-step-icon">${icon}</i>${def.label}
+                </div>`;
+            }).join('');
+        }
+
+        function showDashboardLoading(agentStatuses) {
+            ['guardianPipelineOverlay', 'dataPipelineOverlay'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('active');
+            });
+            renderPipelineSteps('guardianPipelineSteps', agentStatuses);
+            renderPipelineSteps('dataPipelineSteps', agentStatuses);
+        }
+
+        function hideDashboardLoading() {
+            ['guardianPipelineOverlay', 'dataPipelineOverlay'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+        }
+        // ── End pipeline stage helpers ────────────────────────────────────────
+
         async function executePipeline() {
             if (isExecuting) return;
 
@@ -1717,20 +1891,37 @@
         }
 
         async function startStatusPolling() {
+            // Show loading overlays in both dashboards immediately
+            showDashboardLoading({});
+
             statusUpdateInterval = setInterval(async () => {
                 try {
                     const response = await fetch(`${API_BASE}/status`);
                     const status = await response.json();
 
                     updateAgentStatuses(status.agents_status);
+                    // Keep loading overlays in sync with live agent statuses
+                    renderPipelineSteps('guardianPipelineSteps', status.agents_status);
+                    renderPipelineSteps('dataPipelineSteps', status.agents_status);
 
                     if (!status.is_running && isExecuting) {
                         isExecuting = false;
                         document.getElementById('executeBtn').disabled = false;
                         clearInterval(statusUpdateInterval);
+
+                        // Final step render before hiding
+                        renderPipelineSteps('guardianPipelineSteps', status.agents_status);
+                        renderPipelineSteps('dataPipelineSteps', status.agents_status);
+
                         await loadResults();
+
+                        // Refresh both dashboards then hide overlays
                         await loadGuardianDashboard();
-                        showAlert('Pipeline execution completed!', 'info');
+                        const dataFrame = document.getElementById('dataDashboardFrame');
+                        if (dataFrame) dataFrame.src = dataFrame.src;
+
+                        hideDashboardLoading();
+                        showAlert('Pipeline completed — dashboards refreshed.', 'info');
                     }
                 } catch (error) {
                     console.error('Status update failed:', error);
