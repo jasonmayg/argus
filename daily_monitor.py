@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 ARGUS: Daily Federal Reserve News Monitoring
-Daily automated monitoring of Federal Reserve news, storing to database and performing risk analysis
+Daily automated monitoring of Federal Reserve news, Guardian POC event classification, storing to database and performing risk analysis
 """
 
 import asyncio
 import json
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,84 @@ class DailyMonitor:
         self.crawler = FedNewsCrawler()
         self.db = FedNewsDatabase()
         self.current_year = datetime.now().year
+        self.guardian_poc_path = Path(__file__).parent / "guardian_poc" / "src" / "daily_job.py"
+
+    def _run_guardian_job(self, verbose: bool = True) -> Dict:
+        """
+        Run Guardian POC daily job to classify global events into risk alerts
+
+        Returns:
+            Dictionary with Guardian job results
+        """
+        guardian_result = {
+            "status": "skipped",
+            "message": "Guardian POC job not found",
+            "events_count": 0,
+            "alerts_count": 0,
+            "triggered_count": 0
+        }
+
+        if not self.guardian_poc_path.exists():
+            if verbose:
+                print(f"⚠ Guardian POC daily job not found at {self.guardian_poc_path}")
+            return guardian_result
+
+        try:
+            if verbose:
+                print("\n[2/5] Running Guardian POC daily job...")
+
+            cmd = [
+                sys.executable,
+                str(self.guardian_poc_path),
+                "--persona", "treasury_ops",
+                "--fallback-demo-if-empty"
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=Path(__file__).parent
+            )
+
+            if result.returncode != 0:
+                guardian_result["status"] = "error"
+                guardian_result["message"] = f"Guardian job failed: {result.stderr}"
+                if verbose:
+                    print(f"❌ Guardian job error: {result.stderr[:200]}")
+                return guardian_result
+
+            output = result.stdout.strip()
+            if verbose:
+                print(f"✓ {output}")
+
+            # Parse output for stats
+            # Expected output: "mode=live events=177 alerts=30 triggered=28 webhook_pushed=False snapshot=... latest=..."
+            for part in output.split():
+                if part.startswith("events="):
+                    guardian_result["events_count"] = int(part.split("=")[1])
+                elif part.startswith("alerts="):
+                    guardian_result["alerts_count"] = int(part.split("=")[1])
+                elif part.startswith("triggered="):
+                    guardian_result["triggered_count"] = int(part.split("=")[1])
+
+            guardian_result["status"] = "success"
+            guardian_result["message"] = output
+            return guardian_result
+
+        except subprocess.TimeoutExpired:
+            guardian_result["status"] = "error"
+            guardian_result["message"] = "Guardian job timed out (>120s)"
+            if verbose:
+                print("❌ Guardian job timed out")
+            return guardian_result
+        except Exception as e:
+            guardian_result["status"] = "error"
+            guardian_result["message"] = f"Guardian job exception: {str(e)}"
+            if verbose:
+                print(f"❌ Guardian job error: {e}")
+            return guardian_result
 
     async def run(self, verbose: bool = True) -> Dict:
         """
@@ -45,9 +124,9 @@ class DailyMonitor:
         }
 
         try:
-            # 1. Crawl news
+            # 1. Crawl Federal Reserve news
             if verbose:
-                print("\n[1/4] Crawling Federal Reserve news...")
+                print("\n[1/5] Crawling Federal Reserve news...")
 
             news_url = f"https://www.federalreserve.gov/newsevents/pressreleases/{self.current_year}-press.htm"
             crawl_result = await self.crawler.crawl(url=news_url)
@@ -61,17 +140,21 @@ class DailyMonitor:
             if verbose:
                 print(f"✓ Found {len(news_items)} news items")
 
-            # 2. Store to database
+            # 2. Run Guardian POC daily job (classify global events)
+            guardian_result = self._run_guardian_job(verbose=verbose)
+            result['guardian'] = guardian_result
+
+            # 3. Store Federal Reserve news to database
             if verbose:
-                print("\n[2/4] Storing news to database...")
+                print("\n[3/5] Storing Federal Reserve news to database...")
 
             inserted = self.db.insert_news(news_items)
             if verbose:
                 print(f"✓ Inserted {inserted} new records")
 
-            # 3. Add keyword matching
+            # 4. Add keyword matching
             if verbose:
-                print("\n[3/4] Adding keyword matching...")
+                print("\n[4/5] Adding keyword matching...")
 
             keywords = [
                 "Payment", "Payments", "Regulation", "Regulatory",
@@ -80,9 +163,9 @@ class DailyMonitor:
             ]
             self.db.add_keyword_matches(keywords)
 
-            # 4. Statistics and reporting
+            # 5. Statistics and reporting
             if verbose:
-                print("\n[4/4] Generating report...")
+                print("\n[5/5] Generating report...")
 
             stats = self.db.get_statistics()
 
@@ -116,20 +199,37 @@ class DailyMonitor:
         print("Monitoring Summary")
         print("="*70)
         print(f"Status: {result['status']}")
-        print(f"News items crawled: {result['news_count']}")
-        print(f"New records inserted: {result['inserted']}")
-        print(f"Total in database: {result['total_in_db']}")
+
+        # Federal Reserve section
+        print(f"\nFederal Reserve News:")
+        print(f"  • News items crawled: {result['news_count']}")
+        print(f"  • New records inserted: {result['inserted']}")
+        print(f"  • Total in database: {result['total_in_db']}")
 
         stats = result.get('statistics', {})
         if stats.get('by_year'):
-            print(f"\nDistribution by year:")
-            for year in sorted(stats['by_year'].keys(), reverse=True):
-                print(f"  • {year}: {stats['by_year'][year]} items")
+            print(f"\n  Distribution by year:")
+            for year in sorted(stats['by_year'].keys(), reverse=True)[:3]:
+                print(f"    - {year}: {stats['by_year'][year]} items")
 
         if stats.get('top_keywords'):
-            print(f"\nPopular Keywords (Top 5):")
+            print(f"\n  Popular Keywords (Top 5):")
             for keyword in list(stats['top_keywords'].items())[:5]:
-                print(f"  • {keyword[0]}: {keyword[1]} occurrences")
+                print(f"    - {keyword[0]}: {keyword[1]} occurrences")
+
+        # Guardian POC section
+        guardian = result.get('guardian', {})
+        if guardian:
+            print(f"\nGuardian POC Global Event Classification:")
+            print(f"  • Status: {guardian.get('status', 'unknown')}")
+            if guardian.get('events_count'):
+                print(f"  • Raw events fetched: {guardian['events_count']}")
+            if guardian.get('alerts_count'):
+                print(f"  • Classified alerts: {guardian['alerts_count']}")
+            if guardian.get('triggered_count'):
+                print(f"  • High-risk triggered: {guardian['triggered_count']}")
+            if guardian.get('status') in ['error', 'skipped'] and guardian.get('message'):
+                print(f"  • Message: {guardian['message']}")
 
         print("="*70)
 
