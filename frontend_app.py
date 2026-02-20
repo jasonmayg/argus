@@ -1633,7 +1633,7 @@ def get_demo_report():
             "recommendations": [],
             "top_keywords": []
         })
-    return jsonify(orchestrator.reporter.reports[-1])
+    return jsonify(sanitize_for_json(orchestrator.reporter.reports[-1]))
 
 
 @app.route('/api/reset', methods=['POST'])

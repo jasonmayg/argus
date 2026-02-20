@@ -1932,8 +1932,19 @@
         function toggleAgentDetail(card) {
             // Don't expand if user is selecting text
             if (window.getSelection().toString()) return;
-            card.classList.toggle('expanded');
+            const isExpanded = card.classList.contains('expanded');
+            // Accordion: close all cards first
+            document.querySelectorAll('.card.agent-card').forEach(c => c.classList.remove('expanded'));
+            // Open this card only if it was previously closed
+            if (!isExpanded) card.classList.add('expanded');
         }
+
+        // Prevent clicks inside the detail panel from bubbling up to the card toggle
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.agent-detail').forEach(function (el) {
+                el.addEventListener('click', function (e) { e.stopPropagation(); });
+            });
+        });
 
         function updateAgentStatuses(statuses) {
             const statusMap = {

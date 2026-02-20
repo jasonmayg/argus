@@ -1,0 +1,77 @@
+# Germany Treasury Risk Daily Report
+
+- Date (UTC): 2026-02-19
+- Persona: treasury_ops
+- Data mode: live
+- Risk level: LOW
+- Max score: 39.19
+- Avg score: 39.19
+- Warnings: 9 (High: 0, Medium: 0)
+- Related events: 9
+
+## Top Warnings
+- [39.19] Market Risk: ECB FX reference rate USD/EUR: 1.1753 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate GBP/EUR: 0.8738 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.GBP.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate JPY/EUR: 182.05 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.JPY.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate CAD/EUR: 1.6107 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.CAD.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate AUD/EUR: 1.6698 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.AUD.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate BRL/EUR: 6.1519 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.BRL.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate MXN/EUR: 20.3086 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.MXN.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate INR/EUR: 107.183 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.INR.EUR.SP00.A
+- [39.19] Market Risk: ECB FX reference rate CNY/EUR: 8.1197 | ecb | 2026-02-19 00:00
+  - Recommendation: [LOW] Germany: tighten FX/rate limits and refresh hedge coverage.
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.CNY.EUR.SP00.A
+
+## Event Highlights
+- ECB FX reference rate USD/EUR: 1.1753
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A
+- ECB FX reference rate GBP/EUR: 0.8738
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.GBP.EUR.SP00.A
+- ECB FX reference rate JPY/EUR: 182.05
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.JPY.EUR.SP00.A
+- ECB FX reference rate CAD/EUR: 1.6107
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.CAD.EUR.SP00.A
+- ECB FX reference rate AUD/EUR: 1.6698
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.AUD.EUR.SP00.A
+- ECB FX reference rate BRL/EUR: 6.1519
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.BRL.EUR.SP00.A
+- ECB FX reference rate MXN/EUR: 20.3086
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.MXN.EUR.SP00.A
+- ECB FX reference rate INR/EUR: 107.183
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.INR.EUR.SP00.A
+- ECB FX reference rate CNY/EUR: 8.1197
+  - Source: ecb, Time: 2026-02-19 00:00
+  - Categories: Market Risk
+  - Link: https://data-api.ecb.europa.eu/service/data/EXR/D.CNY.EUR.SP00.A
