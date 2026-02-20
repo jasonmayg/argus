@@ -1048,24 +1048,33 @@
                 </div>
                 <div class="agent-detail">
                     <div class="detail-section">
-                        <div class="detail-section-title">Data Sources</div>
+                        <div class="detail-section-title">Available Sources</div>
                         <div class="detail-tags">
-                            <span class="detail-tag source">Federal Reserve</span>
-                            <span class="detail-tag source">Press Releases</span>
-                            <span class="detail-tag source">FOMC Statements</span>
-                            <span class="detail-tag source">Governor Speeches</span>
+                            <span class="detail-tag source">federal_reserve</span>
+                            <span class="detail-tag source">gcs</span>
+                            <span class="detail-tag source">gdelt</span>
+                            <span class="detail-tag source">usgs</span>
+                            <span class="detail-tag source">noaa_nws</span>
+                            <span class="detail-tag source">nasa_eonet</span>
+                            <span class="detail-tag source">reliefweb</span>
+                            <span class="detail-tag source">world_bank</span>
+                            <span class="detail-tag source">bank_of_canada</span>
+                            <span class="detail-tag source">fiscal_data</span>
+                            <span class="detail-tag source">sec_edgar</span>
+                            <span class="detail-tag source">fred</span>
+                            <span class="detail-tag source">&lt;custom URL&gt;</span>
                         </div>
                     </div>
                     <div class="detail-section">
                         <div class="detail-section-title">What It Collects</div>
-                        <p class="detail-description">Crawls the Federal Reserve website for news, press releases, and policy statements. Extracts title, date, URL, and full text. Supports year-range and real-time crawling via Playwright (JavaScript rendering).</p>
+                        <p class="detail-description">Multi-source gatherer. Crawls Fed Reserve via Playwright (JavaScript rendering), pulls live events from Guardian POC API adapters (GDELT, USGS, NOAA, NASA EONET, ReliefWeb, World Bank, BoC, FRED, SEC EDGAR, Treasury Auctions), or loads a Guardian alerts snapshot from Google Cloud Storage. Any <code>https://</code> URL is also accepted as a custom crawl target. All results are normalized to <code>{date, title, link, source, summary}</code>.</p>
                     </div>
                     <div class="detail-section">
                         <div class="detail-section-title">Outputs</div>
                         <div class="detail-tags">
-                            <span class="detail-tag output">JSON news array</span>
-                            <span class="detail-tag output">Markdown report</span>
-                            <span class="detail-tag output">Item count</span>
+                            <span class="detail-tag output">Merged news array</span>
+                            <span class="detail-tag output">Per-source stats</span>
+                            <span class="detail-tag output">Total item count</span>
                         </div>
                     </div>
                 </div>
