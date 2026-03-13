@@ -26,7 +26,7 @@ try:
 except Exception:
     Talisman = None
 
-from agents_system import AgentOrchestrator
+from agents_system import AgentOrchestrator, RiskClassifierAgent, AnalysisAgent
 from data_dashboard import data_dashboard_bp
 from config import API_PORT
 
@@ -1915,6 +1915,73 @@ def execute_pipeline():
     thread.start()
 
     return jsonify({"status": "started", "message": "Pipeline execution started"})
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_items():
+    """Synchronous analysis endpoint for the Bridge Manager.
+
+    Accepts:
+        POST {"news_items": [...], "source_file": "optional_label"}
+
+    Returns:
+        Enriched JSON with 2D risk-matrix scores for every item, plus an
+        aggregate summary.  Runs the RiskClassifier and AnalysisAgent inline
+        (blocking); use /api/execute for the full async pipeline instead.
+    """
+    body = request.get_json(silent=True) or {}
+    news_items = body.get("news_items")
+
+    if not news_items or not isinstance(news_items, list):
+        return jsonify({"error": "Request body must include a non-empty 'news_items' list"}), 400
+
+    source_file = str(body.get("source_file", "bridge_input"))
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        # Stage 1: keyword classification
+        classifier = RiskClassifierAgent()
+        classify_result = loop.run_until_complete(
+            classifier.execute(news_items=news_items)
+        )
+        if classify_result["status"] != "success":
+            loop.close()
+            return jsonify({"error": "Classification failed", "detail": classify_result}), 500
+
+        # Stage 2: 2D risk-matrix analysis (LLM or heuristic)
+        analyzer = AnalysisAgent()
+        analysis_result = loop.run_until_complete(
+            analyzer.execute(classified_news=classify_result["data"])
+        )
+        loop.close()
+
+        if analysis_result["status"] != "success":
+            return jsonify({"error": "Analysis failed", "detail": analysis_result}), 500
+
+        analysis = analysis_result["analysis"]
+        by_level = analysis["by_risk_level"]
+
+        return jsonify(sanitize_for_json({
+            "status":       "success",
+            "source_file":  source_file,
+            "item_count":   len(news_items),
+            "scored_items": analysis["scored_items"],
+            "summary": {
+                "extreme":       len(by_level.get("extreme", [])),
+                "high":          len(by_level.get("high",    [])),
+                "medium":        len(by_level.get("medium",  [])),
+                "low":           len(by_level.get("low",     [])),
+                "llm_scored":    analysis.get("llm_scored", False),
+                "top_keywords":  analysis.get("top_keywords", []),
+                "matrix_summary": analysis.get("matrix_summary", []),
+            },
+            "analyzed_at": datetime.now().isoformat(),
+        }))
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @app.route('/api/results')
