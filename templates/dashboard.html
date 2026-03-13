@@ -374,6 +374,168 @@
             background: #28a745;
         }
 
+        /* ── 2D Risk Matrix styles ──────────────────────────────────────── */
+        .risk-matrix-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .matrix-grid-container {
+            overflow-x: auto;
+        }
+
+        .matrix-grid {
+            border-collapse: collapse;
+            font-size: 0.82em;
+            min-width: 380px;
+        }
+
+        .matrix-grid th, .matrix-grid td {
+            border: 2px solid #fff;
+            text-align: center;
+            padding: 8px 6px;
+            min-width: 72px;
+        }
+
+        .matrix-axis-label {
+            background: #eef0fd;
+            color: #4a55c0;
+            font-weight: 700;
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .matrix-cell-low     { background: #28a745; color: #fff; font-weight: 700; }
+        .matrix-cell-medium  { background: #ffc107; color: #212529; font-weight: 700; }
+        .matrix-cell-high    { background: #fd7e14; color: #fff; font-weight: 700; }
+        .matrix-cell-extreme { background: #dc3545; color: #fff; font-weight: 700; }
+
+        .matrix-cell-count {
+            font-size: 1.2em;
+            display: block;
+        }
+
+        .matrix-legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .matrix-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82em;
+        }
+
+        .matrix-legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .risk-item-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .risk-item-card .risk-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78em;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .risk-item-card .risk-badge.badge-medium { color: #212529; }
+
+        .risk-item-title {
+            font-weight: 600;
+            font-size: 0.92em;
+            color: #222;
+            margin-bottom: 10px;
+        }
+
+        .risk-item-scores {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .score-box {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .score-box .score-label {
+            font-size: 0.72em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #667eea;
+            margin-bottom: 2px;
+        }
+
+        .score-box .score-value {
+            font-size: 0.95em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .score-box .score-reason {
+            font-size: 0.78em;
+            color: #666;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .llm-badge {
+            font-size: 0.68em;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            border-radius: 10px;
+            padding: 1px 7px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .heuristic-badge {
+            font-size: 0.68em;
+            background: #fff8e1;
+            color: #f57f17;
+            border: 1px solid #ffe082;
+            border-radius: 10px;
+            padding: 1px 7px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .matrix-items-header {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── End risk matrix styles ─────────────────────────────────────── */
+
         .log-section {
             background: #1e1e1e;
             color: #00ff00;
@@ -1905,25 +2067,26 @@
                 </div>
                 <div class="agent-detail">
                     <div class="detail-section">
-                        <div class="detail-section-title">Analysis Dimensions</div>
+                        <div class="detail-section-title">2D Risk Matrix (5×5)</div>
                         <div class="detail-tags">
-                            <span class="detail-tag">By risk level</span>
-                            <span class="detail-tag">By category</span>
-                            <span class="detail-tag">Top keywords</span>
-                            <span class="detail-tag">Trend signals</span>
+                            <span class="detail-tag">Probability axis</span>
+                            <span class="detail-tag">Impact axis</span>
+                            <span class="detail-tag">LLM reasoning</span>
+                            <span class="detail-tag">Heuristic fallback</span>
                         </div>
                     </div>
                     <div class="detail-section">
                         <div class="detail-section-title">What It Analyses</div>
-                        <p class="detail-description">Groups classified news into Critical / High / Medium buckets, aggregates by risk category, and extracts the top-10 recurring keywords. Optionally calls Claude API for AI-powered narrative analysis.</p>
+                        <p class="detail-description">For every event the agent assigns two independent scores via Claude API: <strong>Probability</strong> (Unlikely → Frequent) and <strong>Impact</strong> (Negligible → Catastrophic). The final risk level — Low / Medium / High / Extreme — is derived from the 5×5 matrix cell. When no API key is present, scores are estimated from keyword risk scores as a heuristic fallback.</p>
                     </div>
                     <div class="detail-section">
                         <div class="detail-section-title">Outputs</div>
                         <div class="detail-tags">
-                            <span class="detail-tag output">Risk breakdown</span>
-                            <span class="detail-tag output">Category counts</span>
-                            <span class="detail-tag output">Top-10 keywords</span>
-                            <span class="detail-tag output">AI narrative (optional)</span>
+                            <span class="detail-tag output">Probability (1–5 + label)</span>
+                            <span class="detail-tag output">Impact (1–5 + label)</span>
+                            <span class="detail-tag output">Final matrix level</span>
+                            <span class="detail-tag output">P &amp; I reasoning</span>
+                            <span class="detail-tag output">5×5 heatmap grid</span>
                         </div>
                     </div>
                 </div>
@@ -1988,6 +2151,7 @@
             <div class="tabs">
                 <button class="tab-button active" onclick="switchTab(event, 'summary')">Summary</button>
                 <button class="tab-button" onclick="switchTab(event, 'distribution')">Distribution</button>
+                <button class="tab-button" onclick="switchTab(event, 'riskMatrix')">Risk Matrix</button>
                 <button class="tab-button" onclick="switchTab(event, 'details')">Details</button>
             </div>
 
@@ -1997,6 +2161,21 @@
 
             <div id="distribution" class="tab-content">
                 <div id="riskDistribution"></div>
+            </div>
+
+            <!-- 2D Risk Matrix tab -->
+            <div id="riskMatrix" class="tab-content">
+                <div class="risk-matrix-wrap">
+                    <!-- 5×5 heatmap grid -->
+                    <div class="matrix-grid-container">
+                        <div id="riskMatrixGrid"></div>
+                    </div>
+                    <!-- Per-item P×I reasoning cards -->
+                    <div>
+                        <div class="matrix-items-header" id="riskMatrixItemsHeader"></div>
+                        <div id="riskMatrixItems"></div>
+                    </div>
+                </div>
             </div>
 
             <div id="details" class="tab-content">
@@ -2887,16 +3066,34 @@
             }
             if (stages.risk_classification && stages.risk_classification.status === 'success') {
                 summary += `<p><span class="result-label">⚠️ Items Classified:</span> ${stages.risk_classification.count}</p>`;
-                if (stages.risk_classification.distribution) {
-                    const dist = stages.risk_classification.distribution;
-                    summary += `<p><span class="result-label">Distribution:</span> Critical: ${dist.Critical || 0}, High: ${dist.High || 0}, Medium: ${dist.Medium || 0}</p>`;
-                }
+            }
+            const analysis = stages.analysis && stages.analysis.analysis;
+            if (analysis) {
+                const byLevel = analysis.by_risk_level || {};
+                const llmTag = analysis.llm_scored
+                    ? '<span class="llm-badge">LLM-scored</span>'
+                    : '<span class="heuristic-badge">Heuristic</span>';
+                summary += `<p><span class="result-label">🔢 Risk Matrix${llmTag}:</span> `
+                    + `Extreme: ${(byLevel.extreme||[]).length}, `
+                    + `High: ${(byLevel.high||[]).length}, `
+                    + `Medium: ${(byLevel.medium||[]).length}, `
+                    + `Low: ${(byLevel.low||[]).length}</p>`;
             }
             summary += '</div>';
             document.getElementById('resultsSummary').innerHTML = summary;
 
-            // Distribution
-            if (stages.risk_classification && stages.risk_classification.distribution) {
+            // Distribution — show matrix-level boxes
+            if (analysis && analysis.by_risk_level) {
+                const byLevel = analysis.by_risk_level;
+                let html = '<div class="risk-distribution">';
+                html += `<div class="risk-box risk-critical">Extreme<br>${(byLevel.extreme||[]).length}</div>`;
+                html += `<div class="risk-box risk-high">High<br>${(byLevel.high||[]).length}</div>`;
+                html += `<div class="risk-box risk-medium">Medium<br>${(byLevel.medium||[]).length}</div>`;
+                html += `<div class="risk-box risk-low">Low<br>${(byLevel.low||[]).length}</div>`;
+                html += '</div>';
+                document.getElementById('riskDistribution').innerHTML = html;
+            } else if (stages.risk_classification && stages.risk_classification.distribution) {
+                // Fallback to classifier distribution if analysis not available
                 const dist = stages.risk_classification.distribution;
                 let html = '<div class="risk-distribution">';
                 html += `<div class="risk-box risk-critical">Critical<br>${dist.Critical || 0}</div>`;
@@ -2907,8 +3104,121 @@
                 document.getElementById('riskDistribution').innerHTML = html;
             }
 
+            // 2D Risk Matrix tab
+            renderRiskMatrix(results);
+
             // Load full report
             loadReport();
+        }
+
+        /* ── 2D Risk Matrix renderer ────────────────────────────────────── */
+
+        const PROB_LABELS   = ['Unlikely','Seldom','Occasional','Likely','Frequent'];
+        const IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic'];
+        const MATRIX_LEVEL  = [
+            ['Low',    'Low',    'Low',    'Medium', 'Medium'],
+            ['Low',    'Low',    'Medium', 'Medium', 'High'  ],
+            ['Low',    'Medium', 'Medium', 'High',   'High'  ],
+            ['Medium', 'Medium', 'High',   'High',   'Extreme'],
+            ['Medium', 'High',   'High',   'Extreme','Extreme'],
+        ];
+        const LEVEL_CLASS = {
+            Low: 'matrix-cell-low', Medium: 'matrix-cell-medium',
+            High: 'matrix-cell-high', Extreme: 'matrix-cell-extreme',
+        };
+        const LEVEL_COLOR = {
+            Low: '#28a745', Medium: '#ffc107', High: '#fd7e14', Extreme: '#dc3545',
+        };
+
+        function renderRiskMatrix(results) {
+            const analysis = results?.stages?.analysis?.analysis;
+            const gridEl   = document.getElementById('riskMatrixGrid');
+            const itemsEl  = document.getElementById('riskMatrixItems');
+            const hdrEl    = document.getElementById('riskMatrixItemsHeader');
+            if (!gridEl || !itemsEl) return;
+
+            const summary = analysis?.matrix_summary;   // 5×5 count grid
+            const scored  = analysis?.scored_items || [];
+            const llmUsed = analysis?.llm_scored || false;
+
+            // ── 5×5 heatmap ────────────────────────────────────────────────
+            let gridHtml = '<table class="matrix-grid">';
+
+            // Header row: Impact labels
+            gridHtml += '<thead><tr>';
+            gridHtml += '<th class="matrix-axis-label" style="writing-mode:initial">P \\ I</th>';
+            for (const lbl of IMPACT_LABELS) {
+                gridHtml += `<th class="matrix-axis-label">${lbl}</th>`;
+            }
+            gridHtml += '</tr></thead><tbody>';
+
+            // Rows: highest probability at top (P=5 → P=1)
+            for (let p = 5; p >= 1; p--) {
+                gridHtml += '<tr>';
+                gridHtml += `<th class="matrix-axis-label">${PROB_LABELS[p - 1]}</th>`;
+                for (let i = 1; i <= 5; i++) {
+                    const level = MATRIX_LEVEL[p - 1][i - 1];
+                    const cls   = LEVEL_CLASS[level];
+                    const count = summary ? (summary[p - 1][i - 1] || '') : '';
+                    gridHtml += `<td class="${cls}" title="P=${p} I=${i}: ${level}">`;
+                    gridHtml += `<span class="matrix-cell-count">${count}</span>`;
+                    gridHtml += `${level}</td>`;
+                }
+                gridHtml += '</tr>';
+            }
+            gridHtml += '</tbody></table>';
+
+            // Legend
+            gridHtml += '<div class="matrix-legend">';
+            for (const [lv, col] of Object.entries(LEVEL_COLOR)) {
+                const textCol = lv === 'Medium' ? '#212529' : '#fff';
+                gridHtml += `<div class="matrix-legend-item">
+                    <span class="matrix-legend-swatch" style="background:${col}"></span>
+                    <span>${lv}</span></div>`;
+            }
+            gridHtml += '</div>';
+            gridEl.innerHTML = gridHtml;
+
+            // ── Per-item reasoning cards ────────────────────────────────────
+            if (!scored.length) {
+                itemsEl.innerHTML = '<p style="color:#888;font-size:0.9em;">No scored items available.</p>';
+                return;
+            }
+
+            // Sort by matrix_score descending (Extreme first)
+            const sorted = [...scored].sort((a, b) => (b.matrix_score || 0) - (a.matrix_score || 0));
+
+            const scoredBadge = llmUsed
+                ? '<span class="llm-badge">LLM-scored</span>'
+                : '<span class="heuristic-badge">Heuristic</span>';
+            hdrEl.innerHTML = `${sorted.length} items scored ${scoredBadge}`;
+
+            itemsEl.innerHTML = sorted.map(item => {
+                const level    = item.matrix_level || 'Low';
+                const bgColor  = item.matrix_color  || LEVEL_COLOR[level] || '#28a745';
+                const txtColor = item.matrix_text_color || (level === 'Medium' ? '#212529' : '#fff');
+                const badgeCls = level === 'Medium' ? 'risk-badge badge-medium' : 'risk-badge';
+                const itemBadge = item.llm_scored
+                    ? '<span class="llm-badge">LLM</span>'
+                    : '<span class="heuristic-badge">heuristic</span>';
+                return `
+                <div class="risk-item-card">
+                    <span class="${badgeCls}" style="background:${bgColor};color:${txtColor}">${level}</span>${itemBadge}
+                    <div class="risk-item-title">${escapeHtml(item.title || '')}</div>
+                    <div class="risk-item-scores">
+                        <div class="score-box">
+                            <div class="score-label">Probability</div>
+                            <div class="score-value">${item.probability || '—'} — ${escapeHtml(item.probability_label || '')}</div>
+                            <div class="score-reason">${escapeHtml(item.probability_reasoning || '')}</div>
+                        </div>
+                        <div class="score-box">
+                            <div class="score-label">Impact</div>
+                            <div class="score-value">${item.impact || '—'} — ${escapeHtml(item.impact_label || '')}</div>
+                            <div class="score-reason">${escapeHtml(item.impact_reasoning || '')}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         async function loadReport() {
