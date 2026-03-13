@@ -65,10 +65,10 @@ Expected: ✅ All checks passed!
 python frontend_app.py
 ```
 
-Expected: Server running at http://localhost:5000
+Expected: Server running at http://localhost:5050
 
 ### Step 4: Open and Demo (1 minute)
-1. Navigate to http://localhost:5000 in your browser
+1. Navigate to http://localhost:5050 in your browser
 2. Click "Start Pipeline" button
 3. Watch real-time agent execution
 4. View results in Summary/Distribution/Details tabs
@@ -309,7 +309,7 @@ Map keywords to categories:
 ### Run the Dashboard
 ```bash
 python frontend_app.py
-# Then open http://localhost:5000
+# Then open http://localhost:5050
 ```
 
 ### Daily Monitoring
@@ -420,7 +420,7 @@ python -c "from fed_news_db import FedNewsDatabase; print(FedNewsDatabase())"
 
 **Port Already in Use**
 ```bash
-lsof -i :5000  # Find process
+lsof -i :5050  # Find process
 kill -9 <PID>  # Kill it
 ```
 
@@ -440,7 +440,7 @@ pip install flask flask-cors crawl4ai anthropic
 
 1. **Basic Usage** (5 min)
    - Start dashboard: `python frontend_app.py`
-   - Open http://localhost:5000
+   - Open http://localhost:5050
    - Click "Start Pipeline"
 
 2. **Explore Features** (10 min)
@@ -498,7 +498,7 @@ python verify_system.py
 python frontend_app.py
 
 # 4. Open
-# Navigate to http://localhost:5000
+# Navigate to http://localhost:5050
 # Click "Start Pipeline"
 ```
 

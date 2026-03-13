@@ -109,7 +109,7 @@ async def execute(self, **kwargs):
 ### 3. **Test with curl**
 ```bash
 # Test the endpoint and see actual None values
-curl -s http://localhost:5000/api/results | python -m json.tool
+curl -s http://localhost:5050/api/results | python -m json.tool
 
 # If you see "null" in the JSON, those are None values in Python
 ```
@@ -151,18 +151,18 @@ python frontend_app.py
 
 ### 2. **Execute the pipeline**
 ```bash
-curl -X POST http://localhost:5000/api/execute
+curl -X POST http://localhost:5050/api/execute
 ```
 
 ### 3. **Get results (should now work)**
 ```bash
-curl http://localhost:5000/api/results
+curl http://localhost:5050/api/results
 ```
 
 ### 4. **Check for None values**
 ```python
 import requests
-response = requests.get("http://localhost:5000/api/results")
+response = requests.get("http://localhost:5050/api/results")
 data = response.json()
 
 # Verify no "null" values appear (or they're expected)
@@ -222,8 +222,8 @@ safe_response = {
 
 1. **Test the fixed endpoints:**
    ```bash
-   curl http://localhost:5000/api/results
-   curl http://localhost:5000/api/guardian/dashboard
+   curl http://localhost:5050/api/results
+   curl http://localhost:5050/api/guardian/dashboard
    ```
 
 2. **Monitor for remaining None values:**

@@ -12,7 +12,7 @@
 **Action:** Restart Flask and test:
 ```bash
 python frontend_app.py
-curl http://localhost:5000/api/results
+curl http://localhost:5050/api/results
 ```
 
 ---
@@ -234,9 +234,9 @@ source venv/bin/activate
 python frontend_app.py
 
 # Terminal 2: Test endpoints
-curl http://localhost:5000/api/results
-curl http://localhost:5000/api/guardian/dashboard
-curl http://localhost:5000/api/status
+curl http://localhost:5050/api/results
+curl http://localhost:5050/api/guardian/dashboard
+curl http://localhost:5050/api/status
 ```
 
 ---

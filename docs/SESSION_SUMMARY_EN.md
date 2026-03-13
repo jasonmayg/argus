@@ -154,7 +154,7 @@ Complete navigation guide with:
 pip install -r requirements.txt
 python verify_system.py
 python frontend_app.py
-# Open http://localhost:5000
+# Open http://localhost:5050
 ```
 
 ### For Developers
@@ -256,7 +256,7 @@ python verify_system.py
 2. Choose installation method
 3. Run: `pip install -r requirements.txt`
 4. Run: `python frontend_app.py`
-5. Open: http://localhost:5000
+5. Open: http://localhost:5050
 
 ### For Developers
 1. Read IMPLEMENTATION_GUIDE.md
@@ -394,7 +394,7 @@ python verify_system.py
 
 # Run
 python frontend_app.py
-# Open http://localhost:5000
+# Open http://localhost:5050
 ```
 
 ---

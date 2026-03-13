@@ -206,7 +206,7 @@ def main():
         print_success("All checks passed! System is ready.")
         print_info("Next steps:")
         print_info("  1. Start frontend: python frontend_app.py")
-        print_info("  2. Open: http://localhost:5000")
+        print_info("  2. Open: http://localhost:5050")
         print_info("  3. Click 'Start Pipeline' to run a demo")
         return 0
     else:

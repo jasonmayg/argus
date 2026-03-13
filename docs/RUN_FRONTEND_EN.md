@@ -18,14 +18,14 @@ Expected output:
 ║                                                                ║
 ║         ARGUS Multi-Agent System - Web Frontend                ║
 ║                                                                ║
-║  Starting Flask server on http://localhost:5000/              ║
+║  Starting Flask server on http://localhost:5050/              ║
 ║  Open your browser and navigate to the URL above               ║
 ║                                                                ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 
 ### 3. Open Dashboard
-Navigate to **http://localhost:5000** in your browser
+Navigate to **http://localhost:5050** in your browser
 
 ---
 
@@ -168,12 +168,12 @@ Complete structured JSON with:
 
 ## Troubleshooting
 
-### Issue: "Connection refused" when opening http://localhost:5000
+### Issue: "Connection refused" when opening http://localhost:5050
 
 **Solution**:
 - Verify Flask server is running (check terminal for startup message)
-- Try accessing http://127.0.0.1:5000 instead
-- Port 5000 may be in use - restart the Flask app or check with `lsof -i :5000`
+- Try accessing http://127.0.0.1:5050 instead
+- Port 5050 may be in use - restart the Flask app or check with `lsof -i :5050`
 
 ### Issue: Pipeline executes but shows no results
 
@@ -354,12 +354,12 @@ bash setup_cron.sh
 
 #### Monitor specific agent:
 ```bash
-curl http://localhost:5000/api/agents/logs/risk_classifier
+curl http://localhost:5050/api/agents/logs/risk_classifier
 ```
 
 #### Get analysis results:
 ```bash
-curl http://localhost:5000/api/results | python -m json.tool
+curl http://localhost:5050/api/results | python -m json.tool
 ```
 
 ---

@@ -28,6 +28,7 @@ except Exception:
 
 from agents_system import AgentOrchestrator
 from data_dashboard import data_dashboard_bp
+from config import API_PORT
 
 
 class SafeJSONEncoder(JSONEncoder):
@@ -1977,7 +1978,7 @@ def reset_system():
 
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "5050"))
+    port = API_PORT
     print("""
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║

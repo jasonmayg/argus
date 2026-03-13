@@ -203,7 +203,7 @@ python -c "import anthropic; print(f'Anthropic: {anthropic.__version__}')"
    ```
 
 2. **Open Dashboard**:
-   Navigate to http://localhost:5000
+   Navigate to http://localhost:5050
 
 3. **Run a Demo**:
    Click "Start Pipeline" button

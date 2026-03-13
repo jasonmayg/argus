@@ -79,7 +79,7 @@ pip install -r guardian_poc/requirements.txt
 python frontend_app.py
 ```
 
-Open [http://localhost:5000](http://localhost:5000)
+Open [http://localhost:5050](http://localhost:5050)
 
 ### 3. Run daily monitor job (core)
 
@@ -142,7 +142,7 @@ streamlit run guardian_poc/src/dashboard.py
 
 ## Troubleshooting
 
-- Port conflict on `5000`: run `lsof -i :5000` and stop the existing process.
+- Port conflict on `5050`: run `lsof -i :5050` and stop the existing process.
 - Missing modules: reinstall with `pip install -r requirements.txt`.
 - Guardian dashboard import errors: ensure `pip install -r guardian_poc/requirements.txt`.
 - Empty Guardian snapshot: run with `--fallback-demo-if-empty` for demo validation.

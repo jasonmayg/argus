@@ -47,7 +47,7 @@ cd ..
 python frontend_app.py
 
 # 3. Test endpoint
-curl http://localhost:5000/api/results
+curl http://localhost:5050/api/results
 ```
 
 ---

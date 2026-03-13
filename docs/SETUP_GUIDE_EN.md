@@ -396,7 +396,7 @@ python frontend_app.py
 
 ### 3. Open in Browser
 ```
-http://localhost:5000
+http://localhost:5050
 ```
 
 ### 4. Run Demo (2 minutes)
@@ -515,23 +515,23 @@ which python
 
 ---
 
-### Issue: Port 5000 already in use
+### Issue: Port 5050 already in use
 
-**Cause**: Another process using port 5000
+**Cause**: Another process using port 5050
 
 **Solution**:
 ```bash
-# Find process on port 5000
-lsof -i :5000
+# Find process on port 5050
+lsof -i :5050
 
 # Kill the process
 kill -9 <PID>
 
 # Or use different port
-# Edit frontend_app.py, change line 145:
-# app.run(debug=True, port=5000)
-# to:
-# app.run(debug=True, port=5001)
+# Edit config.py, change:
+# API_PORT = 5050
+# to any free port, e.g.:
+# API_PORT = 5051
 ```
 
 ---
@@ -575,7 +575,7 @@ PYTHONHTTPSVERIFY=0 python your_script.py
 1. **Verify**: `python verify_system.py`
 2. **Understand**: Read README.md or INDEX.md
 3. **Run**: `python frontend_app.py`
-4. **Demo**: Open http://localhost:5000
+4. **Demo**: Open http://localhost:5050
 5. **Configure**: Edit configuration files if needed
 
 ### Common Next Actions
@@ -616,7 +616,7 @@ source venv/bin/activate    # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python verify_system.py
 python frontend_app.py
-# Open http://localhost:5000
+# Open http://localhost:5050
 ```
 
 **That's it!** Your ARGUS system is ready to use.

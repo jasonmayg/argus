@@ -86,13 +86,13 @@ python frontend_app.py
 ### Test the Fix
 ```bash
 # Execute the pipeline
-curl -X POST http://localhost:5000/api/execute
+curl -X POST http://localhost:5050/api/execute
 
 # Get results (now works with None values)
-curl http://localhost:5000/api/results
+curl http://localhost:5050/api/results
 
 # Get dashboard (now handles complex data with None)
-curl http://localhost:5000/api/guardian/dashboard
+curl http://localhost:5050/api/guardian/dashboard
 ```
 
 ## What This Fix Does
