@@ -6,6 +6,7 @@ Complete agent-based architecture for Federal Reserve news monitoring and risk a
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from typing import List, Dict, Optional
 from abc import ABC, abstractmethod
@@ -13,6 +14,13 @@ from abc import ABC, abstractmethod
 from fed_news_crawler import FedNewsCrawler
 from risk_classifier import RiskClassifier
 from fed_news_db import FedNewsDatabase
+from risk_matrix import (
+    calculate_risk_level,
+    PROBABILITY_LABELS,
+    IMPACT_LABELS,
+    score_to_probability,
+    score_to_impact,
+)
 
 
 class Agent(ABC):
@@ -374,52 +382,71 @@ class DatabaseAgent(Agent):
 
 
 class AnalysisAgent(Agent):
-    """Agent for risk analysis"""
+    """Agent for 2D Probability × Impact risk matrix analysis.
+
+    For every classified news item the agent assigns:
+      - Probability  (1=Unlikely … 5=Frequent)  — likelihood of occurrence
+      - Impact       (1=Negligible … 5=Catastrophic) — severity for Treasury
+
+    Scores are obtained by calling the Claude API when an ANTHROPIC_API_KEY is
+    present; otherwise a keyword-score heuristic is used as a fallback.
+    The final risk level (Low / Medium / High / Extreme) is derived from the
+    5×5 matrix defined in risk_matrix.py.
+    """
+
+    # Maximum items sent to the LLM in one batch (keeps token cost predictable)
+    _LLM_BATCH_LIMIT = 30
 
     def __init__(self):
         super().__init__("RiskAnalyzer")
         self.analysis_results = []
+        self._api_key = os.getenv("ANTHROPIC_API_KEY")
+
+    # ── Public entry point ────────────────────────────────────────────────────
 
     async def execute(self, classified_news: List[Dict], **kwargs):
-        """Analyze risks in classified news"""
+        """Score every item on the P×I matrix and aggregate results."""
         self.status = "running"
-        self.log(f"Starting analysis of {len(classified_news)} items")
+        self.log(f"Starting 2D risk matrix analysis of {len(classified_news)} items")
 
         try:
-            self.analysis_results = []
+            scored_items = await self._score_items(classified_news)
 
-            # Analyze by risk level
-            critical_items = [n for n in classified_news if n['risk_level'] == 'Critical']
-            high_items = [n for n in classified_news if n['risk_level'] == 'High']
-            medium_items = [n for n in classified_news if n['risk_level'] == 'Medium']
+            extreme_items = [n for n in scored_items if n.get("matrix_level") == "Extreme"]
+            high_items    = [n for n in scored_items if n.get("matrix_level") == "High"]
+            medium_items  = [n for n in scored_items if n.get("matrix_level") == "Medium"]
+            low_items     = [n for n in scored_items if n.get("matrix_level") == "Low"]
 
-            self.log(f"Critical: {len(critical_items)}, High: {len(high_items)}, Medium: {len(medium_items)}")
+            llm_used = any(item.get("llm_scored") for item in scored_items)
+            self.log(
+                f"Matrix results (LLM={'yes' if llm_used else 'heuristic'}) — "
+                f"Extreme: {len(extreme_items)}, High: {len(high_items)}, "
+                f"Medium: {len(medium_items)}, Low: {len(low_items)}"
+            )
 
-            # Analyze by category
-            by_category = {}
-            for item in classified_news:
-                cat = item['risk_category']
-                if cat not in by_category:
-                    by_category[cat] = []
-                by_category[cat].append(item)
+            by_category: Dict[str, list] = {}
+            for item in scored_items:
+                cat = item.get("risk_category", "Unknown")
+                by_category.setdefault(cat, []).append(item)
 
             analysis = {
-                "total_items": len(classified_news),
+                "total_items":   len(scored_items),
+                "scored_items":  scored_items,
+                "llm_scored":    llm_used,
                 "by_risk_level": {
-                    "critical": critical_items,
-                    "high": high_items,
-                    "medium": medium_items
+                    "extreme": extreme_items,
+                    "high":    high_items,
+                    "medium":  medium_items,
+                    "low":     low_items,
                 },
-                "by_category": {
-                    cat: len(items) for cat, items in by_category.items()
-                },
-                "top_keywords": self._extract_top_keywords(classified_news)
+                "by_category":    {cat: len(items) for cat, items in by_category.items()},
+                "top_keywords":   self._extract_top_keywords(classified_news),
+                "matrix_summary": self._build_matrix_summary(scored_items),
             }
 
             self.analysis_results = analysis
-            self.log("Analysis completed successfully")
+            self.log("2D risk matrix analysis completed successfully")
             self.status = "success"
-
             return {"status": "success", "analysis": analysis}
 
         except Exception as e:
@@ -427,15 +454,150 @@ class AnalysisAgent(Agent):
             self.status = "failed"
             return {"status": "failed", "error": str(e)}
 
-    def _extract_top_keywords(self, news_items: List[Dict], top_n: int = 10) -> List[str]:
-        """Extract top keywords from news items"""
-        keyword_count = {}
-        for item in news_items:
-            for keyword in item.get('matched_keywords', []):
-                keyword_count[keyword] = keyword_count.get(keyword, 0) + 1
+    # ── Scoring orchestration ─────────────────────────────────────────────────
 
-        sorted_keywords = sorted(keyword_count.items(), key=lambda x: x[1], reverse=True)
-        return [kw for kw, count in sorted_keywords[:top_n]]
+    async def _score_items(self, news_items: List[Dict]) -> List[Dict]:
+        """Try LLM scoring; fall back to heuristic on any failure."""
+        if self._api_key and news_items:
+            try:
+                return await self._score_with_llm(news_items)
+            except Exception as exc:
+                self.log(f"LLM scoring failed ({exc}), using heuristic fallback", "WARN")
+        return self._score_heuristic(news_items)
+
+    # ── LLM-powered scoring ───────────────────────────────────────────────────
+
+    async def _score_with_llm(self, news_items: List[Dict]) -> List[Dict]:
+        """Call Claude to assign Probability and Impact for all items.
+
+        Items beyond _LLM_BATCH_LIMIT are scored heuristically to cap cost.
+        """
+        import anthropic  # imported here so the module loads without the SDK installed
+
+        client = anthropic.Anthropic(api_key=self._api_key)
+        llm_items = news_items[: self._LLM_BATCH_LIMIT]
+
+        items_text = "\n".join(
+            f"{i + 1}. [{item.get('date', '')}] {item.get('title', '')} "
+            f"(keyword risk score: {item.get('risk_score', 0):.0f}/100)"
+            for i, item in enumerate(llm_items)
+        )
+
+        prompt = f"""You are a senior treasury risk analyst.
+
+For each news item below, assess two independent dimensions:
+
+**Probability** — likelihood this event materialises or escalates within the next 90 days:
+  1 = Unlikely  |  2 = Seldom  |  3 = Occasional  |  4 = Likely  |  5 = Frequent
+
+**Impact** — severity on Treasury operations, liquidity, and fixed-income portfolio if it occurs:
+  1 = Negligible  |  2 = Minor  |  3 = Moderate  |  4 = Hazardous  |  5 = Catastrophic
+
+News items:
+{items_text}
+
+Return a JSON array — one object per item, in the same order:
+[
+  {{
+    "index": 1,
+    "probability": <int 1-5>,
+    "probability_label": "<label>",
+    "probability_reasoning": "<one concise sentence explaining your probability rating>",
+    "impact": <int 1-5>,
+    "impact_label": "<label>",
+    "impact_reasoning": "<one concise sentence explaining your impact rating>"
+  }},
+  ...
+]
+
+Return ONLY the JSON array — no preamble, no explanation, no markdown fences."""
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        raw = response.content[0].text.strip()
+        # Strip optional markdown code fences
+        if raw.startswith("```"):
+            parts = raw.split("```")
+            raw = parts[1] if len(parts) > 1 else raw
+            if raw.lower().startswith("json"):
+                raw = raw[4:]
+        scores: List[Dict] = json.loads(raw.strip())
+
+        result: List[Dict] = []
+        for i, item in enumerate(news_items):
+            item = dict(item)
+            if i < len(scores):
+                s = scores[i]
+                p   = max(1, min(5, int(s.get("probability", 1))))
+                imp = max(1, min(5, int(s.get("impact", 1))))
+                matrix = calculate_risk_level(p, imp)
+                item.update({
+                    "probability":             p,
+                    "probability_label":       PROBABILITY_LABELS[p],
+                    "probability_reasoning":   s.get("probability_reasoning", ""),
+                    "impact":                  imp,
+                    "impact_label":            IMPACT_LABELS[imp],
+                    "impact_reasoning":        s.get("impact_reasoning", ""),
+                    "matrix_level":            matrix["level"],
+                    "matrix_color":            matrix["color"],
+                    "matrix_text_color":       matrix["text_color"],
+                    "matrix_score":            matrix["matrix_score"],
+                    "llm_scored":              True,
+                })
+            else:
+                # Item beyond LLM batch limit — use heuristic
+                item = self._apply_heuristic(item)
+            result.append(item)
+        return result
+
+    # ── Heuristic fallback ────────────────────────────────────────────────────
+
+    def _score_heuristic(self, news_items: List[Dict]) -> List[Dict]:
+        """Derive P and I from the existing keyword risk_score (0–100)."""
+        return [self._apply_heuristic(dict(item)) for item in news_items]
+
+    def _apply_heuristic(self, item: Dict) -> Dict:
+        rs     = float(item.get("risk_score") or 0)
+        p      = score_to_probability(rs)
+        imp    = score_to_impact(rs)
+        matrix = calculate_risk_level(p, imp)
+        item.update({
+            "probability":           p,
+            "probability_label":     PROBABILITY_LABELS[p],
+            "probability_reasoning": f"Estimated from keyword risk score {rs:.0f}/100.",
+            "impact":                imp,
+            "impact_label":          IMPACT_LABELS[imp],
+            "impact_reasoning":      f"Estimated from keyword risk score {rs:.0f}/100.",
+            "matrix_level":          matrix["level"],
+            "matrix_color":          matrix["color"],
+            "matrix_text_color":     matrix["text_color"],
+            "matrix_score":          matrix["matrix_score"],
+            "llm_scored":            False,
+        })
+        return item
+
+    # ── Aggregation helpers ───────────────────────────────────────────────────
+
+    def _build_matrix_summary(self, scored_items: List[Dict]) -> List[List[int]]:
+        """Return a 5×5 count grid (probability × impact) for the heatmap."""
+        grid = [[0] * 5 for _ in range(5)]
+        for item in scored_items:
+            p   = max(1, min(5, int(item.get("probability", 1))))
+            imp = max(1, min(5, int(item.get("impact",      1))))
+            grid[p - 1][imp - 1] += 1
+        return grid
+
+    def _extract_top_keywords(self, news_items: List[Dict], top_n: int = 10) -> List[str]:
+        """Return the top-N most frequent matched keywords."""
+        counts: Dict[str, int] = {}
+        for item in news_items:
+            for kw in item.get("matched_keywords", []):
+                counts[kw] = counts.get(kw, 0) + 1
+        return [kw for kw, _ in sorted(counts.items(), key=lambda x: x[1], reverse=True)[:top_n]]
 
 
 class ReportingAgent(Agent):
@@ -451,18 +613,21 @@ class ReportingAgent(Agent):
         self.log("Generating report...")
 
         try:
+            by_level = analysis_data.get("by_risk_level", {})
             report = {
                 "timestamp": datetime.now().isoformat(),
                 "title": "Federal Reserve News Risk Analysis Report",
                 "summary": {
-                    "total_items": analysis_data['total_items'],
-                    "critical_count": len(analysis_data['by_risk_level']['critical']),
-                    "high_count": len(analysis_data['by_risk_level']['high']),
-                    "medium_count": len(analysis_data['by_risk_level']['medium']),
+                    "total_items":   analysis_data.get("total_items", 0),
+                    "extreme_count": len(by_level.get("extreme", [])),
+                    "high_count":    len(by_level.get("high",    [])),
+                    "medium_count":  len(by_level.get("medium",  [])),
+                    "low_count":     len(by_level.get("low",     [])),
+                    "llm_scored":    analysis_data.get("llm_scored", False),
                 },
                 "recommendations": self._generate_recommendations(analysis_data),
-                "top_keywords": analysis_data['top_keywords'],
-                "category_distribution": analysis_data['by_category']
+                "top_keywords": analysis_data.get("top_keywords", []),
+                "category_distribution": analysis_data.get("by_category", {}),
             }
 
             self.reports.append(report)
@@ -477,23 +642,37 @@ class ReportingAgent(Agent):
             return {"status": "failed", "error": str(e)}
 
     def _generate_recommendations(self, analysis: Dict) -> List[str]:
-        """Generate recommendations based on analysis"""
+        """Generate recommendations based on 2D matrix analysis."""
         recommendations = []
+        by_level = analysis.get("by_risk_level", {})
 
-        critical_count = len(analysis['by_risk_level']['critical'])
-        if critical_count > 0:
-            recommendations.append(f"⚠️ URGENT: {critical_count} critical risk items detected. Immediate management review required.")
+        extreme_count = len(by_level.get("extreme", []))
+        if extreme_count > 0:
+            recommendations.append(
+                f"URGENT: {extreme_count} Extreme-risk item(s) detected "
+                f"(Frequent/Likely × Hazardous/Catastrophic). Immediate management review required."
+            )
 
-        high_count = len(analysis['by_risk_level']['high'])
+        high_count = len(by_level.get("high", []))
         if high_count > 3:
-            recommendations.append(f"📊 {high_count} high-risk items detected. Consider deep analysis.")
+            recommendations.append(
+                f"{high_count} High-risk items on the matrix. Escalate to treasury risk committee."
+            )
 
-        for category, count in analysis['by_category'].items():
+        for category, count in analysis.get("by_category", {}).items():
             if count > 5:
-                recommendations.append(f"🔍 Monitor {category} closely: {count} items detected.")
+                recommendations.append(f"Monitor {category} closely: {count} items flagged.")
+
+        scored = analysis.get("scored_items", [])
+        high_impact = [s for s in scored if s.get("impact", 0) >= 4]
+        if high_impact:
+            recommendations.append(
+                f"{len(high_impact)} item(s) rated Hazardous or Catastrophic impact — "
+                f"review treasury exposure regardless of probability."
+            )
 
         if not recommendations:
-            recommendations.append("✅ Risk profile within normal parameters.")
+            recommendations.append("Risk profile within normal parameters. Continue routine monitoring.")
 
         return recommendations
 
