@@ -141,3 +141,4 @@ guardian_poc/reports/
 dmypy.json
 .pyre/
 .claude/
+CLAUDE.md
