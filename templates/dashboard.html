@@ -1062,6 +1062,572 @@
             gap: 8px;
         }
 
+        .persona-section {
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .persona-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .persona-user {
+            font-size: 14px;
+            color: #475569;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 8px 12px;
+        }
+
+        .persona-select {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            background: #fff;
+            color: #0f172a;
+        }
+
+        .persona-switch-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            background: #0f172a;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .persona-summary {
+            font-size: 14px;
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        .persona-kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .workflow-section {
+            border: 1px solid #dbe3f5;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .workflow-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .workflow-head h3 {
+            margin: 0;
+            color: #0f172a;
+        }
+
+        .workflow-head p {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .workflow-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .workflow-tab {
+            border: 1px solid #d7dee8;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 14px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .workflow-tab:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+        }
+
+        .workflow-tab.active {
+            border-color: #2563eb;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .workflow-step {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .workflow-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .workflow-metric {
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .workflow-detail {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 14px;
+        }
+
+        .workflow-panel {
+            border: 1px solid #dbe2ea;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 18px;
+        }
+
+        .workflow-panel-title {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .workflow-panel-headline {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .workflow-panel-copy {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.65;
+            margin-bottom: 14px;
+        }
+
+        .workflow-bullets {
+            margin: 0;
+            padding-left: 20px;
+            color: #334155;
+            line-height: 1.7;
+        }
+
+        .workflow-evidence-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .workflow-evidence-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            padding: 12px 14px;
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .persona-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .persona-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .persona-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .persona-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .persona-pill.stable {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .persona-pill.low {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .persona-pill.medium {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .persona-pill.high {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .persona-card-metric {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .persona-card-detail {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        .persona-card-countries {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .persona-country-tag {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #4338ca;
+        }
+
+        .persona-lower {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 14px;
+        }
+
+        .persona-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .persona-panel h3 {
+            margin: 0 0 12px;
+            color: #0f172a;
+        }
+
+        .persona-list {
+            margin: 0;
+            padding-left: 20px;
+            color: #334155;
+            line-height: 1.7;
+        }
+
+        .persona-list.tight li {
+            margin-bottom: 6px;
+        }
+
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at top left, rgba(14, 165, 233, 0.22), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.18), transparent 30%),
+                rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(14px);
+            z-index: 4000;
+            padding: 24px;
+        }
+
+        .login-overlay.show {
+            display: flex;
+        }
+
+        .login-card {
+            width: min(920px, 100%);
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.98) 100%);
+            border-radius: 28px;
+            padding: 0;
+            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.34);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            display: grid;
+            grid-template-columns: 1.08fr 0.92fr;
+        }
+
+        .login-hero {
+            padding: 40px 34px 34px;
+            background:
+                linear-gradient(160deg, #0f172a 0%, #172554 55%, #0f766e 100%);
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-hero::before {
+            content: "";
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            top: -120px;
+            right: -80px;
+        }
+
+        .login-hero::after {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.12);
+            bottom: -90px;
+            left: -70px;
+        }
+
+        .login-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .login-card h2 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 40px;
+            line-height: 1.05;
+            color: inherit;
+        }
+
+        .login-card p {
+            color: inherit;
+            margin-bottom: 0;
+        }
+
+        .login-hero-copy {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 16px;
+            line-height: 1.65;
+            max-width: 480px;
+            position: relative;
+        }
+
+        .login-highlights {
+            margin-top: 24px;
+            display: grid;
+            gap: 12px;
+            position: relative;
+        }
+
+        .login-highlight {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-highlight-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.14);
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .login-highlight strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .login-highlight span {
+            display: block;
+            color: rgba(255, 255, 255, 0.74);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .login-panel {
+            padding: 34px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .login-panel-head {
+            margin-bottom: 20px;
+        }
+
+        .login-panel-label {
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .login-panel h3 {
+            margin: 0 0 8px;
+            font-size: 24px;
+            color: #0f172a;
+        }
+
+        .login-panel-copy {
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        .login-form {
+            display: grid;
+            gap: 14px;
+        }
+
+        .login-form label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .login-form input,
+        .login-form select {
+            width: 100%;
+            border: 1px solid #d7dee8;
+            border-radius: 14px;
+            padding: 14px 16px;
+            font-size: 15px;
+            box-sizing: border-box;
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+        }
+
+        .login-form input:focus,
+        .login-form select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .login-persona-note {
+            margin-top: 14px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+            border: 1px solid #dbe3f5;
+        }
+
+        .login-persona-note-title {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #4338ca;
+            margin-bottom: 8px;
+        }
+
+        .login-persona-note-headline {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .login-persona-note-copy {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.55;
+        }
+
+        .login-form button {
+            margin-top: 10px;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 14px 28px rgba(29, 78, 216, 0.22);
+        }
+
+        .login-form button:hover {
+            transform: translateY(-1px);
+        }
+
+        .login-close {
+            margin-top: 14px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+        }
+
         @media (max-width: 900px) {
             .executive-grid {
                 grid-template-columns: 1fr;
@@ -1074,6 +1640,23 @@
             }
             .warning-metrics {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .persona-kpis,
+            .persona-grid,
+            .persona-lower,
+            .workflow-tabs,
+            .workflow-detail {
+                grid-template-columns: 1fr;
+            }
+            .login-card {
+                grid-template-columns: 1fr;
+            }
+            .login-hero,
+            .login-panel {
+                padding: 24px;
+            }
+            .login-card h2 {
+                font-size: 32px;
             }
         }
     </style>
@@ -1100,6 +1683,43 @@
             <button class="btn-reset" id="resetBtn" onclick="resetSystem()">
                 🔄 Reset System
             </button>
+        </div>
+
+        <div class="persona-section">
+            <div class="guardian-header">
+                <div>
+                    <h2>Role-Based Persona Dashboard</h2>
+                    <div class="persona-summary" id="personaSummaryText">Loading persona view...</div>
+                </div>
+                <div class="persona-toolbar">
+                    <div class="persona-user" id="personaUserBadge">User: -</div>
+                    <select class="persona-select" id="personaSwitcher"></select>
+                    <button class="persona-switch-btn" onclick="openPersonaLogin()">Switch Persona</button>
+                </div>
+            </div>
+            <div class="guardian-meta" id="personaMeta">Preparing role-based dashboard...</div>
+            <div class="persona-kpis" id="personaKpiGrid"></div>
+            <div class="workflow-section" id="personaWorkflowSection" style="display:none;">
+                <div class="workflow-head">
+                    <div>
+                        <h3>Cash Manager Decision Flow</h3>
+                        <p>See how the latest daily signals move from detection to treasury action support.</p>
+                    </div>
+                </div>
+                <div class="workflow-tabs" id="workflowTabs"></div>
+                <div class="workflow-detail" id="workflowDetail"></div>
+            </div>
+            <div class="persona-grid" id="personaCardGrid"></div>
+            <div class="persona-lower">
+                <div class="persona-panel">
+                    <h3>Recommended Actions</h3>
+                    <ol class="persona-list tight" id="personaActionList"></ol>
+                </div>
+                <div class="persona-panel">
+                    <h3>Top Watch Countries</h3>
+                    <ul class="persona-list tight" id="personaCountryList"></ul>
+                </div>
+            </div>
         </div>
 
         <!-- Pipeline Visualization -->
@@ -1405,6 +2025,63 @@
         </div>
     </div>
 
+    <div class="login-overlay" id="personaLoginOverlay">
+        <div class="login-card">
+            <div class="login-hero">
+                <div class="login-eyebrow">ARGUS v2.1</div>
+                <h2>Role-based treasury monitoring starts here.</h2>
+                <p class="login-hero-copy">Choose the decision lens you want to simulate. ARGUS keeps the same global event backbone, then changes the top dashboard based on the user role, priorities, and action needs.</p>
+                <div class="login-highlights">
+                    <div class="login-highlight">
+                        <div class="login-highlight-badge">1</div>
+                        <div>
+                            <strong>Persona-led first screen</strong>
+                            <span>The top dashboard shifts from a global view to a role-specific decision surface.</span>
+                        </div>
+                    </div>
+                    <div class="login-highlight">
+                        <div class="login-highlight-badge">2</div>
+                        <div>
+                            <strong>Cash manager is the lead demo</strong>
+                            <span>Liquidity, funding pressure, payment execution, and cash mobility are prioritized first.</span>
+                        </div>
+                    </div>
+                    <div class="login-highlight">
+                        <div class="login-highlight-badge">3</div>
+                        <div>
+                            <strong>Global context remains below</strong>
+                            <span>Guardian Dashboard and Data Dashboard stay available as supporting evidence layers.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="login-panel">
+                <div class="login-panel-head">
+                    <div class="login-panel-label">Persona Access</div>
+                    <h3>Enter Workspace</h3>
+                    <div class="login-panel-copy">Enter your name and choose the Treasury role that will drive the primary decision dashboard.</div>
+                </div>
+                <div class="login-form">
+                    <div>
+                        <label for="loginName">Treasury User</label>
+                        <input id="loginName" type="text" placeholder="For example: Jason or Demo User" />
+                    </div>
+                    <div>
+                        <label for="loginPersona">Persona</label>
+                        <select id="loginPersona"></select>
+                    </div>
+                    <div class="login-persona-note">
+                        <div class="login-persona-note-title">Active Focus</div>
+                        <div class="login-persona-note-headline" id="loginPersonaHeadline">Cash Manager</div>
+                        <div class="login-persona-note-copy" id="loginPersonaCopy">Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.</div>
+                    </div>
+                    <button type="button" onclick="savePersonaSelection()">Enter Dashboard</button>
+                    <button type="button" class="login-close" onclick="closePersonaLogin()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
         <div class="modal-shell">
             <div class="guardian-section" onclick="event.stopPropagation()">
@@ -1542,6 +2219,11 @@
         let guardianRefreshInterval;
         let guardianTopAlerts = [];
         let guardianMeta = {};
+        let currentPersona = 'cash_manager';
+        let currentUserName = '';
+        let availablePersonas = [];
+        let personaWorkflow = [];
+        let activeWorkflowKey = '';
 
         function escapeHtml(text) {
             if (text === null || text === undefined) return '';
@@ -1581,6 +2263,182 @@
             if (trend.delta > 0) return `↑ +${trend.delta}`;
             if (trend.delta < 0) return `↓ ${trend.delta}`;
             return '→ 0';
+        }
+
+        function personaPill(status) {
+            const normalized = String(status || 'stable').toLowerCase();
+            return `<span class="persona-pill ${escapeHtml(normalized)}">${escapeHtml(normalized)}</span>`;
+        }
+
+        function renderWorkflowDetail() {
+            const section = document.getElementById('personaWorkflowSection');
+            const tabs = document.getElementById('workflowTabs');
+            const detail = document.getElementById('workflowDetail');
+            if (!section || !tabs || !detail) return;
+
+            if (!Array.isArray(personaWorkflow) || !personaWorkflow.length) {
+                section.style.display = 'none';
+                tabs.innerHTML = '';
+                detail.innerHTML = '';
+                return;
+            }
+
+            section.style.display = 'block';
+            const active = personaWorkflow.find((item) => item.key === activeWorkflowKey) || personaWorkflow[0];
+            activeWorkflowKey = active.key;
+
+            tabs.innerHTML = personaWorkflow.map((item) => `
+                <button class="workflow-tab ${item.key === activeWorkflowKey ? 'active' : ''}" type="button" onclick="setWorkflowStage('${String(item.key || '').replace(/'/g, "\\'")}')">
+                    <div class="workflow-step">${escapeHtml(item.step || '')}</div>
+                    <div class="workflow-title">${escapeHtml(item.title || '')}</div>
+                    <div class="workflow-metric">${escapeHtml(item.metric || '')}</div>
+                </button>
+            `).join('');
+
+            detail.innerHTML = `
+                <div class="workflow-panel">
+                    <div class="workflow-panel-title">${escapeHtml(active.title || '')}</div>
+                    <div class="workflow-panel-headline">${escapeHtml(active.metric || '')}</div>
+                    <div class="workflow-panel-copy">${escapeHtml(active.summary || '')}</div>
+                    <ul class="workflow-bullets">
+                        ${(active.details || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="workflow-panel">
+                    <div class="workflow-panel-title">Today's Evidence</div>
+                    <div class="workflow-evidence-list">
+                        ${(active.evidence || []).map((item) => `<div class="workflow-evidence-item">${escapeHtml(item)}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function setWorkflowStage(key) {
+            activeWorkflowKey = key;
+            renderWorkflowDetail();
+        }
+
+        function populatePersonaSelect(selectId, selectedValue) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = availablePersonas.map((persona) => `
+                <option value="${escapeHtml(persona.key)}" ${persona.key === selectedValue ? 'selected' : ''}>${escapeHtml(persona.label)}</option>
+            `).join('');
+        }
+
+        function updateLoginPersonaPreview(selectedValue) {
+            const match = availablePersonas.find((persona) => persona.key === selectedValue) || availablePersonas[0] || {
+                label: 'Cash Manager',
+                summary: 'Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.',
+            };
+            const headline = document.getElementById('loginPersonaHeadline');
+            const copy = document.getElementById('loginPersonaCopy');
+            if (headline) headline.textContent = match.label || selectedValue;
+            if (copy) copy.textContent = match.summary || '';
+        }
+
+        function syncPersonaChrome() {
+            document.getElementById('personaUserBadge').textContent = `User: ${currentUserName || 'Guest'} | Persona: ${currentPersona}`;
+            populatePersonaSelect('personaSwitcher', currentPersona);
+            populatePersonaSelect('loginPersona', currentPersona);
+            const loginName = document.getElementById('loginName');
+            if (loginName && currentUserName) loginName.value = currentUserName;
+            updateLoginPersonaPreview(currentPersona);
+        }
+
+        async function loadPersonas() {
+            const response = await fetch(`${API_BASE}/personas`);
+            const payload = await response.json();
+            availablePersonas = Array.isArray(payload.personas) ? payload.personas : [];
+            if (!availablePersonas.length) {
+                availablePersonas = [{ key: 'cash_manager', label: 'Cash Manager' }];
+            }
+        }
+
+        function openPersonaLogin() {
+            syncPersonaChrome();
+            document.getElementById('personaLoginOverlay').classList.add('show');
+        }
+
+        function closePersonaLogin() {
+            document.getElementById('personaLoginOverlay').classList.remove('show');
+        }
+
+        function savePersonaSelection() {
+            const name = String(document.getElementById('loginName').value || '').trim();
+            const persona = String(document.getElementById('loginPersona').value || 'cash_manager').trim();
+            currentUserName = name || 'Demo User';
+            currentPersona = persona || 'cash_manager';
+            localStorage.setItem('argusUserName', currentUserName);
+            localStorage.setItem('argusPersona', currentPersona);
+            closePersonaLogin();
+            syncPersonaChrome();
+            loadPersonaDashboard();
+        }
+
+        function bootstrapPersonaState() {
+            currentUserName = localStorage.getItem('argusUserName') || '';
+            currentPersona = localStorage.getItem('argusPersona') || 'cash_manager';
+            syncPersonaChrome();
+            openPersonaLogin();
+        }
+
+        async function loadPersonaDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/persona/dashboard?persona=${encodeURIComponent(currentPersona)}`);
+                const payload = await response.json();
+                if (!response.ok || payload.status !== 'success') {
+                    document.getElementById('personaMeta').innerHTML = `<span class="muted">Persona dashboard unavailable: ${escapeHtml(payload.message || 'unknown error')}</span>`;
+                    document.getElementById('personaSummaryText').textContent = 'Role-specific decision view unavailable.';
+                    document.getElementById('personaKpiGrid').innerHTML = '';
+                    document.getElementById('personaCardGrid').innerHTML = '';
+                    document.getElementById('personaActionList').innerHTML = '';
+                    document.getElementById('personaCountryList').innerHTML = '';
+                    personaWorkflow = [];
+                    activeWorkflowKey = '';
+                    renderWorkflowDetail();
+                    return;
+                }
+
+                const summary = payload.summary || {};
+                document.getElementById('personaSummaryText').textContent = summary.subheadline || '';
+                document.getElementById('personaMeta').innerHTML =
+                    `Persona: <strong>${escapeHtml(payload.title || currentPersona)}</strong> | Generated: <strong>${escapeHtml(summary.generated_at || '-')}</strong> | Events Seen: <strong>${escapeHtml(summary.event_count ?? 0)}</strong>`;
+                document.getElementById('personaKpiGrid').innerHTML = [
+                    kpiCard('Current Persona', (payload.title || currentPersona)),
+                    kpiCard('Headline', summary.headline || '-'),
+                    kpiCard('Events Seen', summary.event_count ?? 0),
+                    kpiCard('Snapshot', payload.snapshot_path ? 'Connected' : 'Unavailable'),
+                ].join('');
+
+                const cards = Array.isArray(payload.cards) ? payload.cards : [];
+                personaWorkflow = Array.isArray(payload.workflow) ? payload.workflow : [];
+                activeWorkflowKey = personaWorkflow.length ? personaWorkflow[0].key : '';
+                renderWorkflowDetail();
+                document.getElementById('personaCardGrid').innerHTML = cards.map((card) => `
+                    <div class="persona-card">
+                        <div class="persona-card-head">
+                            <div class="persona-card-title">${escapeHtml(card.title || '-')}</div>
+                            ${personaPill(card.status)}
+                        </div>
+                        <div class="persona-card-metric">${escapeHtml(card.metric || '-')}</div>
+                        <div class="persona-card-detail">${escapeHtml(card.detail || '-')}</div>
+                        <div class="persona-card-countries">
+                            ${(card.countries || []).map((country) => `<span class="persona-country-tag">${escapeHtml(country)}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                const actions = Array.isArray(payload.actions) ? payload.actions : [];
+                document.getElementById('personaActionList').innerHTML = actions.map((action) => `<li>${escapeHtml(action)}</li>`).join('');
+
+                const countries = Array.isArray(payload.top_countries) ? payload.top_countries : [];
+                document.getElementById('personaCountryList').innerHTML = countries.map((item) => `
+                    <li>${escapeHtml(item.country || '-')} | ${escapeHtml(item.top_category || '-')} | max score ${escapeHtml(item.max_score ?? 0)}</li>
+                `).join('');
+            } catch (error) {
+                document.getElementById('personaMeta').innerHTML = `<span class="muted">Persona dashboard load failed: ${escapeHtml(error.message)}</span>`;
+            }
         }
 
         async function loadGuardianDashboard() {
@@ -1917,6 +2775,7 @@
                         await loadResults();
 
                         // Refresh both dashboards then hide overlays
+                        await loadPersonaDashboard();
                         await loadGuardianDashboard();
                         const dataFrame = document.getElementById('dataDashboardFrame');
                         if (dataFrame) dataFrame.src = dataFrame.src;
@@ -1945,6 +2804,21 @@
             document.querySelectorAll('.agent-detail').forEach(function (el) {
                 el.addEventListener('click', function (e) { e.stopPropagation(); });
             });
+            const personaSwitcher = document.getElementById('personaSwitcher');
+            if (personaSwitcher) {
+                personaSwitcher.addEventListener('change', function (e) {
+                    currentPersona = String(e.target.value || 'cash_manager');
+                    localStorage.setItem('argusPersona', currentPersona);
+                    syncPersonaChrome();
+                    loadPersonaDashboard();
+                });
+            }
+            const loginPersona = document.getElementById('loginPersona');
+            if (loginPersona) {
+                loginPersona.addEventListener('change', function (e) {
+                    updateLoginPersonaPreview(String(e.target.value || 'cash_manager'));
+                });
+            }
         });
 
         function updateAgentStatuses(statuses) {
@@ -2104,6 +2978,9 @@
 
         // Initial page load and periodic dashboard refresh
         document.addEventListener('DOMContentLoaded', async () => {
+            await loadPersonas();
+            bootstrapPersonaState();
+            await loadPersonaDashboard();
             await loadResults();
         });
     </script>
