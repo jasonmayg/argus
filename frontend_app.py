@@ -26,7 +26,18 @@ try:
 except Exception:
     Talisman = None
 
-from agents_system import AgentOrchestrator, RiskClassifierAgent, AnalysisAgent
+from agents_system import AgentOrchestrator, RiskClassifierAgent
+from core.agents import (
+    AnalysisAgent,
+    PERSONA_REGISTRY,
+    FX_RELATED_CATEGORIES,
+    build_alert_list,
+    build_country_board,
+    load_monitored_countries,
+    build_fx_summary,
+    build_cash_manager_dashboard,
+    build_generic_persona_dashboard,
+)
 from data_dashboard import data_dashboard_bp
 from config import API_PORT
 
@@ -839,208 +850,6 @@ def _resolve_guardian_snapshot_path() -> Path:
     return candidates[0] if candidates else Path("alerts_latest.json")
 
 
-def _risk_level(score: float) -> str:
-    if score >= 70:
-        return "High"
-    if score >= 40:
-        return "Medium"
-    if score > 0:
-        return "Low"
-    return "None"
-
-
-FX_RELATED_CATEGORIES = {
-    "market risk",
-    "liquidity risk",
-    "credit risk",
-    "political risk",
-    "regulatory risk",
-    "systematic risk",
-}
-
-PERSONA_REGISTRY = {
-    "cash_manager": {
-        "label": "Cash Manager",
-        "summary": "Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.",
-    },
-    "fx_manager": {
-        "label": "FX Manager",
-        "summary": "Prioritizes currency volatility, hedge exposure, and FX-driven cross-border risk.",
-    },
-    "treasury_ops": {
-        "label": "Treasury Operations",
-        "summary": "Prioritizes daily treasury execution, controls, and operational continuity.",
-    },
-    "treasury_tech": {
-        "label": "Treasury Technology",
-        "summary": "Prioritizes systems resilience, process reliability, and operational technology risk.",
-    },
-    "risk_manager": {
-        "label": "Risk Manager",
-        "summary": "Prioritizes concentration risk, systemic signals, and escalation readiness.",
-    },
-}
-
-PERSONA_CARD_SPECS = {
-    "cash_manager": [
-        {
-            "key": "liquidity_risk",
-            "title": "Liquidity Risk",
-            "categories": {"liquidity risk", "credit risk", "systematic risk"},
-            "keywords": {"liquidity", "cash", "buffer", "funding", "credit", "default"},
-        },
-        {
-            "key": "funding_pressure",
-            "title": "Funding Cost Pressure",
-            "categories": {"market risk", "credit risk", "regulatory risk"},
-            "keywords": {"interest", "rate", "funding", "debt", "maturity", "refinanc"},
-        },
-        {
-            "key": "payments_ops",
-            "title": "Payment & Disbursement Risk",
-            "categories": {"operational risk", "process risk", "regulatory risk"},
-            "keywords": {"payment", "settlement", "bank", "disbursement", "transfer", "outage"},
-        },
-        {
-            "key": "cash_mobility",
-            "title": "Cash Concentration & Sweeping Watch",
-            "categories": {"regulatory risk", "political risk", "process risk"},
-            "keywords": {"capital", "sweep", "restriction", "mobility", "cross-border", "transfer"},
-        },
-    ],
-}
-
-
-def _build_country_board(alerts):
-    monitored_set = set(_load_monitored_countries())
-    by_country = {}
-    for alert in alerts:
-        country = alert.get("country") or "Unknown"
-        if monitored_set and country not in monitored_set:
-            continue
-        raw_score = alert.get("score", 0)
-        try:
-            score = float(raw_score)
-        except (TypeError, ValueError):
-            score = 0.0
-
-        row = by_country.setdefault(country, {
-            "country": country,
-            "alert_count": 0,
-            "score_sum": 0.0,
-            "max_score": 0.0,
-            "top_category": "Unclassified",
-        })
-        row["alert_count"] += 1
-        row["score_sum"] += score
-        if score > row["max_score"]:
-            row["max_score"] = score
-            row["top_category"] = alert.get("category_label") or alert.get("category_key") or "-"
-
-    board = []
-    for country, row in by_country.items():
-        avg_score = row["score_sum"] / row["alert_count"] if row["alert_count"] else 0.0
-        board.append({
-            "country": country,
-            "alert_count": row["alert_count"],
-            "avg_score": round(avg_score, 2),
-            "max_score": round(row["max_score"], 2),
-            "top_category": row["top_category"],
-            "risk_level": _risk_level(row["max_score"]),
-        })
-
-    board.sort(key=lambda x: (x["max_score"], x["alert_count"]), reverse=True)
-    return board
-
-
-def _build_alert_list(alerts, max_items=60):
-    shaped = []
-    for alert in alerts:
-        raw_score = alert.get("score", 0)
-        try:
-            score = float(raw_score)
-        except (TypeError, ValueError):
-            score = 0.0
-        shaped.append({
-            "alert_id": f"{alert.get('country','Unknown')}|{alert.get('source','-')}|{alert.get('published_at','')}|{round(score,2)}",
-            "country": alert.get("country") or "Unknown",
-            "category": alert.get("category_label") or alert.get("category_key") or "-",
-            "score": round(score, 2),
-            "risk_level": _risk_level(score),
-            "severity": alert.get("severity") or "-",
-            "recency": alert.get("recency") or "-",
-            "source": alert.get("source") or "-",
-            "title": alert.get("title") or "",
-            "url": alert.get("url") or "",
-            "published_at": alert.get("published_at") or "",
-            "recommendation": alert.get("recommendation") or "",
-            "recommendation_source": alert.get("recommendation_source") or "rule",
-            "rationale": alert.get("rationale") or "",
-            "raw_dt": alert.get("raw_dt") or "",
-        })
-    shaped.sort(key=lambda x: x["score"], reverse=True)
-    return shaped[:max_items]
-
-
-def _load_monitored_countries() -> list[str]:
-    """Load the 11-country watchlist from Alphabet config; fallback to defaults."""
-    fallback = ["USA", "UK", "Germany", "Japan", "France", "Canada", "Brazil", "India", "Australia", "Mexico", "China"]
-    alphabet_root = _resolve_alphabet_root()
-    if not alphabet_root:
-        return fallback
-    cfg_path = alphabet_root / "guardian_poc" / "config" / "countries.yaml"
-    if not cfg_path.exists():
-        return fallback
-    try:
-        import yaml
-        cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-        countries = list((cfg.get("countries") or {}).keys())
-        return countries if countries else fallback
-    except Exception:
-        return fallback
-
-
-def _build_fx_summary(alert_rows: list[dict], monitored_countries: list[str]) -> dict:
-    """Build FX-oriented risk board for monitored countries."""
-    board_map = {
-        c: {
-            "country": c,
-            "fx_score": 0.0,
-            "fx_level": "None",
-            "fx_alert_count": 0,
-            "top_driver": "-",
-        }
-        for c in monitored_countries
-    }
-
-    for row in alert_rows:
-        country = row.get("country")
-        if country not in board_map:
-            continue
-        category = str(row.get("category") or "").strip().lower()
-        if category not in FX_RELATED_CATEGORIES:
-            continue
-        score = float(row.get("score") or 0)
-        slot = board_map[country]
-        slot["fx_alert_count"] += 1
-        if score >= slot["fx_score"]:
-            slot["fx_score"] = round(score, 2)
-            slot["fx_level"] = _risk_level(score)
-            slot["top_driver"] = row.get("category") or "-"
-
-    board = list(board_map.values())
-    board.sort(key=lambda x: (x["fx_score"], x["fx_alert_count"]), reverse=True)
-    high_count = len([x for x in board if x["fx_score"] >= 70])
-    medium_or_above = len([x for x in board if x["fx_score"] >= 40])
-    return {
-        "monitored_count": len(monitored_countries),
-        "high_risk_country_count": high_count,
-        "medium_or_above_country_count": medium_or_above,
-        "top5": board[:5],
-        "countries": board,
-    }
-
-
 def _snapshot_and_alert_rows() -> tuple[dict | None, list[dict], str]:
     """Load the current Guardian snapshot and normalize alert rows for downstream views."""
     gcs_result = _load_guardian_snapshot_from_gcs()
@@ -1063,218 +872,8 @@ def _snapshot_and_alert_rows() -> tuple[dict | None, list[dict], str]:
     data_mode = snapshot.get("data_mode")
     enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
     alerts = _filter_guardian_alerts(snapshot.get("alerts"), enforce_whitelist=enforce_whitelist)
-    alert_rows = _build_alert_list(alerts, max_items=5000)
+    alert_rows = build_alert_list(alerts, max_items=5000)
     return snapshot, alert_rows, snapshot_ref
-
-
-def _matches_persona_spec(row: dict, spec: dict) -> bool:
-    category = str(row.get("category") or "").strip().lower()
-    if category in spec["categories"]:
-        return True
-    text = " ".join([
-        str(row.get("title") or ""),
-        str(row.get("recommendation") or ""),
-        str(row.get("rationale") or ""),
-    ]).lower()
-    return any(kw in text for kw in spec["keywords"])
-
-
-def _status_from_score(score: float) -> str:
-    if score >= 70:
-        return "high"
-    if score >= 40:
-        return "medium"
-    if score > 0:
-        return "low"
-    return "stable"
-
-
-def _default_actions_for_cash_manager(rows: list[dict]) -> list[str]:
-    actions = []
-    for row in rows:
-        rec = str(row.get("recommendation") or "").strip()
-        if rec and rec not in actions:
-            actions.append(rec)
-        if len(actions) >= 3:
-            break
-    if actions:
-        return actions
-    return [
-        "Review local cash buffers in the highest-risk markets.",
-        "Validate payment routing and same-day settlement capacity.",
-        "Re-check short-term funding and cash concentration plans.",
-    ]
-
-
-def _top_alert_excerpt(rows: list[dict], limit: int = 3) -> list[str]:
-    excerpts = []
-    for row in rows[:limit]:
-        country = str(row.get("country") or "-")
-        title = str(row.get("title") or row.get("category") or "-")
-        excerpts.append(f"{country}: {title}")
-    return excerpts
-
-
-def _build_cash_manager_workflow(alert_rows: list[dict], actions: list[str]) -> list[dict]:
-    signal_rows = alert_rows[:6]
-    high_rows = [row for row in alert_rows if float(row.get("score") or 0) >= 70]
-    liquidity_rows = [
-        row for row in alert_rows
-        if str(row.get("category") or "").strip().lower() in {"liquidity risk", "credit risk", "systematic risk"}
-    ]
-    payment_rows = [
-        row for row in alert_rows
-        if "payment" in str(row.get("title") or "").lower()
-        or "bank" in str(row.get("title") or "").lower()
-        or "settlement" in str(row.get("title") or "").lower()
-    ]
-    top_category = Counter(str(row.get("category") or "-") for row in alert_rows).most_common(1)
-    dominant_category = top_category[0][0] if top_category else "-"
-    impacted_countries = sorted({str(row.get("country") or "-") for row in liquidity_rows + payment_rows})[:4]
-
-    return [
-        {
-            "key": "signal_detection",
-            "step": "01",
-            "title": "Signal Detection",
-            "status": _status_from_score(max((float(r.get("score") or 0) for r in signal_rows), default=0.0)),
-            "summary": "The system continuously monitors new market, geopolitical, banking, and operational signals relevant to daily cash management.",
-            "metric": f"{len(signal_rows)} priority signals",
-            "details": [
-                f"{len(alert_rows)} total events available in the latest monitoring cycle.",
-                f"{len(high_rows)} high-risk signals surfaced for immediate review.",
-                "Signal sources include global news, GCS snapshots, and treasury-related event adapters.",
-            ],
-            "evidence": _top_alert_excerpt(signal_rows),
-        },
-        {
-            "key": "risk_assessment",
-            "step": "02",
-            "title": "Risk Assessment",
-            "status": _status_from_score(max((float(r.get("score") or 0) for r in high_rows or alert_rows), default=0.0)),
-            "summary": "Detected events are classified into treasury-relevant risk categories so the cash manager can understand the nature of the threat quickly.",
-            "metric": f"Top risk: {dominant_category}",
-            "details": [
-                f"{len(liquidity_rows)} alerts currently map to liquidity / counterparty-sensitive risk categories.",
-                f"Dominant category in the latest snapshot is {dominant_category}.",
-                "Classification emphasizes liquidity, operational continuity, regulatory friction, and funding pressure.",
-            ],
-            "evidence": _top_alert_excerpt(high_rows or alert_rows),
-        },
-        {
-            "key": "impact_estimation",
-            "step": "03",
-            "title": "Impact Estimation",
-            "status": _status_from_score(max((float(r.get("score") or 0) for r in liquidity_rows + payment_rows), default=0.0)),
-            "summary": "The system estimates how detected events could affect global liquidity, trapped cash, payment execution, and regional treasury exposure.",
-            "metric": f"{len(impacted_countries)} countries under watch",
-            "details": [
-                f"{len(payment_rows)} signals suggest possible payment, banking, or settlement disruption.",
-                f"{len(liquidity_rows)} signals could affect near-term liquidity or counterparty confidence.",
-                "Impact estimation is organized around cash mobility, payment continuity, and short-term funding pressure.",
-            ],
-            "evidence": impacted_countries or ["No country concentration signal detected."],
-        },
-        {
-            "key": "decision_support",
-            "step": "04",
-            "title": "Decision Support",
-            "status": _status_from_score(max((float(r.get("score") or 0) for r in high_rows or alert_rows), default=0.0)),
-            "summary": "ARGUS translates today’s risk picture into treasury action options while keeping the final decision with the cash manager.",
-            "metric": f"{len(actions)} recommended actions",
-            "details": [
-                "Suggested actions focus on reallocating liquidity, validating payment routing, and adjusting short-term funding plans.",
-                "Actions are meant to support decision speed, not replace treasury judgment.",
-                "Recommendations can be escalated to management when exposure becomes material.",
-            ],
-            "evidence": actions[:3],
-        },
-    ]
-
-
-def _build_cash_manager_dashboard(alert_rows: list[dict], snapshot: dict | None) -> dict:
-    matched_cards = []
-    for spec in PERSONA_CARD_SPECS["cash_manager"]:
-        matched = [row for row in alert_rows if _matches_persona_spec(row, spec)]
-        top = matched[:3]
-        top_score = max((float(r.get("score") or 0) for r in matched), default=0.0)
-        countries = sorted({str(r.get("country") or "-") for r in top if str(r.get("country") or "").strip()})
-        detail = "No material signals detected in the latest snapshot."
-        if top:
-            detail = " | ".join(
-                f"{r.get('country') or '-'}: {r.get('title') or r.get('category') or '-'}"
-                for r in top[:2]
-            )
-        matched_cards.append({
-            "key": spec["key"],
-            "title": spec["title"],
-            "status": _status_from_score(top_score),
-            "metric": f"{len(matched)} matched alerts",
-            "detail": detail,
-            "top_score": round(top_score, 2),
-            "countries": countries[:3],
-        })
-
-    high_risk = len([row for row in alert_rows if float(row.get("score") or 0) >= 70])
-    triggered = len([row for row in alert_rows if float(row.get("score") or 0) >= 40])
-    top_countries = _build_country_board(alert_rows)[:3]
-    actions = _default_actions_for_cash_manager(alert_rows)
-    generated_at = "-"
-    if isinstance(snapshot, dict):
-        generated_at = snapshot.get("generated_at_local") or snapshot.get("generated_at_utc") or "-"
-
-    return {
-        "persona": "cash_manager",
-        "title": "Cash Manager Dashboard",
-        "summary": {
-            "headline": f"{triggered} triggered alerts and {high_risk} high-risk signals currently affect near-term cash decisions.",
-            "subheadline": "Focus on liquidity, payment execution, short-term funding, and cash mobility.",
-            "generated_at": generated_at,
-            "event_count": len(alert_rows),
-        },
-        "cards": matched_cards,
-        "actions": actions,
-        "top_countries": top_countries,
-        "workflow": _build_cash_manager_workflow(alert_rows, actions),
-    }
-
-
-def _build_generic_persona_dashboard(persona: str, alert_rows: list[dict], snapshot: dict | None) -> dict:
-    cfg = PERSONA_REGISTRY.get(persona, PERSONA_REGISTRY["cash_manager"])
-    top_rows = alert_rows[:3]
-    generated_at = "-"
-    if isinstance(snapshot, dict):
-        generated_at = snapshot.get("generated_at_local") or snapshot.get("generated_at_utc") or "-"
-    return {
-        "persona": persona,
-        "title": f"{cfg['label']} Dashboard",
-        "summary": {
-            "headline": cfg["summary"],
-            "subheadline": "Role-based dashboard placeholder; cash manager is currently the deepest implementation.",
-            "generated_at": generated_at,
-            "event_count": len(alert_rows),
-        },
-        "cards": [
-            {
-                "key": "priority_signals",
-                "title": "Priority Signals",
-                "status": _status_from_score(max((float(r.get('score') or 0) for r in top_rows), default=0.0)),
-                "metric": f"{len(top_rows)} top alerts",
-                "detail": " | ".join(
-                    f"{r.get('country') or '-'}: {r.get('category') or '-'}"
-                    for r in top_rows
-                ) or "No alerts available.",
-                "top_score": round(max((float(r.get('score') or 0) for r in top_rows), default=0.0), 2),
-                "countries": [str(r.get("country") or "-") for r in top_rows[:3]],
-            }
-        ],
-        "actions": [
-            "Review top alerts from the global Guardian board.",
-            "Switch to Cash Manager persona for the full role-specific demo.",
-        ],
-        "top_countries": _build_country_board(alert_rows)[:3],
-        "workflow": [],
-    }
 
 
 def _filter_guardian_alerts(raw_alerts, enforce_whitelist: bool = True):
@@ -1677,14 +1276,14 @@ def get_guardian_dashboard():
     data_mode = snapshot.get("data_mode")
     enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
     alerts = _filter_guardian_alerts(snapshot.get("alerts"), enforce_whitelist=enforce_whitelist)
-    monitored_countries = _load_monitored_countries()
+    monitored_countries = load_monitored_countries()
     monitored_set = set(monitored_countries)
 
-    alert_rows_all = _build_alert_list(alerts, max_items=5000)
+    alert_rows_all = build_alert_list(alerts, max_items=5000)
     scoped_alerts = [a for a in alerts if str(a.get("country") or "") in monitored_set]
-    alert_rows = _build_alert_list(scoped_alerts if scoped_alerts else alerts, max_items=5000)
+    alert_rows = build_alert_list(scoped_alerts if scoped_alerts else alerts, max_items=5000)
 
-    country_board = _build_country_board(scoped_alerts if scoped_alerts else alerts)
+    country_board = build_country_board(scoped_alerts if scoped_alerts else alerts)
     availability = snapshot.get("data_avaliability") or snapshot.get("data_availability") or []
     availability = [
         x for x in availability
@@ -1709,7 +1308,7 @@ def get_guardian_dashboard():
         latest_rows = [x for x in alert_rows if str(x.get("raw_dt") or "") == latest_dt]
         if latest_rows:
             fx_input_rows = latest_rows
-    fx_summary = _build_fx_summary(fx_input_rows, monitored_countries)
+    fx_summary = build_fx_summary(fx_input_rows, monitored_countries)
     fx_summary["as_of_dt"] = latest_dt or None
 
     high_risk_country_count = len([x for x in country_board if float(x.get("max_score", 0)) >= 70])
@@ -1730,7 +1329,7 @@ def get_guardian_dashboard():
             prev_mode = prev_snapshot_obj.get("data_mode")
             prev_enforce = not str(prev_mode or "").startswith("live_gcs_raw")
             prev_alerts = _filter_guardian_alerts(prev_snapshot_obj.get("alerts"), enforce_whitelist=prev_enforce)
-            prev_rows = _build_alert_list(prev_alerts, max_items=5000)
+            prev_rows = build_alert_list(prev_alerts, max_items=5000)
             prev_triggered = len([x for x in prev_rows if float(x.get("score", 0)) >= threshold])
             current_triggered_for_trend = triggered_count
         except Exception:
@@ -1743,7 +1342,7 @@ def get_guardian_dashboard():
                 prev_mode = prev_snapshot.get("data_mode")
                 prev_enforce = not str(prev_mode or "").startswith("live_gcs_raw")
                 prev_alerts = _filter_guardian_alerts(prev_snapshot.get("alerts"), enforce_whitelist=prev_enforce)
-                prev_rows = _build_alert_list(prev_alerts, max_items=5000)
+                prev_rows = build_alert_list(prev_alerts, max_items=5000)
                 prev_triggered = len([x for x in prev_rows if float(x.get("score", 0)) >= threshold])
                 current_triggered_for_trend = triggered_count
             except Exception:
@@ -1859,9 +1458,9 @@ def get_persona_dashboard():
         }), 404
 
     if persona == "cash_manager":
-        payload = _build_cash_manager_dashboard(alert_rows, snapshot)
+        payload = build_cash_manager_dashboard(alert_rows, snapshot)
     else:
-        payload = _build_generic_persona_dashboard(persona, alert_rows, snapshot)
+        payload = build_generic_persona_dashboard(persona, alert_rows, snapshot)
 
     payload["status"] = "success"
     payload["snapshot_path"] = snapshot_ref
