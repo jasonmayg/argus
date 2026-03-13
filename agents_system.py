@@ -11,10 +11,9 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from abc import ABC, abstractmethod
 
-from fed_news_crawler import FedNewsCrawler
 from risk_classifier import RiskClassifier
-from fed_news_db import FedNewsDatabase
 from core.agents import AnalysisAgent
+from core.data_agent import DataAgent, GUARDIAN_API_SOURCES
 
 
 class Agent(ABC):
@@ -54,10 +53,10 @@ class Agent(ABC):
 
 
 class NewsGathererAgent(Agent):
-    """Multi-source news and events gatherer.
+    """Multi-source news and events gatherer backed by the unified DataAgent.
 
     Supported source keys for the `sources` parameter:
-        'federal_reserve'  - Fed Reserve press releases (default, uses FedNewsCrawler)
+        'federal_reserve'  - Fed Reserve press releases (crawl4ai markdown extraction)
         'gcs'              - Google Cloud Storage Guardian snapshot (alerts_latest.json)
         'gdelt'            - GDELT global conflict/macro news
         'usgs'             - USGS significant earthquake feed
@@ -69,138 +68,17 @@ class NewsGathererAgent(Agent):
         'fiscal_data'      - US Treasury auction data
         'sec_edgar'        - SEC EDGAR corporate filings
         'fred'             - FRED economic indicators (requires FRED_API_KEY env var)
-        '<https://...>'    - Any custom URL (auto-detected, crawled via FedNewsCrawler)
+        '<https://...>'    - Any custom URL (auto-detected, crawled via crawl4ai)
     """
 
     SOURCE_FEDERAL_RESERVE = "federal_reserve"
     SOURCE_GCS = "gcs"
-
-    # Guardian POC adapter source keys (map to GuardianEngine._adapter_* methods)
-    GUARDIAN_API_SOURCES = {
-        "gdelt", "usgs", "reliefweb", "noaa_nws", "nasa_eonet",
-        "world_bank", "bank_of_canada", "fiscal_data", "sec_edgar", "fred",
-    }
-
     DEFAULT_SOURCES = [SOURCE_FEDERAL_RESERVE]
 
     def __init__(self):
         super().__init__("NewsGatherer")
-        self.crawler = FedNewsCrawler()
+        self._data_agent = DataAgent()
         self.news_data = []
-        self._guardian_engine = None  # lazy-loaded on first use
-
-    def _get_guardian_engine(self):
-        """Lazy-load GuardianEngine from guardian_poc/src."""
-        if self._guardian_engine is not None:
-            return self._guardian_engine
-        import sys
-        from pathlib import Path
-        guardian_src = Path(__file__).parent / "guardian_poc" / "src"
-        if str(guardian_src) not in sys.path:
-            sys.path.insert(0, str(guardian_src))
-        cfg_dir = Path(__file__).parent / "guardian_poc" / "config"
-        from guardian import GuardianEngine  # noqa: PLC0415
-        self._guardian_engine = GuardianEngine(
-            countries_cfg=str(cfg_dir / "countries.yaml"),
-            keywords_cfg=str(cfg_dir / "risk_keywords.yaml"),
-            personas_cfg=str(cfg_dir / "personas.yaml"),
-            sources_cfg=str(cfg_dir / "data_sources.yaml"),
-        )
-        return self._guardian_engine
-
-    def _event_to_news_item(self, event) -> Dict:
-        """Normalize a GuardianEngine Event to the standard news item dict."""
-        date_str = (
-            event.published_at.strftime("%Y-%m-%d")
-            if event.published_at
-            else datetime.now().strftime("%Y-%m-%d")
-        )
-        return {
-            "date": date_str,
-            "title": event.title,
-            "link": event.url or "",
-            "source": event.source,
-            "summary": (event.summary or "")[:500],
-        }
-
-    def _load_gcs_snapshot(self) -> List[Dict]:
-        """Load Guardian alerts from a GCS snapshot and normalize to news items."""
-        import os
-        import json as _json
-        gcs_enabled = os.getenv("GUARDIAN_GCS_ENABLED", "true").strip().lower() not in {
-            "0", "false", "no", "off"
-        }
-        if not gcs_enabled:
-            self.log("GCS skipped: GUARDIAN_GCS_ENABLED is false", "WARN")
-            return []
-        bucket_name = os.getenv("GUARDIAN_GCS_BUCKET", "your-gcs-bucket").strip()
-        prefix = os.getenv("GUARDIAN_GCS_PREFIX", "").strip().strip("/")
-        try:
-            from google.cloud import storage  # noqa: PLC0415
-            client = storage.Client()
-            bucket = client.bucket(bucket_name)
-            candidates = [
-                f"{prefix}/guardian_poc/data/alerts_latest.json".lstrip("/"),
-                f"{prefix}/alerts_latest.json".lstrip("/"),
-                "guardian_poc/data/alerts_latest.json",
-            ]
-            blob = None
-            for path in candidates:
-                b = bucket.blob(path)
-                if b.exists():
-                    blob = b
-                    self.log(f"GCS: found snapshot at gs://{bucket_name}/{path}")
-                    break
-            if blob is None:
-                self.log(f"GCS: no alerts_latest.json found in gs://{bucket_name}", "WARN")
-                return []
-            snapshot = _json.loads(blob.download_as_text(encoding="utf-8"))
-            return self._snapshot_to_news_items(snapshot)
-        except Exception as exc:
-            self.log(f"GCS load failed: {exc}", "ERROR")
-            return []
-
-    def _snapshot_to_news_items(self, snapshot: Dict) -> List[Dict]:
-        """Convert Guardian snapshot alert list to normalized news items."""
-        items = []
-        for alert in snapshot.get("alerts", []):
-            title = str(alert.get("title") or "").strip()
-            if not title:
-                continue
-            pub = str(alert.get("published_at") or "")
-            date_str = pub[:10] if len(pub) >= 10 else datetime.now().strftime("%Y-%m-%d")
-            items.append({
-                "date": date_str,
-                "title": title,
-                "link": alert.get("url") or "",
-                "source": alert.get("source") or "gcs",
-                "summary": (alert.get("rationale") or alert.get("recommendation") or "")[:500],
-            })
-        return items
-
-    async def _fetch_federal_reserve(self, url: Optional[str] = None) -> List[Dict]:
-        """Fetch Fed Reserve press releases via FedNewsCrawler."""
-        if not url:
-            year = datetime.now().year
-            url = f"https://www.federalreserve.gov/newsevents/pressreleases/{year}-press.htm"
-        self.log(f"Crawling: {url}")
-        result = await self.crawler.crawl(url=url)
-        if result["status"] != "success":
-            raise RuntimeError(result.get("error", "Crawl returned non-success status"))
-        items = result["json_data"]
-        for item in items:
-            item.setdefault("source", self.SOURCE_FEDERAL_RESERVE)
-        return items
-
-    def _fetch_guardian_source(self, source_key: str) -> List[Dict]:
-        """Fetch events from a Guardian POC API adapter and normalize to news items."""
-        engine = self._get_guardian_engine()
-        cfg = engine.sources.get(source_key, {})
-        adapter = engine.source_adapters.get(source_key)
-        if adapter is None:
-            raise ValueError(f"No adapter registered in GuardianEngine for source '{source_key}'")
-        events = adapter(source_key, cfg, 50)
-        return [self._event_to_news_item(e) for e in events]
 
     async def execute(
         self,
@@ -210,58 +88,35 @@ class NewsGathererAgent(Agent):
     ):
         """Gather news and events from one or more data sources.
 
+        Delegates to DataAgent which writes each source payload to
+        shared_storage/raw/ so the bridge pipeline can process them.
+
         Args:
-            url:     Optional URL; used with 'federal_reserve' source, or as a
-                     custom URL source (any https:// string is auto-detected).
-            sources: List of source keys to activate. Defaults to ['federal_reserve'].
-                     Pass multiple to merge results, e.g.
-                     ['federal_reserve', 'gdelt', 'usgs', 'gcs']
+            url:     Optional URL override for 'federal_reserve' or a custom
+                     https:// crawl target.
+            sources: List of source keys. Defaults to ['federal_reserve'].
         """
         self.status = "running"
         self.log("Starting multi-source news gathering...")
 
-        # Resolve source list
-        if not sources:
-            sources = [self.SOURCE_FEDERAL_RESERVE] if not url else [self.SOURCE_FEDERAL_RESERVE]
+        fetch_result = await self._data_agent.fetch(sources=sources, url=url, write_raw=True)
 
-        all_items: List[Dict] = []
-        source_stats: Dict = {}
+        self.news_data = fetch_result["items"]
+        total = fetch_result["total"]
 
-        for source_key in sources:
-            try:
-                if source_key == self.SOURCE_FEDERAL_RESERVE:
-                    items = await self._fetch_federal_reserve(url)
-                elif source_key == self.SOURCE_GCS:
-                    items = self._load_gcs_snapshot()
-                elif source_key in self.GUARDIAN_API_SOURCES:
-                    items = self._fetch_guardian_source(source_key)
-                elif source_key.startswith("http://") or source_key.startswith("https://"):
-                    # Treat raw URL as a custom crawl target
-                    items = await self._fetch_federal_reserve(source_key)
-                else:
-                    self.log(f"Unknown source '{source_key}' — skipping", "WARN")
-                    source_stats[source_key] = {"count": 0, "status": "skipped"}
-                    continue
-
-                source_stats[source_key] = {"count": len(items), "status": "success"}
-                self.log(f"Source '{source_key}': {len(items)} items")
-                all_items.extend(items)
-
-            except Exception as exc:
-                self.log(f"Source '{source_key}' failed: {exc}", "ERROR")
-                source_stats[source_key] = {"count": 0, "status": "failed", "error": str(exc)}
-
-        self.news_data = all_items
-        total = len(all_items)
+        for source_key, stat in fetch_result["sources"].items():
+            self.log(f"Source '{source_key}': {stat['count']} items ({stat['status']})")
+            if stat.get("path"):
+                self.log(f"  → wrote {stat['path']}")
 
         if total > 0:
             self.status = "success"
-            self.log(f"Gathered {total} total items from {len(source_stats)} source(s)")
+            self.log(f"Gathered {total} total items from {len(fetch_result['sources'])} source(s)")
             return {
                 "status": "success",
                 "count": total,
-                "data": all_items,
-                "sources": source_stats,
+                "data": self.news_data,
+                "sources": fetch_result["sources"],
             }
 
         self.status = "failed"
@@ -270,7 +125,7 @@ class NewsGathererAgent(Agent):
             "status": "failed",
             "count": 0,
             "data": [],
-            "sources": source_stats,
+            "sources": fetch_result["sources"],
             "error": "No items gathered from any configured source",
         }
 
@@ -329,50 +184,52 @@ class RiskClassifierAgent(Agent):
 
 
 class DatabaseAgent(Agent):
-    """Agent for database operations"""
+    """Agent for persisting processed items to shared_storage/analyzed/.
+
+    Replaces the legacy SQLite-backed FedNewsDatabase.  All storage now goes
+    through the shared_storage pipeline so every source uses the same path.
+    """
 
     def __init__(self):
         super().__init__("DatabaseManager")
         self.records_stored = 0
 
     async def execute(self, action: str, data: Optional[Dict] = None, **kwargs):
-        """Execute database operations"""
-        self.status = "running"
-        self.log(f"Executing database action: {action}")
+        """Persist or query items via shared_storage.
 
-        # Create fresh database connection for this thread (SQLite threading fix)
-        db = FedNewsDatabase()
+        Supported actions:
+            insert  — write news_items to shared_storage/raw/ as a timestamped JSON file
+            query   — return a lightweight in-memory count summary (no SQLite)
+        """
+        self.status = "running"
+        self.log(f"Executing storage action: {action}")
 
         try:
             if action == "insert":
-                inserted = db.insert_news(data['news_items'])
-                self.records_stored += inserted
-                self.log(f"Inserted {inserted} records")
-                return {"status": "success", "inserted": inserted}
+                from config import RAW_DIR  # noqa: PLC0415
+                from core.data_agent import _write_to_raw  # noqa: PLC0415
 
-            elif action == "classify":
-                keywords = data.get('keywords', [])
-                db.add_keyword_matches(keywords)
-                self.log(f"Added keyword matches")
-                return {"status": "success"}
+                items = (data or {}).get("news_items", [])
+                if items:
+                    path = _write_to_raw("pipeline_db_insert", items)
+                    self.records_stored += len(items)
+                    self.log(f"Wrote {len(items)} records to {path}")
+                    return {"status": "success", "inserted": len(items), "path": str(path)}
+                return {"status": "success", "inserted": 0}
 
             elif action == "query":
-                query_type = data.get('type')
-                if query_type == 'statistics':
-                    stats = db.get_statistics()
-                    self.log(f"Retrieved statistics: {stats['total_news']} total records")
-                    return {"status": "success", "data": stats}
+                return {
+                    "status": "success",
+                    "data": {"total_news": self.records_stored},
+                }
 
             self.status = "success"
             return {"status": "success"}
 
         except Exception as e:
-            self.log(f"Database operation failed: {str(e)}", "ERROR")
+            self.log(f"Storage operation failed: {str(e)}", "ERROR")
             self.status = "failed"
             return {"status": "failed", "error": str(e)}
-
-        finally:
-            db.close()
 
 
 class ReportingAgent(Agent):
