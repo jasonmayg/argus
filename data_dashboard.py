@@ -57,6 +57,8 @@ INDICATOR_DISPLAY = {
     "earthquakes_global": "USGS Earthquakes (Global)",
 }
 
+DEFAULT_ARGUS_GCS_BUCKET = "your-gcs-bucket"
+
 # 数据类型归类：用文件名前缀判断
 def _classify_dataset(file_stem: str) -> str:
     s = file_stem.lower()
@@ -115,11 +117,45 @@ def _resolve_data_dir() -> Path:
             return c
     return candidates[0]
 def _get_gcs_bucket():
-    bucket_name = os.getenv("ARGUS_GCS_BUCKET", "").strip()
-    if not bucket_name:
-        raise RuntimeError("Missing env ARGUS_GCS_BUCKET")
-    client = storage.Client()  # uses GOOGLE_APPLICATION_CREDENTIALS
+    bucket_name = (
+        os.getenv("ARGUS_GCS_BUCKET", "").strip()
+        or os.getenv("GUARDIAN_GCS_BUCKET", "").strip()
+        or DEFAULT_ARGUS_GCS_BUCKET
+    )
+    project = os.getenv("GOOGLE_CLOUD_PROJECT", "").strip() or None
+    adc_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if adc_path:
+        client = storage.Client(project=project)
+        return client.bucket(bucket_name)
+
+    here = Path(__file__).resolve().parent
+    key_candidates = [
+        here / "keys" / "treasury-reader.json",
+        here / "keys" / "service-account.json",
+    ]
+    for key_path in key_candidates:
+        if key_path.exists():
+            client = storage.Client.from_service_account_json(str(key_path), project=project)
+            return client.bucket(bucket_name)
+
+    client = storage.Client(project=project)
     return client.bucket(bucket_name)
+
+
+def _resolve_data_dashboard_prefix(bucket) -> str:
+    explicit_prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip()
+    if explicit_prefix:
+        return explicit_prefix
+
+    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "").strip()
+    if not base_prefix:
+        guardian_root = os.getenv("GUARDIAN_GCS_PREFIX", "").strip().strip("/")
+        guardian_raw = os.getenv("GUARDIAN_GCS_RAW_PREFIX", "raw").strip().strip("/")
+        if guardian_root:
+            base_prefix = f"{guardian_root}/{guardian_raw}/"
+        else:
+            base_prefix = f"{guardian_raw}/"
+    return _gcs_latest_dt_prefix(bucket, base_prefix)
 
 
 def _gcs_latest_dt_prefix(bucket, base_prefix: str = "raw/") -> str:
@@ -632,12 +668,7 @@ def data_page():
 @data_dashboard_bp.get("/api/data/inventory")
 def api_inventory():
     bucket = _get_gcs_bucket()
-
-    # 如果你不想每次手动改 dt，就用 latest 自动发现
-    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
-    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip()
-    if not prefix:
-        prefix = _gcs_latest_dt_prefix(bucket, base_prefix)
+    prefix = _resolve_data_dashboard_prefix(bucket)
 
     inv = _inventory_from_gcs(bucket, prefix)
     return jsonify(inv)
@@ -646,8 +677,7 @@ def api_inventory():
 @data_dashboard_bp.get("/api/data/matrix")
 def api_matrix():
     bucket = _get_gcs_bucket()
-    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
-    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+    prefix = _resolve_data_dashboard_prefix(bucket)
 
     inv = _inventory_from_gcs(bucket, prefix)
     return jsonify(_coverage_matrix(inv))
@@ -672,8 +702,7 @@ def api_series():
     indicator = (request.args.get("indicator") or "").strip().lower()
 
     bucket = _get_gcs_bucket()
-    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
-    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+    prefix = _resolve_data_dashboard_prefix(bucket)
 
     inv = _inventory_from_gcs(bucket, prefix)
     blob_name = _find_blob_for(country, indicator, inv)
@@ -710,8 +739,7 @@ def api_compare():
         return jsonify({"ok": False, "message": "countries must have exactly 2 items"}), 400
 
     bucket = _get_gcs_bucket()
-    base_prefix = os.getenv("ARGUS_GCS_BASE_PREFIX", "raw/")
-    prefix = os.getenv("ARGUS_GCS_PREFIX", "").strip() or _gcs_latest_dt_prefix(bucket, base_prefix)
+    prefix = _resolve_data_dashboard_prefix(bucket)
 
     inv = _inventory_from_gcs(bucket, prefix)
 

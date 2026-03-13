@@ -21,7 +21,10 @@ from collections import Counter
 from functools import lru_cache
 import unicodedata
 from json import JSONEncoder
-from flask_talisman import Talisman
+try:
+    from flask_talisman import Talisman
+except Exception:
+    Talisman = None
 
 from agents_system import AgentOrchestrator
 from data_dashboard import data_dashboard_bp
@@ -854,6 +857,58 @@ FX_RELATED_CATEGORIES = {
     "systematic risk",
 }
 
+PERSONA_REGISTRY = {
+    "cash_manager": {
+        "label": "Cash Manager",
+        "summary": "Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.",
+    },
+    "fx_manager": {
+        "label": "FX Manager",
+        "summary": "Prioritizes currency volatility, hedge exposure, and FX-driven cross-border risk.",
+    },
+    "treasury_ops": {
+        "label": "Treasury Operations",
+        "summary": "Prioritizes daily treasury execution, controls, and operational continuity.",
+    },
+    "treasury_tech": {
+        "label": "Treasury Technology",
+        "summary": "Prioritizes systems resilience, process reliability, and operational technology risk.",
+    },
+    "risk_manager": {
+        "label": "Risk Manager",
+        "summary": "Prioritizes concentration risk, systemic signals, and escalation readiness.",
+    },
+}
+
+PERSONA_CARD_SPECS = {
+    "cash_manager": [
+        {
+            "key": "liquidity_risk",
+            "title": "Liquidity Risk",
+            "categories": {"liquidity risk", "credit risk", "systematic risk"},
+            "keywords": {"liquidity", "cash", "buffer", "funding", "credit", "default"},
+        },
+        {
+            "key": "funding_pressure",
+            "title": "Funding Cost Pressure",
+            "categories": {"market risk", "credit risk", "regulatory risk"},
+            "keywords": {"interest", "rate", "funding", "debt", "maturity", "refinanc"},
+        },
+        {
+            "key": "payments_ops",
+            "title": "Payment & Disbursement Risk",
+            "categories": {"operational risk", "process risk", "regulatory risk"},
+            "keywords": {"payment", "settlement", "bank", "disbursement", "transfer", "outage"},
+        },
+        {
+            "key": "cash_mobility",
+            "title": "Cash Concentration & Sweeping Watch",
+            "categories": {"regulatory risk", "political risk", "process risk"},
+            "keywords": {"capital", "sweep", "restriction", "mobility", "cross-border", "transfer"},
+        },
+    ],
+}
+
 
 def _build_country_board(alerts):
     monitored_set = set(_load_monitored_countries())
@@ -982,6 +1037,242 @@ def _build_fx_summary(alert_rows: list[dict], monitored_countries: list[str]) ->
         "medium_or_above_country_count": medium_or_above,
         "top5": board[:5],
         "countries": board,
+    }
+
+
+def _snapshot_and_alert_rows() -> tuple[dict | None, list[dict], str]:
+    """Load the current Guardian snapshot and normalize alert rows for downstream views."""
+    gcs_result = _load_guardian_snapshot_from_gcs()
+    snapshot = None
+    snapshot_ref = ""
+    if gcs_result.get("ok"):
+        snapshot = gcs_result.get("snapshot")
+        snapshot_ref = str(gcs_result.get("snapshot_ref") or "")
+
+    if snapshot is None:
+        snapshot_path = _resolve_guardian_snapshot_path()
+        if not snapshot_path.exists():
+            return None, [], ""
+        try:
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            snapshot_ref = str(snapshot_path)
+        except Exception:
+            return None, [], ""
+
+    data_mode = snapshot.get("data_mode")
+    enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
+    alerts = _filter_guardian_alerts(snapshot.get("alerts"), enforce_whitelist=enforce_whitelist)
+    alert_rows = _build_alert_list(alerts, max_items=5000)
+    return snapshot, alert_rows, snapshot_ref
+
+
+def _matches_persona_spec(row: dict, spec: dict) -> bool:
+    category = str(row.get("category") or "").strip().lower()
+    if category in spec["categories"]:
+        return True
+    text = " ".join([
+        str(row.get("title") or ""),
+        str(row.get("recommendation") or ""),
+        str(row.get("rationale") or ""),
+    ]).lower()
+    return any(kw in text for kw in spec["keywords"])
+
+
+def _status_from_score(score: float) -> str:
+    if score >= 70:
+        return "high"
+    if score >= 40:
+        return "medium"
+    if score > 0:
+        return "low"
+    return "stable"
+
+
+def _default_actions_for_cash_manager(rows: list[dict]) -> list[str]:
+    actions = []
+    for row in rows:
+        rec = str(row.get("recommendation") or "").strip()
+        if rec and rec not in actions:
+            actions.append(rec)
+        if len(actions) >= 3:
+            break
+    if actions:
+        return actions
+    return [
+        "Review local cash buffers in the highest-risk markets.",
+        "Validate payment routing and same-day settlement capacity.",
+        "Re-check short-term funding and cash concentration plans.",
+    ]
+
+
+def _top_alert_excerpt(rows: list[dict], limit: int = 3) -> list[str]:
+    excerpts = []
+    for row in rows[:limit]:
+        country = str(row.get("country") or "-")
+        title = str(row.get("title") or row.get("category") or "-")
+        excerpts.append(f"{country}: {title}")
+    return excerpts
+
+
+def _build_cash_manager_workflow(alert_rows: list[dict], actions: list[str]) -> list[dict]:
+    signal_rows = alert_rows[:6]
+    high_rows = [row for row in alert_rows if float(row.get("score") or 0) >= 70]
+    liquidity_rows = [
+        row for row in alert_rows
+        if str(row.get("category") or "").strip().lower() in {"liquidity risk", "credit risk", "systematic risk"}
+    ]
+    payment_rows = [
+        row for row in alert_rows
+        if "payment" in str(row.get("title") or "").lower()
+        or "bank" in str(row.get("title") or "").lower()
+        or "settlement" in str(row.get("title") or "").lower()
+    ]
+    top_category = Counter(str(row.get("category") or "-") for row in alert_rows).most_common(1)
+    dominant_category = top_category[0][0] if top_category else "-"
+    impacted_countries = sorted({str(row.get("country") or "-") for row in liquidity_rows + payment_rows})[:4]
+
+    return [
+        {
+            "key": "signal_detection",
+            "step": "01",
+            "title": "Signal Detection",
+            "status": _status_from_score(max((float(r.get("score") or 0) for r in signal_rows), default=0.0)),
+            "summary": "The system continuously monitors new market, geopolitical, banking, and operational signals relevant to daily cash management.",
+            "metric": f"{len(signal_rows)} priority signals",
+            "details": [
+                f"{len(alert_rows)} total events available in the latest monitoring cycle.",
+                f"{len(high_rows)} high-risk signals surfaced for immediate review.",
+                "Signal sources include global news, GCS snapshots, and treasury-related event adapters.",
+            ],
+            "evidence": _top_alert_excerpt(signal_rows),
+        },
+        {
+            "key": "risk_assessment",
+            "step": "02",
+            "title": "Risk Assessment",
+            "status": _status_from_score(max((float(r.get("score") or 0) for r in high_rows or alert_rows), default=0.0)),
+            "summary": "Detected events are classified into treasury-relevant risk categories so the cash manager can understand the nature of the threat quickly.",
+            "metric": f"Top risk: {dominant_category}",
+            "details": [
+                f"{len(liquidity_rows)} alerts currently map to liquidity / counterparty-sensitive risk categories.",
+                f"Dominant category in the latest snapshot is {dominant_category}.",
+                "Classification emphasizes liquidity, operational continuity, regulatory friction, and funding pressure.",
+            ],
+            "evidence": _top_alert_excerpt(high_rows or alert_rows),
+        },
+        {
+            "key": "impact_estimation",
+            "step": "03",
+            "title": "Impact Estimation",
+            "status": _status_from_score(max((float(r.get("score") or 0) for r in liquidity_rows + payment_rows), default=0.0)),
+            "summary": "The system estimates how detected events could affect global liquidity, trapped cash, payment execution, and regional treasury exposure.",
+            "metric": f"{len(impacted_countries)} countries under watch",
+            "details": [
+                f"{len(payment_rows)} signals suggest possible payment, banking, or settlement disruption.",
+                f"{len(liquidity_rows)} signals could affect near-term liquidity or counterparty confidence.",
+                "Impact estimation is organized around cash mobility, payment continuity, and short-term funding pressure.",
+            ],
+            "evidence": impacted_countries or ["No country concentration signal detected."],
+        },
+        {
+            "key": "decision_support",
+            "step": "04",
+            "title": "Decision Support",
+            "status": _status_from_score(max((float(r.get("score") or 0) for r in high_rows or alert_rows), default=0.0)),
+            "summary": "ARGUS translates today’s risk picture into treasury action options while keeping the final decision with the cash manager.",
+            "metric": f"{len(actions)} recommended actions",
+            "details": [
+                "Suggested actions focus on reallocating liquidity, validating payment routing, and adjusting short-term funding plans.",
+                "Actions are meant to support decision speed, not replace treasury judgment.",
+                "Recommendations can be escalated to management when exposure becomes material.",
+            ],
+            "evidence": actions[:3],
+        },
+    ]
+
+
+def _build_cash_manager_dashboard(alert_rows: list[dict], snapshot: dict | None) -> dict:
+    matched_cards = []
+    for spec in PERSONA_CARD_SPECS["cash_manager"]:
+        matched = [row for row in alert_rows if _matches_persona_spec(row, spec)]
+        top = matched[:3]
+        top_score = max((float(r.get("score") or 0) for r in matched), default=0.0)
+        countries = sorted({str(r.get("country") or "-") for r in top if str(r.get("country") or "").strip()})
+        detail = "No material signals detected in the latest snapshot."
+        if top:
+            detail = " | ".join(
+                f"{r.get('country') or '-'}: {r.get('title') or r.get('category') or '-'}"
+                for r in top[:2]
+            )
+        matched_cards.append({
+            "key": spec["key"],
+            "title": spec["title"],
+            "status": _status_from_score(top_score),
+            "metric": f"{len(matched)} matched alerts",
+            "detail": detail,
+            "top_score": round(top_score, 2),
+            "countries": countries[:3],
+        })
+
+    high_risk = len([row for row in alert_rows if float(row.get("score") or 0) >= 70])
+    triggered = len([row for row in alert_rows if float(row.get("score") or 0) >= 40])
+    top_countries = _build_country_board(alert_rows)[:3]
+    actions = _default_actions_for_cash_manager(alert_rows)
+    generated_at = "-"
+    if isinstance(snapshot, dict):
+        generated_at = snapshot.get("generated_at_local") or snapshot.get("generated_at_utc") or "-"
+
+    return {
+        "persona": "cash_manager",
+        "title": "Cash Manager Dashboard",
+        "summary": {
+            "headline": f"{triggered} triggered alerts and {high_risk} high-risk signals currently affect near-term cash decisions.",
+            "subheadline": "Focus on liquidity, payment execution, short-term funding, and cash mobility.",
+            "generated_at": generated_at,
+            "event_count": len(alert_rows),
+        },
+        "cards": matched_cards,
+        "actions": actions,
+        "top_countries": top_countries,
+        "workflow": _build_cash_manager_workflow(alert_rows, actions),
+    }
+
+
+def _build_generic_persona_dashboard(persona: str, alert_rows: list[dict], snapshot: dict | None) -> dict:
+    cfg = PERSONA_REGISTRY.get(persona, PERSONA_REGISTRY["cash_manager"])
+    top_rows = alert_rows[:3]
+    generated_at = "-"
+    if isinstance(snapshot, dict):
+        generated_at = snapshot.get("generated_at_local") or snapshot.get("generated_at_utc") or "-"
+    return {
+        "persona": persona,
+        "title": f"{cfg['label']} Dashboard",
+        "summary": {
+            "headline": cfg["summary"],
+            "subheadline": "Role-based dashboard placeholder; cash manager is currently the deepest implementation.",
+            "generated_at": generated_at,
+            "event_count": len(alert_rows),
+        },
+        "cards": [
+            {
+                "key": "priority_signals",
+                "title": "Priority Signals",
+                "status": _status_from_score(max((float(r.get('score') or 0) for r in top_rows), default=0.0)),
+                "metric": f"{len(top_rows)} top alerts",
+                "detail": " | ".join(
+                    f"{r.get('country') or '-'}: {r.get('category') or '-'}"
+                    for r in top_rows
+                ) or "No alerts available.",
+                "top_score": round(max((float(r.get('score') or 0) for r in top_rows), default=0.0), 2),
+                "countries": [str(r.get("country") or "-") for r in top_rows[:3]],
+            }
+        ],
+        "actions": [
+            "Review top alerts from the global Guardian board.",
+            "Switch to Cash Manager persona for the full role-specific demo.",
+        ],
+        "top_countries": _build_country_board(alert_rows)[:3],
+        "workflow": [],
     }
 
 
@@ -1536,6 +1827,44 @@ def get_guardian_dashboard():
     }
     # Sanitize to remove None values before jsonify
     return jsonify(sanitize_for_json(dashboard_data))
+
+
+@app.route('/api/personas')
+def get_personas():
+    """Return available persona options for the role-based dashboard."""
+    return jsonify({
+        "status": "success",
+        "personas": [
+            {"key": key, "label": cfg["label"], "summary": cfg["summary"]}
+            for key, cfg in PERSONA_REGISTRY.items()
+        ],
+        "default_persona": "cash_manager",
+    })
+
+
+@app.route('/api/persona/dashboard')
+def get_persona_dashboard():
+    """Return role-based dashboard content for the selected persona."""
+    persona = str(request.args.get("persona") or "cash_manager").strip().lower()
+    if persona not in PERSONA_REGISTRY:
+        persona = "cash_manager"
+
+    snapshot, alert_rows, snapshot_ref = _snapshot_and_alert_rows()
+    if snapshot is None:
+        return jsonify({
+            "status": "missing",
+            "message": "Persona dashboard unavailable because Guardian snapshot could not be loaded.",
+            "persona": persona,
+        }), 404
+
+    if persona == "cash_manager":
+        payload = _build_cash_manager_dashboard(alert_rows, snapshot)
+    else:
+        payload = _build_generic_persona_dashboard(persona, alert_rows, snapshot)
+
+    payload["status"] = "success"
+    payload["snapshot_path"] = snapshot_ref
+    return jsonify(sanitize_for_json(payload))
 
 
 @app.route('/')
