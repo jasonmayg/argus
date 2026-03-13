@@ -11,4 +11,6 @@ All code, comments, variable names, UI text, docstrings, and documentation must 
 Do not generate summary documents, recap files, or 'final summary' markdown unless explicitly asked. Focus output on deliverables: working code, tests, and commits.
 Make sure all generated docs except README.md are under docs/folder
 
+## Development Commands
+- Check syntax: `python -m py_compile $FILENAME` (Run this after any python file edit)
 
