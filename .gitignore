@@ -140,3 +140,4 @@ guardian_poc/reports/
 .dmypy.json
 dmypy.json
 .pyre/
+.claude/
