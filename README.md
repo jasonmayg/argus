@@ -13,8 +13,10 @@ argus/
 ├── state.py                 # Shared orchestrator + execution state
 ├── config.py                # Single source of truth: port, shared_storage paths
 ├── bridge_manager.py        # File-drop bridge: raw/ → /api/analyze → analyzed/
+├── daily_monitor.py         # Scheduled monitoring job (Fed + Guardian POC)
 │
 ├── core/
+│   ├── data_agent.py        # Unified DataAgent: all sources → shared_storage/raw/
 │   ├── agents.py            # AnalysisAgent (2D matrix), persona dashboards
 │   ├── guardian_loader.py   # GCS/snapshot loading, alert normalisation, daily warnings
 │   └── json_utils.py        # SafeJSONEncoder, sanitize_for_json
@@ -27,13 +29,10 @@ argus/
 │                            #   ReportingAgent, AgentOrchestrator
 ├── risk_matrix.py           # 5×5 Probability × Impact matrix helpers
 ├── risk_classifier.py       # Keyword-based risk taxonomy (0–100 scoring)
-├── fed_news_crawler.py      # Federal Reserve news crawler
-├── fed_news_db.py           # SQLite persistence layer
-├── daily_monitor.py         # Scheduled Fed monitoring job
 │
-├── shared_storage/          # Bridge pipeline working directories
-│   ├── raw/                 # Drop JSON files here to trigger the bridge
-│   ├── analyzed/            # Bridge writes enriched output here
+├── shared_storage/          # Single source of truth for all pipeline data
+│   ├── raw/                 # Every DataAgent source writes here; bridge watches this dir
+│   ├── analyzed/            # Bridge writes enriched, 2D-scored output here
 │   ├── processed/           # Successfully processed raw files archived here
 │   └── failed/              # Files that could not be processed
 │
@@ -44,6 +43,29 @@ argus/
 │   └── config/              # countries.yaml, risk_keywords.yaml, data_sources.yaml
 └── docs/                    # Runbooks and reference guides
 ```
+
+---
+
+## Data Flow
+
+```
+DataAgent (core/data_agent.py)
+  │  Fetches from: federal_reserve, gcs, gdelt, usgs, noaa_nws,
+  │                nasa_eonet, reliefweb, world_bank, bank_of_canada,
+  │                fiscal_data, sec_edgar, fred, <custom URL>
+  │
+  ▼ writes bridge input contract JSON
+shared_storage/raw/
+  │
+  ▼ bridge_manager.py watches and calls POST /api/analyze
+RiskClassifierAgent → AnalysisAgent (2D matrix, Claude LLM)
+  │
+  ▼
+shared_storage/analyzed/   (enriched results)
+shared_storage/processed/  (archived source files)
+```
+
+All modules read from and write to `shared_storage/`. No module maintains a private data cache.
 
 ---
 
@@ -91,6 +113,8 @@ Open [http://localhost:5050](http://localhost:5050)
 python daily_monitor.py
 ```
 
+Fetches Federal Reserve news via `DataAgent`, writes to `shared_storage/raw/`, and runs the Guardian POC daily snapshot. Logs are saved to `data/logs/`.
+
 ### 5. Run the bridge (watch shared_storage/raw/ for incoming files)
 
 ```bash
@@ -113,6 +137,28 @@ Drop any JSON file into `shared_storage/raw/` and the bridge will call `/api/ana
   ]
 }
 ```
+
+---
+
+## DataAgent Sources
+
+`core/data_agent.py` supports the following source keys out of the box:
+
+| Source key | Description |
+|------------|-------------|
+| `federal_reserve` | Fed Reserve press releases (crawl4ai, markdown link extraction) |
+| `gcs` | Google Cloud Storage Guardian snapshot (`alerts_latest.json`) |
+| `gdelt` | GDELT global conflict / macro news |
+| `usgs` | USGS significant earthquake feed |
+| `noaa_nws` | NOAA National Weather Service active alerts |
+| `nasa_eonet` | NASA EONET natural hazard events |
+| `reliefweb` | UN OCHA ReliefWeb humanitarian reports |
+| `world_bank` | World Bank macro / CPI indicators |
+| `bank_of_canada` | Bank of Canada daily FX rates |
+| `fiscal_data` | US Treasury auction data |
+| `sec_edgar` | SEC EDGAR corporate filings |
+| `fred` | FRED economic indicators (requires `FRED_API_KEY`) |
+| `https://...` | Any custom URL (auto-crawled via crawl4ai) |
 
 ---
 
@@ -163,11 +209,12 @@ bash setup_cron.sh
 | Guardian snapshot missing | Run `guardian_poc/src/daily_job.py` or check GCS env vars |
 | Bridge: "Connection refused" | Start `frontend_app.py` before `bridge_manager.py` |
 | LLM scoring falls back to heuristic | Set `ANTHROPIC_API_KEY` in `.env` |
+| `daily_monitor.py` crawl fails | Check `ANTHROPIC_API_KEY` and network access to federalreserve.gov |
 
 ---
 
 ## Version
 
-- **Version**: 2.0
+- **Version**: 3.0
 - **Status**: Production-ready
 - **Last Updated**: 2026-03-13
