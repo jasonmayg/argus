@@ -95,7 +95,7 @@ async function loadGuardianDashboard() {
 | **Entry Point** | `frontend_app.py` (Flask server) | `guardian_poc/src/dashboard.py` (Streamlit - optional) |
 | **Integration** | Imports `guardian_poc` modules via relative paths | Can run standalone OR be consumed by main app |
 | **Deployment** | Single Flask process | Dual mode:<br>1. Embedded in Flask (API calls)<br>2. Standalone Streamlit UI |
-| **Port** | 5000 (Flask) | 8501 (Streamlit - if standalone) |
+| **Port** | 5050 (Flask) | 8501 (Streamlit - if standalone) |
 
 #### **Dependency Strategy:**
 
@@ -496,7 +496,7 @@ class GuardianEngine:
 # Start Flask server with Guardian integration
 python frontend_app.py
 
-# Guardian accessible at: http://localhost:5000/api/guardian/dashboard
+# Guardian accessible at: http://localhost:5050/api/guardian/dashboard
 # UI: Click "🌍 Open Guardian Dashboard" button
 ```
 
@@ -517,7 +517,7 @@ python frontend_app.py
 # Terminal 2: Guardian Streamlit
 cd guardian_poc && streamlit run src/dashboard.py
 
-# Main app: http://localhost:5000
+# Main app: http://localhost:5050
 # Guardian Streamlit: http://localhost:8501
 ```
 

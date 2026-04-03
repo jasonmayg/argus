@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARGUS - Multi-Agent Risk Analysis System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,11 +15,12 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
             min-height: 100vh;
-            padding: 20px;
-            color: #333;
+            padding: 40px 20px;
+            color: #fff;
         }
 
         .container {
@@ -26,194 +30,79 @@
 
         header {
             text-align: center;
-            color: white;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
         }
 
         header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 2.2em;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            letter-spacing: -0.02em;
         }
 
         header p {
             font-size: 1.1em;
             opacity: 0.9;
+            font-weight: 400;
         }
 
         .dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
             margin-bottom: 30px;
             align-items: start;
         }
 
         .card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            color: #fff;
         }
 
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
         }
 
         .card h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .card-content {
-            line-height: 1.6;
+            color: #fff;
+            margin-bottom: 18px;
+            font-size: 1.25em;
+            font-weight: 700;
+            letter-spacing: -0.01em;
         }
 
         .agent-status {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 10px 0;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 5px;
-        }
-
-        .agent-name {
-            font-weight: bold;
-            color: #333;
+            margin: 12px 0;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         .status-badge {
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        .status-idle {
-            background: #e0e0e0;
-            color: #666;
-        }
-
-        .status-running {
-            background: #fff3cd;
-            color: #856404;
-            animation: pulse 1s infinite;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-failed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Agent card click-to-expand */
-        .card.agent-card {
-            cursor: pointer;
-            position: relative;
-        }
-
-        .card.agent-card:hover {
-            border: 1px solid #667eea;
-        }
-
-        .card-click-hint {
-            font-size: 0.75em;
-            color: #aaa;
-            margin-top: 6px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            user-select: none;
-        }
-
-        .card-chevron {
-            display: inline-block;
-            transition: transform 0.25s ease;
-            font-style: normal;
-        }
-
-        .card.expanded .card-chevron {
-            transform: rotate(180deg);
-        }
-
-        .agent-detail {
-            display: none;
-            margin-top: 14px;
-            border-top: 1px solid #eee;
-            padding-top: 12px;
-            animation: fadeSlideIn 0.2s ease;
-        }
-
-        .card.expanded .agent-detail {
-            display: block;
-        }
-
-        @keyframes fadeSlideIn {
-            from { opacity: 0; transform: translateY(-6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .detail-section {
-            margin-bottom: 12px;
-        }
-
-        .detail-section-title {
-            font-size: 0.78em;
+            font-size: 0.85em;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #667eea;
-            margin-bottom: 6px;
         }
 
-        .detail-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .detail-tag {
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.78em;
-            font-weight: 600;
-            background: #eef0fd;
-            color: #4a55c0;
-            border: 1px solid #c7ccf5;
-        }
-
-        .detail-tag.output {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-color: #a5d6a7;
-        }
-
-        .detail-tag.source {
-            background: #fff8e1;
-            color: #f57f17;
-            border-color: #ffe082;
-        }
-
-        .detail-tag.critical {
-            background: #fce4ec;
-            color: #880e4f;
-            border-color: #f48fb1;
-        }
-
-        .detail-description {
-            font-size: 0.85em;
-            color: #555;
-            line-height: 1.5;
-        }
+        .status-idle { background: rgba(255,255,255,0.2); color: #fff; }
+        .status-running { background: #fff3cd; color: #856404; animation: pulse 1s infinite; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -222,1442 +111,162 @@
 
         .controls {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 15px;
+            margin-bottom: 40px;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         button {
-            padding: 12px 30px;
-            font-size: 1em;
+            padding: 14px 28px;
+            font-size: 0.95em;
             border: none;
-            border-radius: 5px;
+            border-radius: 12px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
             transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .btn-execute {
-            background: #28a745;
-            color: white;
+        .btn-execute { background: #28a745; color: white; }
+        .btn-guardian { background: #6366f1; color: white; }
+        .btn-data { background: #7c3aed; color: white; }
+        .btn-persona { background: #ec4899; color: white; }
+        .btn-reset { background: rgba(220, 53, 69, 0.8); color: white; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
         }
 
-        .btn-execute:hover:not(:disabled) {
-            background: #218838;
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        .modal-overlay.show { display: flex; }
+
+        .modal-shell {
+            width: min(1250px, 95vw);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-
-        .btn-reset {
-            background: #dc3545;
-            color: white;
+        .guardian-section {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 28px;
+            padding: 50px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+            color: #1e293b;
         }
 
-        .btn-reset:hover {
-            background: #c82333;
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        .guardian-header h2 {
+            font-size: 1.8em;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 15px;
         }
 
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        .subsection-title {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 30px 0 20px;
         }
+
+        .matrix-grid {
+            border-collapse: separate;
+            border-spacing: 8px;
+            width: 100%;
+        }
+
+        .matrix-grid th, .matrix-grid td {
+            padding: 20px;
+            border-radius: 14px;
+            text-align: center;
+            font-weight: 800;
+            transition: all 0.3s ease;
+        }
+
+        .matrix-axis-label {
+            background: rgba(0,0,0,0.05);
+            color: #64748b;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .matrix-cell-extreme { background: rgba(239, 68, 68, 0.9) !important; color: #fff; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+        .matrix-cell-high { background: rgba(249, 115, 22, 0.9) !important; color: #fff; box-shadow: 0 0 15px rgba(249, 115, 22, 0.2); }
+        .matrix-cell-medium { background: rgba(234, 179, 8, 0.9) !important; color: #fff; }
+        .matrix-cell-low { background: rgba(34, 197, 94, 0.9) !important; color: #fff; }
 
         .pipeline-visualization {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
             margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .pipeline-stages {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 20px 0;
+            margin: 30px 0;
         }
 
         .stage {
             flex: 1;
             text-align: center;
-            padding: 15px;
-            border-radius: 8px;
-            background: #f5f5f5;
-            margin: 0 10px;
-            border: 2px solid #ddd;
-            transition: all 0.3s ease;
+            padding: 25px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0 12px;
         }
 
-        .stage.active {
-            background: #fff3cd;
-            border-color: #ffc107;
-            transform: scale(1.05);
-        }
-
-        .stage.completed {
-            background: #d4edda;
-            border-color: #28a745;
-        }
-
-        .stage h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .arrow {
-            flex-shrink: 0;
-            color: #667eea;
-            font-size: 1.5em;
-            margin: 0 10px;
-        }
+        .stage.active { background: rgba(255, 255, 255, 0.4); border-color: #fff; transform: scale(1.05); }
 
         .results-section {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
             margin-bottom: 30px;
-        }
-
-        .results-section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
-        .result-item {
-            padding: 15px;
-            margin: 10px 0;
-            background: #f5f5f5;
-            border-left: 4px solid #667eea;
-            border-radius: 5px;
-        }
-
-        .result-label {
-            font-weight: bold;
-            color: #667eea;
-            margin-right: 10px;
-        }
-
-        .risk-distribution {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .risk-box {
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .risk-critical {
-            background: #dc3545;
-        }
-
-        .risk-high {
-            background: #fd7e14;
-        }
-
-        .risk-medium {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .risk-low {
-            background: #28a745;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .log-section {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            max-height: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            color: #e2e8f0;
+            padding: 30px;
+            border-radius: 18px;
+            font-family: 'Inter', monospace;
+            max-height: 250px;
             overflow-y: auto;
             font-size: 0.9em;
-            line-height: 1.4;
-        }
-
-        .log-entry {
-            margin: 5px 0;
-            padding: 5px;
-            border-left: 2px solid #00ff00;
-            padding-left: 10px;
-        }
-
-        .log-timestamp {
-            color: #888;
-            margin-right: 10px;
-        }
-
-        .log-level {
-            color: #ffff00;
-            font-weight: bold;
-            margin-right: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .footer {
             text-align: center;
-            color: white;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,0,0,0.1);
-            border-radius: 50%;
-            border-top-color: #667eea;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .alert {
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 5px;
-            display: none;
-        }
-
-        .alert.show {
-            display: block;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .tab-button {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            color: #667eea;
-            font-weight: bold;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .tab-button.active {
-            border-bottom-color: #667eea;
-            color: #667eea;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* ── Pipeline loading overlay inside modals ── */
-        .guardian-section {
-            position: relative; /* anchor for absolute overlay */
-        }
-
-        .modal-pipeline-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,0.97);
-            border-radius: 10px;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            padding: 48px 28px;
-            text-align: center;
-        }
-
-        .modal-pipeline-overlay.active {
-            display: flex;
-        }
-
-        .pipeline-overlay-spinner {
-            width: 52px;
-            height: 52px;
-            border: 5px solid #e0e0ff;
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.85s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        .pipeline-overlay-title {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .pipeline-overlay-subtitle {
-            font-size: 0.85em;
-            color: #888;
-            margin-bottom: 28px;
-            max-width: 380px;
-        }
-
-        .pipeline-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-            width: 100%;
-            max-width: 400px;
-            text-align: left;
-        }
-
-        .pipeline-step {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 14px;
-            border-radius: 7px;
-            font-size: 0.84em;
-            background: #f5f5f5;
-            color: #bbb;
-            transition: background 0.25s, color 0.25s;
-        }
-
-        .pipeline-step.done {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .pipeline-step.active {
-            background: #fff8e1;
-            color: #e65100;
-            font-weight: 700;
-            animation: pulse-step 1.2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-step {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.75; }
-        }
-
-        .pipeline-step-icon {
-            width: 20px;
-            text-align: center;
-            font-style: normal;
-            flex-shrink: 0;
-        }
-
-        .pipeline-overlay-hint {
-            margin-top: 22px;
-            font-size: 0.78em;
-            color: #ccc;
-            font-style: italic;
-        }
-        /* ── End pipeline loading overlay ── */
-
-        .guardian-section {
-            background: white;
-            border-radius: 14px;
-            padding: 24px;
-            box-shadow: 0 16px 36px rgba(28, 29, 67, 0.28);
-            border: 1px solid rgba(102, 126, 234, 0.22);
-            max-height: 85vh;
-            overflow-y: auto;
-        }
-
-        .guardian-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-
-        .guardian-header h2 {
-            color: #4656a5;
-            margin: 0;
-        }
-
-        .guardian-meta {
-            color: #4b5563;
+            opacity: 0.8;
+            margin-top: 60px;
             font-size: 0.95em;
-            margin-bottom: 16px;
-        }
-
-        .guardian-refresh {
-            background: #667eea;
-            color: white;
-            padding: 10px 16px;
-            border-radius: 8px;
-            letter-spacing: 0;
-            text-transform: none;
-        }
-
-        .guardian-refresh:hover {
-            background: #5a70d4;
-            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.35);
-        }
-
-        .btn-guardian {
-            background: #0f766e;
-            color: white;
-        }
-
-        .btn-guardian:hover {
-            background: #115e59;
-            box-shadow: 0 5px 15px rgba(15, 118, 110, 0.4);
-        }
-
-        .btn-data {
-             background: #7c3aed;
-             color: white;
-        }
-
-        .btn-data:hover {
-             background: #6d28d9;
-              box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);
-        }
-
-        /* Data modal iframe */
-        .data-iframe {
-             width: 100%;
-             height: 78vh;
-              border: none;
-              border-radius: 12px;
-              background: white;
-        }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .executive-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .kpi-card {
-            background: linear-gradient(180deg, #fbfcff 0%, #f4f7ff 100%);
-            border: 1px solid #d9e1ff;
-            border-radius: 10px;
-            padding: 12px;
-        }
-
-        .kpi-label {
-            font-size: 0.85em;
-            color: #6b7280;
-        }
-
-        .kpi-value {
-            font-size: 1.4em;
-            font-weight: 700;
-            color: #2b3155;
-            margin-top: 4px;
-        }
-
-        .trend-pill {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 0.82em;
-            font-weight: 700;
-            margin-top: 6px;
-        }
-
-        .trend-up {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .trend-down {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .trend-flat {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .trend-na {
-            background: #f3f4f6;
-            color: #4b5563;
-        }
-
-        .subsection-title {
-            color: #374151;
-            margin: 18px 0 10px;
-            font-size: 1.1em;
-        }
-
-        .country-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 10px;
-        }
-
-        .country-card {
-            border-radius: 10px;
-            padding: 12px;
-            border: 2px solid #d7dcf5;
-            background: linear-gradient(180deg, #ffffff 0%, #f7f8ff 100%);
-        }
-        .country-card.rank-1 {
-            border-color: #dc2626;
-            background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
-        }
-        .country-card.rank-2 {
-            border-color: #ea580c;
-            background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
-        }
-        .country-card.rank-3 {
-            border-color: #d97706;
-            background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
-        }
-        .country-card.rank-4 {
-            border-color: #0f766e;
-            background: linear-gradient(180deg, #f0fdfa 0%, #ccfbf1 100%);
-        }
-        .country-card.rank-5 {
-            border-color: #475569;
-            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-        }
-
-        .country-name {
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 6px;
-        }
-
-        .country-score {
-            font-size: 1.25em;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .country-meta {
-            color: #4b5563;
-            font-size: 0.9em;
-        }
-
-        .level-high {
-            color: #b91c1c;
-            border-color: #ef4444;
-        }
-
-        .level-medium {
-            color: #b45309;
-            border-color: #f59e0b;
-        }
-
-        .level-low {
-            color: #166534;
-            border-color: #22c55e;
-        }
-
-        .level-none {
-            color: #374151;
-            border-color: #9ca3af;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-            border: 1px solid #d9e1ff;
-            border-radius: 10px;
-        }
-
-        .alerts-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 920px;
-        }
-
-        .alerts-table th, .alerts-table td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 10px;
-            text-align: left;
-            vertical-align: top;
-            font-size: 0.92em;
-        }
-
-        .alerts-table th {
-            background: #eef2ff;
-            color: #394166;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .alert-title {
-            max-width: 380px;
-            white-space: normal;
-            line-height: 1.35;
-        }
-
-        .muted {
-            color: #6b7280;
-            font-size: 0.9em;
-        }
-
-        .alerts-table a {
-            color: #4656a5;
-            text-decoration-color: rgba(70, 86, 165, 0.45);
-        }
-
-        .alerts-table a:hover {
-            color: #35418f;
-        }
-
-        .alert-action-btn {
-            background: #4f46e5;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 0.82em;
-            cursor: pointer;
-            text-transform: none;
-            letter-spacing: 0;
-        }
-
-        .alert-action-btn:hover {
-            background: #4338ca;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(33, 35, 66, 0.52);
-            backdrop-filter: blur(3px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 18px;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-shell {
-            width: min(1280px, 96vw);
-        }
-
-        .insight-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .insight-card {
-            border: 1px solid #d9e1ff;
-            border-radius: 10px;
-            padding: 10px;
-            background: #f8faff;
-        }
-
-        .insight-title {
-            font-size: 0.82em;
-            color: #6b7280;
-        }
-
-        .insight-value {
-            margin-top: 4px;
-            font-size: 1.2em;
-            color: #1f2a56;
-            font-weight: 700;
-        }
-
-        .insight-body {
-            margin-top: 12px;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-        }
-
-        .insight-body h4 {
-            margin: 0 0 6px 0;
-            color: #374151;
-        }
-
-        .insight-body p {
-            margin: 0 0 10px 0;
-            color: #374151;
-            line-height: 1.45;
-        }
-
-        .tech-details {
-            margin-top: 16px;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-        }
-
-        .tech-details summary {
-            cursor: pointer;
-            color: #4b5563;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .google-risk-card {
-            border: 1px solid #d9e1ff;
-            border-radius: 10px;
-            padding: 12px;
-            background: linear-gradient(180deg, #f7f9ff 0%, #eef3ff 100%);
-            margin-bottom: 14px;
-        }
-
-        .risk-row {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-        .warning-panel {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 12px;
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            margin-bottom: 16px;
-        }
-        .warning-head {
-            color: #475569;
-            font-size: 0.9em;
-            margin-bottom: 8px;
-        }
-        .warning-metrics {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .warning-metric {
-            border: 1px solid #dbe2ea;
-            border-radius: 8px;
-            background: #fff;
-            padding: 8px 10px;
-        }
-        .warning-metric-label {
-            color: #64748b;
-            font-size: 0.78em;
-        }
-        .warning-metric-value {
-            color: #0f172a;
-            font-size: 1.05em;
-            font-weight: 700;
-            margin-top: 2px;
-        }
-        .warning-list {
-            display: grid;
-            gap: 8px;
-        }
-        .warning-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 10px;
-            background: #ffffff;
-            color: #334155;
-        }
-        .warning-item.high {
-            border-color: #ef4444;
-            background: #fef2f2;
-        }
-        .warning-item.warn {
-            border-color: #f59e0b;
-            background: #fffbeb;
-        }
-        .warning-item.ok {
-            border-color: #10b981;
-            background: #ecfdf5;
-        }
-        .warning-title {
-            font-weight: 700;
-            margin-right: 6px;
-        }
-        .warning-badge {
-            display: inline-block;
-            margin-right: 8px;
-            font-size: 0.75em;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 999px;
-            background: #e2e8f0;
-            color: #334155;
-            text-transform: uppercase;
-        }
-        .warning-item.high .warning-badge {
-            background: #fecaca;
-            color: #991b1b;
-        }
-        .warning-item.warn .warning-badge {
-            background: #fde68a;
-            color: #92400e;
-        }
-        .warning-item.ok .warning-badge {
-            background: #bbf7d0;
-            color: #166534;
-        }
-
-        .google-risk-title {
-            font-weight: 700;
-            color: #394166;
-            margin-bottom: 6px;
-        }
-
-        .google-risk-main {
-            font-size: 1.25em;
-            font-weight: 700;
-            color: #1f2a56;
-            margin-bottom: 4px;
-        }
-
-        .google-risk-sub {
-            font-size: 0.9em;
-            color: #4b5563;
-        }
-
-        .fx-list {
-            margin-top: 8px;
-            font-size: 0.9em;
-            color: #374151;
-            line-height: 1.5;
-        }
-
-        .fx-item {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .persona-section {
-            background: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-            padding: 24px;
-            margin-bottom: 28px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
-        }
-
-        .persona-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .persona-user {
-            font-size: 14px;
-            color: #475569;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            padding: 8px 12px;
-        }
-
-        .persona-select {
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 14px;
-            background: #fff;
-            color: #0f172a;
-        }
-
-        .persona-switch-btn {
-            border: none;
-            border-radius: 10px;
-            padding: 10px 14px;
-            background: #0f172a;
-            color: #fff;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .persona-summary {
-            font-size: 14px;
-            color: #475569;
-            margin-top: 4px;
-        }
-
-        .persona-kpis {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-
-        .persona-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-
-        .workflow-section {
-            border: 1px solid #dbe3f5;
-            border-radius: 20px;
-            background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
-            padding: 18px;
-            margin-bottom: 18px;
-        }
-
-        .workflow-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 12px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-
-        .workflow-head h3 {
-            margin: 0;
-            color: #0f172a;
-        }
-
-        .workflow-head p {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .workflow-tabs {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-
-        .workflow-tab {
-            border: 1px solid #d7dee8;
-            border-radius: 16px;
-            background: #ffffff;
-            padding: 14px;
-            cursor: pointer;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-        }
-
-        .workflow-tab:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
-        }
-
-        .workflow-tab.active {
-            border-color: #2563eb;
-            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
-            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-        }
-
-        .workflow-step {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .workflow-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 6px;
-        }
-
-        .workflow-metric {
-            font-size: 14px;
-            color: #475569;
-        }
-
-        .workflow-detail {
-            display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 14px;
-        }
-
-        .workflow-panel {
-            border: 1px solid #dbe2ea;
-            border-radius: 16px;
-            background: #ffffff;
-            padding: 18px;
-        }
-
-        .workflow-panel-title {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #64748b;
-            margin-bottom: 10px;
-        }
-
-        .workflow-panel-headline {
-            font-size: 24px;
-            font-weight: 800;
-            color: #0f172a;
-            margin-bottom: 8px;
-        }
-
-        .workflow-panel-copy {
-            font-size: 14px;
-            color: #475569;
-            line-height: 1.65;
-            margin-bottom: 14px;
-        }
-
-        .workflow-bullets {
-            margin: 0;
-            padding-left: 20px;
-            color: #334155;
-            line-height: 1.7;
-        }
-
-        .workflow-evidence-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .workflow-evidence-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            background: #f8fafc;
-            padding: 12px 14px;
-            color: #334155;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .persona-card {
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 18px;
-        }
-
-        .persona-card-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-
-        .persona-card-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-
-        .persona-pill {
-            display: inline-flex;
-            align-items: center;
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .persona-pill.stable {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .persona-pill.low {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .persona-pill.medium {
-            background: #fef3c7;
-            color: #b45309;
-        }
-
-        .persona-pill.high {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .persona-card-metric {
-            font-size: 28px;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 8px;
-        }
-
-        .persona-card-detail {
-            font-size: 14px;
-            color: #475569;
-            line-height: 1.5;
-        }
-
-        .persona-card-countries {
-            margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .persona-country-tag {
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 999px;
-            background: #eef2ff;
-            color: #4338ca;
-        }
-
-        .persona-lower {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: 14px;
-        }
-
-        .persona-panel {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 18px;
-        }
-
-        .persona-panel h3 {
-            margin: 0 0 12px;
-            color: #0f172a;
-        }
-
-        .persona-list {
-            margin: 0;
-            padding-left: 20px;
-            color: #334155;
-            line-height: 1.7;
-        }
-
-        .persona-list.tight li {
-            margin-bottom: 6px;
-        }
-
-        .login-overlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background:
-                radial-gradient(circle at top left, rgba(14, 165, 233, 0.22), transparent 34%),
-                radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.18), transparent 30%),
-                rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(14px);
-            z-index: 4000;
-            padding: 24px;
-        }
-
-        .login-overlay.show {
-            display: flex;
-        }
-
-        .login-card {
-            width: min(920px, 100%);
-            background:
-                linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(248,250,252,0.98) 100%);
-            border-radius: 28px;
-            padding: 0;
-            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.34);
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            display: grid;
-            grid-template-columns: 1.08fr 0.92fr;
-        }
-
-        .login-hero {
-            padding: 40px 34px 34px;
-            background:
-                linear-gradient(160deg, #0f172a 0%, #172554 55%, #0f766e 100%);
-            color: #ffffff;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .login-hero::before {
-            content: "";
-            position: absolute;
-            width: 280px;
-            height: 280px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
-            top: -120px;
-            right: -80px;
-        }
-
-        .login-hero::after {
-            content: "";
-            position: absolute;
-            width: 220px;
-            height: 220px;
-            border-radius: 999px;
-            background: rgba(56, 189, 248, 0.12);
-            bottom: -90px;
-            left: -70px;
-        }
-
-        .login-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.92);
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-bottom: 18px;
-        }
-
-        .login-card h2 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 40px;
-            line-height: 1.05;
-            color: inherit;
-        }
-
-        .login-card p {
-            color: inherit;
-            margin-bottom: 0;
-        }
-
-        .login-hero-copy {
-            color: rgba(255, 255, 255, 0.82);
-            font-size: 16px;
-            line-height: 1.65;
-            max-width: 480px;
-            position: relative;
-        }
-
-        .login-highlights {
-            margin-top: 24px;
-            display: grid;
-            gap: 12px;
-            position: relative;
-        }
-
-        .login-highlight {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 14px 16px;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .login-highlight-badge {
-            width: 32px;
-            height: 32px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.14);
-            font-weight: 800;
-            flex-shrink: 0;
-        }
-
-        .login-highlight strong {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 14px;
-        }
-
-        .login-highlight span {
-            display: block;
-            color: rgba(255, 255, 255, 0.74);
-            font-size: 13px;
-            line-height: 1.45;
-        }
-
-        .login-panel {
-            padding: 34px;
-            background: rgba(255, 255, 255, 0.92);
-        }
-
-        .login-panel-head {
-            margin-bottom: 20px;
-        }
-
-        .login-panel-label {
-            font-size: 12px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .login-panel h3 {
-            margin: 0 0 8px;
-            font-size: 24px;
-            color: #0f172a;
-        }
-
-        .login-panel-copy {
-            color: #475569;
-            line-height: 1.6;
-        }
-
-        .login-form {
-            display: grid;
-            gap: 14px;
-        }
-
-        .login-form label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #334155;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .login-form input,
-        .login-form select {
-            width: 100%;
-            border: 1px solid #d7dee8;
-            border-radius: 14px;
-            padding: 14px 16px;
-            font-size: 15px;
-            box-sizing: border-box;
-            background: #ffffff;
-            color: #0f172a;
-            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
-        }
-
-        .login-form input:focus,
-        .login-form select:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-        }
-
-        .login-persona-note {
-            margin-top: 14px;
-            padding: 14px 16px;
-            border-radius: 16px;
-            background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-            border: 1px solid #dbe3f5;
-        }
-
-        .login-persona-note-title {
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #4338ca;
-            margin-bottom: 8px;
-        }
-
-        .login-persona-note-headline {
-            font-size: 18px;
-            font-weight: 800;
-            color: #0f172a;
-            margin-bottom: 6px;
-        }
-
-        .login-persona-note-copy {
-            font-size: 14px;
-            color: #475569;
-            line-height: 1.55;
-        }
-
-        .login-form button {
-            margin-top: 10px;
-            border: none;
-            border-radius: 14px;
-            padding: 14px 18px;
-            background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
-            color: #ffffff;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 14px 28px rgba(29, 78, 216, 0.22);
-        }
-
-        .login-form button:hover {
-            transform: translateY(-1px);
-        }
-
-        .login-close {
-            margin-top: 14px;
-            border: none;
-            background: transparent;
-            color: #64748b;
-            font-size: 14px;
-            cursor: pointer;
-            padding: 0;
         }
 
         @media (max-width: 900px) {
-            .executive-grid {
-                grid-template-columns: 1fr;
-            }
-            .insight-grid {
-                grid-template-columns: 1fr;
-            }
-            .risk-row {
-                grid-template-columns: 1fr;
-            }
-            .warning-metrics {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-            .persona-kpis,
-            .persona-grid,
-            .persona-lower,
-            .workflow-tabs,
-            .workflow-detail {
-                grid-template-columns: 1fr;
-            }
-            .login-card {
-                grid-template-columns: 1fr;
-            }
-            .login-hero,
-            .login-panel {
-                padding: 24px;
-            }
-            .login-card h2 {
-                font-size: 32px;
-            }
+            .dashboard { grid-template-columns: 1fr; }
+            .pipeline-stages { flex-direction: column; gap: 15px; }
         }
     </style>
 </head>
@@ -1665,419 +274,101 @@
     <div class="container">
         <header>
             <h1>🤖 ARGUS Multi-Agent System</h1>
-            <p>Global Data & News Monitoring & Risk Analysis</p>
+            <p>Institutional Grade Risk Monitoring & Analysis Platform</p>
         </header>
 
-        <div class="alert alert-info" id="alert"></div>
+        <div class="alert alert-info" id="alert" style="display:none; padding:18px; margin-bottom:25px; border-radius:12px; background:rgba(255,255,255,0.3); text-align:center; font-weight:700;"></div>
 
         <div class="controls">
-            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">
-                ▶️ Start Analysis Pipeline
-            </button>
-            <button class="btn-guardian" id="guardianBtn" onclick="openGuardianDashboard()">
-                🌍 Open Guardian Dashboard
-            </button>
-            <button class="btn-data" id="dataBtn" onclick="openDataDashboard()">
-                 📊 Open Data Dashboard
-            </button>
-            <button class="btn-reset" id="resetBtn" onclick="resetSystem()">
-                🔄 Reset System
-            </button>
+            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">▶️ Start Pipeline</button>
+            <button class="btn-persona" onclick="openPersonaDashboard()">👤 Cash Manager Dashboard</button>
+            <button class="btn-guardian" id="guardianBtn" onclick="openGuardianDashboard()">🌍 Guardian View</button>
+            <button class="btn-data" id="dataBtn" onclick="openDataDashboard()">📊 Data View</button>
+            <button class="btn-reset" id="resetBtn" onclick="resetSystem()" style="display:none;">🔄 Reset</button>
         </div>
 
-        <div class="persona-section">
-            <div class="guardian-header">
-                <div>
-                    <h2>Role-Based Persona Dashboard</h2>
-                    <div class="persona-summary" id="personaSummaryText">Loading persona view...</div>
-                </div>
-                <div class="persona-toolbar">
-                    <div class="persona-user" id="personaUserBadge">User: -</div>
-                    <select class="persona-select" id="personaSwitcher"></select>
-                    <button class="persona-switch-btn" onclick="openPersonaLogin()">Switch Persona</button>
-                </div>
-            </div>
-            <div class="guardian-meta" id="personaMeta">Preparing role-based dashboard...</div>
-            <div class="persona-kpis" id="personaKpiGrid"></div>
-            <div class="workflow-section" id="personaWorkflowSection" style="display:none;">
-                <div class="workflow-head">
-                    <div>
-                        <h3>Cash Manager Decision Flow</h3>
-                        <p>See how the latest daily signals move from detection to treasury action support.</p>
-                    </div>
-                </div>
-                <div class="workflow-tabs" id="workflowTabs"></div>
-                <div class="workflow-detail" id="workflowDetail"></div>
-            </div>
-            <div class="persona-grid" id="personaCardGrid"></div>
-            <div class="persona-lower">
-                <div class="persona-panel">
-                    <h3>Recommended Actions</h3>
-                    <ol class="persona-list tight" id="personaActionList"></ol>
-                </div>
-                <div class="persona-panel">
-                    <h3>Top Watch Countries</h3>
-                    <ul class="persona-list tight" id="personaCountryList"></ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pipeline Visualization -->
-        <div class="pipeline-visualization">
-            <h2>Pipeline Execution Flow</h2>
-            <div class="pipeline-stages">
-                <div class="stage" id="stage1">
-                    <h3>📰</h3>
-                    <p>Data Gathering</p>
-                </div>
-                <div class="arrow">→</div>
-                <div class="stage" id="stage2">
-                    <h3>⚠️</h3>
-                    <p>Risk Classification</p>
-                </div>
-                <div class="arrow">→</div>
-                <div class="stage" id="stage3">
-                    <h3>💾</h3>
-                    <p>Database Management</p>
-                </div>
-                <div class="arrow">→</div>
-                <div class="stage" id="stage4">
-                    <h3>🔍</h3>
-                    <p>Analysis</p>
-                </div>
-                <div class="arrow">→</div>
-                <div class="stage" id="stage5">
-                    <h3>📊</h3>
-                    <p>Report Generation</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Agent Status Dashboard -->
         <div class="dashboard">
-
-            <!-- Data Agent -->
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>📰 Data Agent</h2>
                 <div class="card-content" id="newsGathererStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Status</span>
-                        <span class="status-badge status-idle">Idle</span>
-                    </div>
-                    <p>Global Data &amp; News collecting</p>
-                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="opacity: 0.9;">Ingesting institutional telemetry and news feeds.</p>
                 </div>
-                <div class="agent-detail">
-                    <div class="detail-section">
-                        <div class="detail-section-title">Available Sources</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag source">federal_reserve</span>
-                            <span class="detail-tag source">gcs</span>
-                            <span class="detail-tag source">gdelt</span>
-                            <span class="detail-tag source">usgs</span>
-                            <span class="detail-tag source">noaa_nws</span>
-                            <span class="detail-tag source">nasa_eonet</span>
-                            <span class="detail-tag source">reliefweb</span>
-                            <span class="detail-tag source">world_bank</span>
-                            <span class="detail-tag source">bank_of_canada</span>
-                            <span class="detail-tag source">fiscal_data</span>
-                            <span class="detail-tag source">sec_edgar</span>
-                            <span class="detail-tag source">fred</span>
-                            <span class="detail-tag source">&lt;custom URL&gt;</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">What It Collects</div>
-                        <p class="detail-description">Multi-source gatherer. Crawls Fed Reserve via Playwright (JavaScript rendering), pulls live events from Guardian POC API adapters (GDELT, USGS, NOAA, NASA EONET, ReliefWeb, World Bank, BoC, FRED, SEC EDGAR, Treasury Auctions), or loads a Guardian alerts snapshot from Google Cloud Storage. Any <code>https://</code> URL is also accepted as a custom crawl target. All results are normalized to <code>{date, title, link, source, summary}</code>.</p>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Outputs</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag output">Merged news array</span>
-                            <span class="detail-tag output">Per-source stats</span>
-                            <span class="detail-tag output">Total item count</span>
-                        </div>
-                    </div>
+                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size: 0.9em;">Verified sources: Fed, World Bank, FRED, GDELT, and custom SPA crawlers.</p>
                 </div>
             </div>
 
-            <!-- Risk Classifier Agent -->
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>⚠️ Risk Classifier Agent</h2>
+                <h2>⚠️ Risk Classifier</h2>
                 <div class="card-content" id="classifierStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Status</span>
-                        <span class="status-badge status-idle">Idle</span>
-                    </div>
-                    <p>Classifies news by risk categories and levels</p>
-                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="opacity: 0.9;">Taxonomizing signals into risk categories.</p>
                 </div>
-                <div class="agent-detail">
-                    <div class="detail-section">
-                        <div class="detail-section-title">Risk Categories</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag">Financial Risk</span>
-                            <span class="detail-tag">Market Risk</span>
-                            <span class="detail-tag">Credit Risk</span>
-                            <span class="detail-tag">Liquidity Risk</span>
-                            <span class="detail-tag">Operational Risk</span>
-                            <span class="detail-tag">Political Risk</span>
-                            <span class="detail-tag">Regulatory Risk</span>
-                            <span class="detail-tag">Supply Chain Risk</span>
-                            <span class="detail-tag">Systematic Risk</span>
-                            <span class="detail-tag">Reputation Risk</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">High-Priority Keywords</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag critical">crisis</span>
-                            <span class="detail-tag critical">default</span>
-                            <span class="detail-tag critical">bankruptcy</span>
-                            <span class="detail-tag critical">fraud</span>
-                            <span class="detail-tag critical">cyber attack</span>
-                            <span class="detail-tag critical">scandal</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Risk Levels &amp; Scoring</div>
-                        <p class="detail-description">Scores each item 0–100. Critical (80–100) → immediate escalation. High (60–79) → deep analysis. Medium (40–59) → monitor. Low (1–39) → routine.</p>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Outputs</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag output">Risk score (0–100)</span>
-                            <span class="detail-tag output">Risk level label</span>
-                            <span class="detail-tag output">Category path</span>
-                            <span class="detail-tag output">Matched keywords</span>
-                            <span class="detail-tag output">Distribution stats</span>
-                        </div>
-                    </div>
+                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size: 0.9em;">High-priority signals: Liquidity pressure, defaults, and regulatory shifts.</p>
                 </div>
             </div>
 
-            <!-- Database Agent -->
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>💾 Database Agent</h2>
-                <div class="card-content" id="databaseStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Status</span>
-                        <span class="status-badge status-idle">Idle</span>
-                    </div>
-                    <p>Manages data storage and retrieval operations</p>
-                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
-                </div>
-                <div class="agent-detail">
-                    <div class="detail-section">
-                        <div class="detail-section-title">Database Tables</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag source">news</span>
-                            <span class="detail-tag source">keyword_matches</span>
-                            <span class="detail-tag source">risk_analysis</span>
-                            <span class="detail-tag source">metadata</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Operations</div>
-                        <p class="detail-description">Inserts classified news, persists keyword match indexes, stores risk analysis results, and queries aggregate statistics. Uses SQLite with thread-safe connections (<code>check_same_thread=False</code>).</p>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Outputs</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag output">Insert count</span>
-                            <span class="detail-tag output">DB statistics</span>
-                            <span class="detail-tag output">argus_news.db</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analysis Agent -->
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
                 <h2>🔍 Analysis Agent</h2>
                 <div class="card-content" id="analyzerStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Status</span>
-                        <span class="status-badge status-idle">Idle</span>
-                    </div>
-                    <p>Performs comprehensive risk analysis</p>
-                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
+                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="opacity: 0.9;">Executing 2D matrix mapping and LLM reasoning.</p>
                 </div>
-                <div class="agent-detail">
-                    <div class="detail-section">
-                        <div class="detail-section-title">Analysis Dimensions</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag">By risk level</span>
-                            <span class="detail-tag">By category</span>
-                            <span class="detail-tag">Top keywords</span>
-                            <span class="detail-tag">Trend signals</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">What It Analyses</div>
-                        <p class="detail-description">Groups classified news into Critical / High / Medium buckets, aggregates by risk category, and extracts the top-10 recurring keywords. Optionally calls Claude API for AI-powered narrative analysis.</p>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Outputs</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag output">Risk breakdown</span>
-                            <span class="detail-tag output">Category counts</span>
-                            <span class="detail-tag output">Top-10 keywords</span>
-                            <span class="detail-tag output">AI narrative (optional)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reporting Agent -->
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>📊 Reporting Agent</h2>
-                <div class="card-content" id="reporterStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Status</span>
-                        <span class="status-badge status-idle">Idle</span>
-                    </div>
-                    <p>Generates detailed analysis reports</p>
-                    <p class="card-click-hint">Click for details <i class="card-chevron">▾</i></p>
-                </div>
-                <div class="agent-detail">
-                    <div class="detail-section">
-                        <div class="detail-section-title">Report Sections</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag">Executive Summary</span>
-                            <span class="detail-tag">Risk Distribution</span>
-                            <span class="detail-tag">Critical Alerts</span>
-                            <span class="detail-tag">High-Risk Items</span>
-                            <span class="detail-tag">Recommendations</span>
-                            <span class="detail-tag">Top Keywords</span>
-                        </div>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Report Format</div>
-                        <p class="detail-description">Produces a timestamped JSON report titled "Federal Reserve News Risk Analysis Report". Includes per-level item lists, actionable recommendations per category, and a keyword frequency summary.</p>
-                    </div>
-                    <div class="detail-section">
-                        <div class="detail-section-title">Outputs</div>
-                        <div class="detail-tags">
-                            <span class="detail-tag output">JSON report</span>
-                            <span class="detail-tag output">Markdown report</span>
-                            <span class="detail-tag output">Recommendations list</span>
-                            <span class="detail-tag output">Timestamp</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- System Status (non-clickable) -->
-            <div class="card">
-                <h2>⚙️ System Status</h2>
-                <div class="card-content" id="systemStatus">
-                    <div class="agent-status">
-                        <span class="agent-name">Overall Status</span>
-                        <span class="status-badge status-idle">Ready</span>
-                    </div>
-                    <p><span id="lastUpdate">Never executed</span></p>
+                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size: 0.9em;">Probability vs Impact vector analysis driven by Claude 3.5 Sonnet.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Results Section -->
+        <div class="pipeline-visualization">
+            <h2 style="font-size: 1.3em; text-align: center; margin-bottom: 25px;">Operational Pipeline Flow</h2>
+            <div class="pipeline-stages">
+                <div class="stage" id="stage1"><h3>📰</h3><p>Ingestion</p></div>
+                <div class="stage" id="stage2"><h3>⚠️</h3><p>Classification</p></div>
+                <div class="stage" id="stage3"><h3>💾</h3><p>Persistence</p></div>
+                <div class="stage" id="stage4"><h3>🔍</h3><p>Analysis</p></div>
+                <div class="stage" id="stage5"><h3>📊</h3><p>Reporting</p></div>
+            </div>
+        </div>
+
         <div class="results-section" id="resultsSection" style="display: none;">
-            <h2>📈 Analysis Results</h2>
-
-            <div class="tabs">
-                <button class="tab-button active" onclick="switchTab(event, 'summary')">Summary</button>
-                <button class="tab-button" onclick="switchTab(event, 'distribution')">Distribution</button>
-                <button class="tab-button" onclick="switchTab(event, 'details')">Details</button>
-            </div>
-
-            <div id="summary" class="tab-content active">
-                <div id="resultsSummary"></div>
-            </div>
-
-            <div id="distribution" class="tab-content">
-                <div id="riskDistribution"></div>
-            </div>
-
-            <div id="details" class="tab-content">
-                <h3>Recommendations</h3>
-                <div id="recommendationsContainer"></div>
-                <h3>Top Keywords</h3>
-                <div id="keywordsContainer"></div>
+            <h2 style="font-size: 1.6em; font-weight: 800; margin-bottom: 30px;">📈 Intelligence Output</h2>
+            <div id="resultsSummary"></div>
+            <div id="riskMatrix" style="margin-top:30px;">
+                <h3 class="subsection-title">2D Risk Assessment Matrix</h3>
+                <div class="matrix-grid-container" style="overflow-x: auto; margin-bottom: 40px;"><div id="riskMatrixGrid"></div></div>
+                <h3 class="subsection-title" id="riskMatrixItemsHeader">Evidence & Rationale</h3>
+                <div id="riskMatrixItems" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;"></div>
             </div>
         </div>
 
-        <!-- Logs Section -->
         <div class="results-section">
-            <h2>📋 System Logs</h2>
-            <div class="log-section" id="logsContainer">
-                <div class="log-entry">
-                    <span class="log-timestamp">[System]</span>
-                    <span class="log-level">INFO</span>
-                    System initialized and ready for execution
-                </div>
-            </div>
+            <h2 style="font-size: 1.4em; font-weight: 800; margin-bottom: 25px;">📋 Operational Logs</h2>
+            <div class="log-section" id="logsContainer"><div class="log-entry">Argus Intelligence Engine v2.1 initialized.</div></div>
         </div>
 
-        <div class="footer">
-            <p>ARGUS Multi-Agent System v2.1 | Global Data & News Monitoring & Risk Analysis</p>
-            <p>Status: <span id="footer-status">Ready</span></p>
-        </div>
+        <div class="footer"><p>ARGUS Multi-Agent Platform &copy; 2026 | Cycle Heartbeat: <span id="lastUpdate">-</span></p></div>
     </div>
 
-    <div class="login-overlay" id="personaLoginOverlay">
-        <div class="login-card">
-            <div class="login-hero">
-                <div class="login-eyebrow">ARGUS v2.1</div>
-                <h2>Role-based treasury monitoring starts here.</h2>
-                <p class="login-hero-copy">Choose the decision lens you want to simulate. ARGUS keeps the same global event backbone, then changes the top dashboard based on the user role, priorities, and action needs.</p>
-                <div class="login-highlights">
-                    <div class="login-highlight">
-                        <div class="login-highlight-badge">1</div>
-                        <div>
-                            <strong>Persona-led first screen</strong>
-                            <span>The top dashboard shifts from a global view to a role-specific decision surface.</span>
-                        </div>
-                    </div>
-                    <div class="login-highlight">
-                        <div class="login-highlight-badge">2</div>
-                        <div>
-                            <strong>Cash manager is the lead demo</strong>
-                            <span>Liquidity, funding pressure, payment execution, and cash mobility are prioritized first.</span>
-                        </div>
-                    </div>
-                    <div class="login-highlight">
-                        <div class="login-highlight-badge">3</div>
-                        <div>
-                            <strong>Global context remains below</strong>
-                            <span>Guardian Dashboard and Data Dashboard stay available as supporting evidence layers.</span>
-                        </div>
-                    </div>
+    <!-- MODALS -->
+    <div class="modal-overlay" id="personaModal" onclick="closePersonaDashboard(event)">
+        <div class="modal-shell">
+            <div class="guardian-section" onclick="event.stopPropagation()">
+                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>👤 Role-Based Dashboard</h2>
+                    <button class="btn-reset" onclick="closePersonaDashboard()" style="padding: 8px 16px; font-size: 0.85em;">Exit View</button>
                 </div>
-            </div>
-            <div class="login-panel">
-                <div class="login-panel-head">
-                    <div class="login-panel-label">Persona Access</div>
-                    <h3>Enter Workspace</h3>
-                    <div class="login-panel-copy">Enter your name and choose the Treasury role that will drive the primary decision dashboard.</div>
+                <div id="personaSummaryText" style="margin: 25px 0; color: #1e293b; font-weight: 700; font-size: 1.2em;"></div>
+                <div id="personaMeta" style="font-size: 0.9em; color: #64748b; margin-bottom: 35px; padding: 20px; background: rgba(0,0,0,0.05); border-radius: 14px; border: 1px solid rgba(0,0,0,0.05);"></div>
+                <div id="personaKpiGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 35px;"></div>
+                <div id="personaCardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 35px;"></div>
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 24px;">
+                    <div class="card" style="background:rgba(255,255,255,0.4); border-color:rgba(0,0,0,0.1); color:#1e293b; padding:30px;"><h3 style="font-size: 1.1em; margin-bottom:20px; color:#1e293b; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Strategic Directives</h3><ol id="personaActionList" style="padding-left:20px; font-size:1em; line-height:1.7;"></ol></div>
+                    <div class="card" style="background:rgba(255,255,255,0.4); border-color:rgba(0,0,0,0.1); color:#1e293b; padding:30px;"><h3 style="font-size: 1.1em; margin-bottom:20px; color:#1e293b; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Exposure Watchlist</h3><ul id="personaCountryList" style="list-style:none; font-size:1em;"></ul></div>
                 </div>
-                <div class="login-form">
-                    <div>
-                        <label for="loginName">Treasury User</label>
-                        <input id="loginName" type="text" placeholder="For example: Jason or Demo User" />
-                    </div>
-                    <div>
-                        <label for="loginPersona">Persona</label>
-                        <select id="loginPersona"></select>
-                    </div>
-                    <div class="login-persona-note">
-                        <div class="login-persona-note-title">Active Focus</div>
-                        <div class="login-persona-note-headline" id="loginPersonaHeadline">Cash Manager</div>
-                        <div class="login-persona-note-copy" id="loginPersonaCopy">Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.</div>
-                    </div>
-                    <button type="button" onclick="savePersonaSelection()">Enter Dashboard</button>
-                    <button type="button" class="login-close" onclick="closePersonaLogin()">Close</button>
-                </div>
+                <div style="margin-top: 40px; text-align: center;"><button class="btn-guardian" onclick="openPersonaLogin()">Switch Focus Persona</button></div>
             </div>
         </div>
     </div>
@@ -2085,128 +376,34 @@
     <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
         <div class="modal-shell">
             <div class="guardian-section" onclick="event.stopPropagation()">
-
-                <!-- Pipeline loading overlay: shown while agents are running -->
-                <div class="modal-pipeline-overlay" id="guardianPipelineOverlay">
-                    <div class="pipeline-overlay-spinner"></div>
-                    <div class="pipeline-overlay-title">🤖 Pipeline Running</div>
-                    <div class="pipeline-overlay-subtitle">Agents are gathering and processing data — Guardian snapshot will be ready when the pipeline completes</div>
-                    <div class="pipeline-steps" id="guardianPipelineSteps"></div>
-                    <div class="pipeline-overlay-hint">Dashboard will refresh automatically on completion</div>
+                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>🌍 Global Guardian Dashboard</h2>
+                    <div style="display:flex; gap:12px;"><button class="btn-guardian" onclick="loadGuardianDashboard()" style="padding: 10px 20px;">Refresh Data</button><button class="btn-reset" onclick="closeGuardianDashboard()" style="padding: 10px 20px;">Close</button></div>
                 </div>
-
-                <div class="guardian-header">
-                    <h2>🌍 Global Treasury Dashboard</h2>
-                    <div>
-                        <button class="guardian-refresh" onclick="loadGuardianDashboard()">Refresh</button>
-                        <button class="guardian-refresh" style="background:#dc3545;" onclick="closeGuardianDashboard()">Close</button>
-                    </div>
-                </div>
-                <div class="guardian-meta" id="guardianMeta">Loading guardian snapshot...</div>
-                <div class="executive-grid" id="guardianExecutiveGrid"></div>
-                <div class="risk-row">
-                    <div class="google-risk-card" id="googleRiskCard"></div>
-                    <div class="google-risk-card" id="fxRiskCard"></div>
-                </div>
-                <div class="warning-panel">
-                    <div class="warning-head" id="dailyWarningHead">Daily comparison: loading...</div>
-                    <div class="warning-metrics" id="dailyWarningMetrics"></div>
-                    <div class="warning-list" id="dailyWarningsList"></div>
-                </div>
-
-                <h3 class="subsection-title">Country Alert Board</h3>
-                <div class="country-grid" id="countryBoardGrid"></div>
-
-                <h3 class="subsection-title">Top 5 Critical Alerts</h3>
-                <div class="table-wrap">
-                    <table class="alerts-table">
-                        <thead>
-                            <tr>
-                                <th>Country</th>
-                                <th>Category</th>
-                                <th>Score</th>
-                                <th>Level</th>
-                                <th>Source</th>
-                                <th>Title</th>
-                                <th>Published</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="criticalAlertsTableBody"></tbody>
-                    </table>
-                </div>
-
-                <details class="tech-details">
-                    <summary>Technical Metrics</summary>
-                    <div class="kpi-grid" id="guardianKpiGrid"></div>
-                </details>
+                <div id="guardianMeta" style="margin: 25px 0; font-size: 0.95em; color: #64748b;"></div>
+                <div id="guardianExecutiveGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;"><div id="googleRiskCard" class="card" style="background:rgba(255,255,255,0.4); color:#1e293b; padding:30px;"></div><div id="fxRiskCard" class="card" style="background:rgba(255,255,255,0.4); color:#1e293b; padding:30px;"></div></div>
+                <div id="countryBoardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px;"></div>
+                <h3 class="subsection-title">Critical Intelligence Alerts</h3>
+                <div style="overflow-x:auto; background:rgba(255,255,255,0.5); border-radius:18px;"><table style="width:100%; border-collapse:collapse; font-size:0.95em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th style="padding:18px; text-align:left;">Jurisdiction</th><th style="padding:18px; text-align:left;">Taxonomy</th><th style="padding:18px; text-align:left;">Intensity</th><th style="padding:18px; text-align:left;">Headline</th><th style="padding:18px; text-align:left;">Action</th></tr></thead><tbody id="criticalAlertsTableBody"></tbody></table></div>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="dataModal" onclick="closeDataDashboard(event)">
-      <div class="modal-shell">
-        <div class="guardian-section" onclick="event.stopPropagation()">
-
-          <!-- Pipeline loading overlay: shown while agents are running -->
-          <div class="modal-pipeline-overlay" id="dataPipelineOverlay">
-              <div class="pipeline-overlay-spinner"></div>
-              <div class="pipeline-overlay-title">🤖 Pipeline Running</div>
-              <div class="pipeline-overlay-subtitle">Agents are building the data inventory — the data source catalogue will populate when the pipeline completes</div>
-              <div class="pipeline-steps" id="dataPipelineSteps"></div>
-              <div class="pipeline-overlay-hint">Dashboard will refresh automatically on completion</div>
-          </div>
-
-          <div class="guardian-header">
-            <h2>📊 Data Dashboard</h2>
-            <div>
-              <button class="guardian-refresh" onclick="refreshDataDashboard()">Refresh</button>
-              <button class="guardian-refresh" style="background:#dc3545;" onclick="closeDataDashboard()">Close</button>
-            </div>
-          </div>
-
-          <div class="guardian-meta" id="dataMeta">
-            Data view is embedded from <strong>/data</strong>
-          </div>
-
-          <iframe id="dataDashboardFrame" class="data-iframe" src="/data"></iframe>
-        </div>
-      </div>
+      <div class="modal-shell"><div class="guardian-section" onclick="event.stopPropagation()"><div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;"><h2>📊 Global Data Infrastructure</h2><button class="btn-reset" onclick="closeDataDashboard()">Close</button></div><iframe id="dataDashboardFrame" style="width:100%; height:75vh; border:none; border-radius:20px; background:rgba(0,0,0,0.05);" src="/data"></iframe></div></div>
     </div>
 
-    <div class="modal-overlay" id="alertInsightModal" onclick="closeAlertInsight(event)">
-        <div class="modal-shell" style="width:min(900px,96vw);">
-            <div class="guardian-section" onclick="event.stopPropagation()">
-                <div class="guardian-header">
-                    <h2>🔎 Alert Insight Dashboard</h2>
-                    <button class="guardian-refresh" style="background:#dc3545;" onclick="closeAlertInsight()">Close</button>
-                </div>
-                <div class="guardian-meta" id="alertInsightMeta">Select an alert to inspect.</div>
-
-                <div class="insight-grid">
-                    <div class="insight-card">
-                        <div class="insight-title">Score / Level</div>
-                        <div class="insight-value" id="insightScore">-</div>
-                    </div>
-                    <div class="insight-card">
-                        <div class="insight-title">Country / Category</div>
-                        <div class="insight-value" id="insightCountryCategory">-</div>
-                    </div>
-                    <div class="insight-card">
-                        <div class="insight-title">Trigger Check</div>
-                        <div class="insight-value" id="insightTriggerCheck">-</div>
-                    </div>
-                </div>
-
-                <div class="insight-body">
-                    <h4>Headline</h4>
-                    <p id="insightTitle">-</p>
-                    <h4>Recommendation</h4>
-                    <p id="insightRecommendation">-</p>
-                    <h4>Rationale</h4>
-                    <p id="insightRationale">-</p>
-                    <h4>Source Link</h4>
-                    <p id="insightLink">-</p>
+    <div class="modal-overlay" id="personaLoginOverlay">
+        <div class="modal-shell" style="max-width:650px;">
+            <div class="guardian-section" style="padding:60px;">
+                <h2 style="text-align:center; margin-bottom:35px; font-weight:800;">Operational Profile Focus</h2>
+                <div style="display:grid; gap:25px;">
+                    <div><label style="display:block; font-size:0.85em; font-weight:800; color:#64748b; margin-bottom:10px; text-transform:uppercase;">Operator Name</label><input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:16px; border-radius:14px; border:1px solid #cbd5e1; font-size:1.05em;"></div>
+                    <div><label style="display:block; font-size:0.85em; font-weight:800; color:#64748b; margin-bottom:10px; text-transform:uppercase;">Analytical Persona</label><select id="loginPersona" style="width:100%; padding:16px; border-radius:14px; border:1px solid #cbd5e1; font-size:1.05em;"></select></div>
+                    <div style="background:rgba(0,0,0,0.04); padding:25px; border-radius:16px;"><div id="loginPersonaHeadline" style="font-weight:800; color:#1e293b; margin-bottom:8px;">-</div><div id="loginPersonaCopy" style="font-size:0.95em; color:#475569;">-</div></div>
+                    <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:#6366f1; padding:18px;">Configure Environment</button>
+                    <button type="button" onclick="closePersonaLogin()" style="width:100%; border:none; background:transparent; color:#64748b; font-weight:700;">Close</button>
                 </div>
             </div>
         </div>
@@ -2215,774 +412,85 @@
     <script>
         const API_BASE = '/api';
         let isExecuting = false;
-        let statusUpdateInterval;
-        let guardianRefreshInterval;
         let guardianTopAlerts = [];
-        let guardianMeta = {};
         let currentPersona = 'cash_manager';
-        let currentUserName = '';
         let availablePersonas = [];
-        let personaWorkflow = [];
-        let activeWorkflowKey = '';
+        const PROB_LABELS = ['Unlikely','Seldom','Occasional','Likely','Frequent'];
+        const IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic'];
+        const MATRIX_LEVEL = [['Low','Low','Low','Medium','Medium'],['Low','Low','Medium','Medium','High'],['Low','Medium','Medium','High','High'],['Medium','Medium','High','High','Extreme'],['Medium','High','High','Extreme','Extreme']];
 
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
+        function escapeHtml(text) { return text === null || text === undefined ? '' : String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function kpiCard(label, value) { return `<div class="card" style="padding:25px; background:rgba(255,255,255,0.4); color:#1e293b; border:1px solid rgba(0,0,0,0.1);"><div style="font-size:0.75em; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:8px;">${escapeHtml(label)}</div><div style="font-size:1.7em; font-weight:800;">${escapeHtml(value)}</div></div>`; }
 
-        function levelClass(level) {
-            if (!level) return 'level-none';
-            return `level-${String(level).toLowerCase()}`;
-        }
-
-        function kpiCard(label, value) {
-            return `
-                <div class="kpi-card">
-                    <div class="kpi-label">${escapeHtml(label)}</div>
-                    <div class="kpi-value">${escapeHtml(value)}</div>
-                </div>
-            `;
-        }
-
-        function trendDirectionClass(direction) {
-            if (direction === 'UP') return 'trend-up';
-            if (direction === 'DOWN') return 'trend-down';
-            if (direction === 'FLAT') return 'trend-flat';
-            return 'trend-na';
-        }
-
-        function trendText(trend) {
-            if (!trend || trend.direction === 'NA' || trend.delta === null || trend.delta === undefined) {
-                return 'No baseline';
-            }
-            if (trend.delta > 0) return `↑ +${trend.delta}`;
-            if (trend.delta < 0) return `↓ ${trend.delta}`;
-            return '→ 0';
-        }
-
-        function personaPill(status) {
-            const normalized = String(status || 'stable').toLowerCase();
-            return `<span class="persona-pill ${escapeHtml(normalized)}">${escapeHtml(normalized)}</span>`;
-        }
-
-        function renderWorkflowDetail() {
-            const section = document.getElementById('personaWorkflowSection');
-            const tabs = document.getElementById('workflowTabs');
-            const detail = document.getElementById('workflowDetail');
-            if (!section || !tabs || !detail) return;
-
-            if (!Array.isArray(personaWorkflow) || !personaWorkflow.length) {
-                section.style.display = 'none';
-                tabs.innerHTML = '';
-                detail.innerHTML = '';
-                return;
-            }
-
-            section.style.display = 'block';
-            const active = personaWorkflow.find((item) => item.key === activeWorkflowKey) || personaWorkflow[0];
-            activeWorkflowKey = active.key;
-
-            tabs.innerHTML = personaWorkflow.map((item) => `
-                <button class="workflow-tab ${item.key === activeWorkflowKey ? 'active' : ''}" type="button" onclick="setWorkflowStage('${String(item.key || '').replace(/'/g, "\\'")}')">
-                    <div class="workflow-step">${escapeHtml(item.step || '')}</div>
-                    <div class="workflow-title">${escapeHtml(item.title || '')}</div>
-                    <div class="workflow-metric">${escapeHtml(item.metric || '')}</div>
-                </button>
-            `).join('');
-
-            detail.innerHTML = `
-                <div class="workflow-panel">
-                    <div class="workflow-panel-title">${escapeHtml(active.title || '')}</div>
-                    <div class="workflow-panel-headline">${escapeHtml(active.metric || '')}</div>
-                    <div class="workflow-panel-copy">${escapeHtml(active.summary || '')}</div>
-                    <ul class="workflow-bullets">
-                        ${(active.details || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-                    </ul>
-                </div>
-                <div class="workflow-panel">
-                    <div class="workflow-panel-title">Today's Evidence</div>
-                    <div class="workflow-evidence-list">
-                        ${(active.evidence || []).map((item) => `<div class="workflow-evidence-item">${escapeHtml(item)}</div>`).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function setWorkflowStage(key) {
-            activeWorkflowKey = key;
-            renderWorkflowDetail();
-        }
-
-        function populatePersonaSelect(selectId, selectedValue) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            select.innerHTML = availablePersonas.map((persona) => `
-                <option value="${escapeHtml(persona.key)}" ${persona.key === selectedValue ? 'selected' : ''}>${escapeHtml(persona.label)}</option>
-            `).join('');
-        }
-
-        function updateLoginPersonaPreview(selectedValue) {
-            const match = availablePersonas.find((persona) => persona.key === selectedValue) || availablePersonas[0] || {
-                label: 'Cash Manager',
-                summary: 'Prioritizes liquidity, payments, funding pressure, and immediate treasury actions.',
-            };
-            const headline = document.getElementById('loginPersonaHeadline');
-            const copy = document.getElementById('loginPersonaCopy');
-            if (headline) headline.textContent = match.label || selectedValue;
-            if (copy) copy.textContent = match.summary || '';
-        }
-
-        function syncPersonaChrome() {
-            document.getElementById('personaUserBadge').textContent = `User: ${currentUserName || 'Guest'} | Persona: ${currentPersona}`;
-            populatePersonaSelect('personaSwitcher', currentPersona);
-            populatePersonaSelect('loginPersona', currentPersona);
-            const loginName = document.getElementById('loginName');
-            if (loginName && currentUserName) loginName.value = currentUserName;
-            updateLoginPersonaPreview(currentPersona);
-        }
+        async function openPersonaDashboard() { document.getElementById('personaModal').classList.add('show'); await loadPersonaDashboard(); }
+        function closePersonaDashboard(e) { if (e && e.target.id !== 'personaModal' && e.target.type !== 'button') return; document.getElementById('personaModal').classList.remove('show'); }
+        async function openGuardianDashboard() { document.getElementById('guardianModal').classList.add('show'); await loadGuardianDashboard(); }
+        function closeGuardianDashboard(e) { if (e && e.target.id !== 'guardianModal' && e.target.type !== 'button') return; document.getElementById('guardianModal').classList.remove('show'); }
+        function openDataDashboard() { document.getElementById('dataModal').classList.add('show'); }
+        function closeDataDashboard(e) { if (e && e.target.id !== 'dataModal' && e.target.type !== 'button') return; document.getElementById('dataModal').classList.remove('show'); }
+        function openPersonaLogin() { document.getElementById('personaLoginOverlay').classList.add('show'); }
+        function closePersonaLogin() { document.getElementById('personaLoginOverlay').classList.remove('show'); }
 
         async function loadPersonas() {
-            const response = await fetch(`${API_BASE}/personas`);
-            const payload = await response.json();
-            availablePersonas = Array.isArray(payload.personas) ? payload.personas : [];
-            if (!availablePersonas.length) {
-                availablePersonas = [{ key: 'cash_manager', label: 'Cash Manager' }];
-            }
+            const r = await fetch(`${API_BASE}/personas`); const d = await r.json(); availablePersonas = d.personas || [];
+            const sel = document.getElementById('loginPersona');
+            sel.innerHTML = availablePersonas.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+            updateLoginPersonaPreview(sel.value);
+            sel.onchange = (e) => updateLoginPersonaPreview(e.target.value);
         }
-
-        function openPersonaLogin() {
-            syncPersonaChrome();
-            document.getElementById('personaLoginOverlay').classList.add('show');
-        }
-
-        function closePersonaLogin() {
-            document.getElementById('personaLoginOverlay').classList.remove('show');
-        }
-
-        function savePersonaSelection() {
-            const name = String(document.getElementById('loginName').value || '').trim();
-            const persona = String(document.getElementById('loginPersona').value || 'cash_manager').trim();
-            currentUserName = name || 'Demo User';
-            currentPersona = persona || 'cash_manager';
-            localStorage.setItem('argusUserName', currentUserName);
-            localStorage.setItem('argusPersona', currentPersona);
-            closePersonaLogin();
-            syncPersonaChrome();
-            loadPersonaDashboard();
-        }
-
-        function bootstrapPersonaState() {
-            currentUserName = localStorage.getItem('argusUserName') || '';
-            currentPersona = localStorage.getItem('argusPersona') || 'cash_manager';
-            syncPersonaChrome();
-            openPersonaLogin();
-        }
+        function updateLoginPersonaPreview(val) { const p = availablePersonas.find(x => x.key === val); if (p) { document.getElementById('loginPersonaHeadline').textContent = p.label; document.getElementById('loginPersonaCopy').textContent = p.summary; } }
+        function savePersonaSelection() { currentPersona = document.getElementById('loginPersona').value; localStorage.setItem('argusPersona', currentPersona); closePersonaLogin(); loadPersonaDashboard(); }
 
         async function loadPersonaDashboard() {
-            try {
-                const response = await fetch(`${API_BASE}/persona/dashboard?persona=${encodeURIComponent(currentPersona)}`);
-                const payload = await response.json();
-                if (!response.ok || payload.status !== 'success') {
-                    document.getElementById('personaMeta').innerHTML = `<span class="muted">Persona dashboard unavailable: ${escapeHtml(payload.message || 'unknown error')}</span>`;
-                    document.getElementById('personaSummaryText').textContent = 'Role-specific decision view unavailable.';
-                    document.getElementById('personaKpiGrid').innerHTML = '';
-                    document.getElementById('personaCardGrid').innerHTML = '';
-                    document.getElementById('personaActionList').innerHTML = '';
-                    document.getElementById('personaCountryList').innerHTML = '';
-                    personaWorkflow = [];
-                    activeWorkflowKey = '';
-                    renderWorkflowDetail();
-                    return;
-                }
-
-                const summary = payload.summary || {};
-                document.getElementById('personaSummaryText').textContent = summary.subheadline || '';
-                document.getElementById('personaMeta').innerHTML =
-                    `Persona: <strong>${escapeHtml(payload.title || currentPersona)}</strong> | Generated: <strong>${escapeHtml(summary.generated_at || '-')}</strong> | Events Seen: <strong>${escapeHtml(summary.event_count ?? 0)}</strong>`;
-                document.getElementById('personaKpiGrid').innerHTML = [
-                    kpiCard('Current Persona', (payload.title || currentPersona)),
-                    kpiCard('Headline', summary.headline || '-'),
-                    kpiCard('Events Seen', summary.event_count ?? 0),
-                    kpiCard('Snapshot', payload.snapshot_path ? 'Connected' : 'Unavailable'),
-                ].join('');
-
-                const cards = Array.isArray(payload.cards) ? payload.cards : [];
-                personaWorkflow = Array.isArray(payload.workflow) ? payload.workflow : [];
-                activeWorkflowKey = personaWorkflow.length ? personaWorkflow[0].key : '';
-                renderWorkflowDetail();
-                document.getElementById('personaCardGrid').innerHTML = cards.map((card) => `
-                    <div class="persona-card">
-                        <div class="persona-card-head">
-                            <div class="persona-card-title">${escapeHtml(card.title || '-')}</div>
-                            ${personaPill(card.status)}
-                        </div>
-                        <div class="persona-card-metric">${escapeHtml(card.metric || '-')}</div>
-                        <div class="persona-card-detail">${escapeHtml(card.detail || '-')}</div>
-                        <div class="persona-card-countries">
-                            ${(card.countries || []).map((country) => `<span class="persona-country-tag">${escapeHtml(country)}</span>`).join('')}
-                        </div>
-                    </div>
-                `).join('');
-
-                const actions = Array.isArray(payload.actions) ? payload.actions : [];
-                document.getElementById('personaActionList').innerHTML = actions.map((action) => `<li>${escapeHtml(action)}</li>`).join('');
-
-                const countries = Array.isArray(payload.top_countries) ? payload.top_countries : [];
-                document.getElementById('personaCountryList').innerHTML = countries.map((item) => `
-                    <li>${escapeHtml(item.country || '-')} | ${escapeHtml(item.top_category || '-')} | max score ${escapeHtml(item.max_score ?? 0)}</li>
-                `).join('');
-            } catch (error) {
-                document.getElementById('personaMeta').innerHTML = `<span class="muted">Persona dashboard load failed: ${escapeHtml(error.message)}</span>`;
-            }
+            const r = await fetch(`${API_BASE}/persona/dashboard?persona=${currentPersona}`); const d = await r.json();
+            if (d.status !== 'success') return;
+            document.getElementById('personaSummaryText').textContent = d.summary.subheadline;
+            document.getElementById('personaMeta').innerHTML = `Active Session: <strong>${d.title}</strong> | Cycle: <strong>${d.summary.generated_at}</strong>`;
+            document.getElementById('personaKpiGrid').innerHTML = [kpiCard('Focus', d.title), kpiCard('Telemetry', d.summary.event_count), kpiCard('Integrity', 'Optimal')].join('');
+            document.getElementById('personaCardGrid').innerHTML = d.cards.map(c => `<div class="card" style="background:rgba(255,255,255,0.6); color:#1e293b;"><div style="font-weight:800; margin-bottom:12px; color:#4f46e5; text-transform:uppercase; font-size:0.85em;">${escapeHtml(c.title)}</div><div style="font-size:2.2em; font-weight:800; margin-bottom:8px;">${escapeHtml(c.metric)}</div><div style="font-size:0.95em; opacity:0.8;">${escapeHtml(c.detail)}</div></div>`).join('');
+            document.getElementById('personaActionList').innerHTML = d.actions.map(a => `<li style="margin-bottom:15px;">${escapeHtml(a)}</li>`).join('');
+            document.getElementById('personaCountryList').innerHTML = d.top_countries.map(c => `<li style="padding:12px 0; border-bottom:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between;"><span>${escapeHtml(c.country)}</span><strong style="color:#4f46e5;">${c.max_score}</strong></li>`).join('');
         }
 
         async function loadGuardianDashboard() {
-            try {
-                const response = await fetch(`${API_BASE}/guardian/dashboard`);
-                const payload = await response.json();
+            const r = await fetch(`${API_BASE}/guardian/dashboard`); const d = await r.json();
+            if (d.status !== 'success') return;
+            document.getElementById('guardianMeta').textContent = `Global Cycle: ${d.meta.generated_at_local}`;
+            document.getElementById('guardianExecutiveGrid').innerHTML = [kpiCard('Jurisdictions', d.executive_summary.high_risk_country_count), kpiCard('Active Alerts', d.executive_summary.total_risk_alert_count), kpiCard('Incident Index', d.executive_summary.high_risk_alert_count)].join('');
+            document.getElementById('googleRiskCard').innerHTML = `<h4 style="font-weight:800; text-transform:uppercase; font-size:0.85em; color:#64748b; margin-bottom:12px;">Google Downside</h4><div style="font-size:2.8em; font-weight:800; color:#1e293b;">${d.google_downside.percent}%</div><p style="font-size:0.9em; color:#64748b;">Confidence: ${d.google_downside.level}</p>`;
+            document.getElementById('fxRiskCard').innerHTML = `<h4 style="font-weight:800; text-transform:uppercase; font-size:0.85em; color:#64748b; margin-bottom:12px;">FX Volatility</h4><div style="font-size:2.8em; font-weight:800; color:#1e293b;">${d.fx_summary.high_risk_country_count} <small>Pairs</small></div><p style="font-size:0.9em; color:#64748b;">Exposure Detected</p>`;
+            document.getElementById('countryBoardGrid').innerHTML = d.country_rank_top5.map(c => `<div class="card" style="padding:22px; background:rgba(255,255,255,0.3); color:#1e293b;"><strong>${escapeHtml(c.country)}</strong><div style="font-size:0.9em; color:#64748b;">${c.alert_count} Alerts</div></div>`).join('');
+            guardianTopAlerts = d.critical_alerts_top5 || [];
+            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => `<tr><td style="padding:20px; font-weight:800;">${escapeHtml(a.country)}</td><td style="padding:20px;">${escapeHtml(a.category)}</td><td style="padding:20px;"><strong style="color:#ef4444;">${a.score}</strong></td><td style="padding:20px;">${escapeHtml(a.title)}</td><td style="padding:20px;"><button class="btn-guardian" style="padding:8px 14px; font-size:0.8em;">Inspect</button></td></tr>`).join('');
+        }
 
-                if (!response.ok || payload.status !== 'success') {
-                    document.getElementById('guardianMeta').innerHTML =
-                        `<span class="muted">Guardian snapshot unavailable: ${escapeHtml(payload.message || 'unknown error')}</span>`;
-                    guardianTopAlerts = [];
-                    document.getElementById('guardianExecutiveGrid').innerHTML = '';
-                    document.getElementById('googleRiskCard').innerHTML = '';
-                    document.getElementById('fxRiskCard').innerHTML = '';
-                    document.getElementById('guardianKpiGrid').innerHTML = '';
-                    document.getElementById('countryBoardGrid').innerHTML = '';
-                    document.getElementById('criticalAlertsTableBody').innerHTML = '';
-                    document.getElementById('dailyWarningHead').textContent = 'Daily comparison unavailable';
-                    document.getElementById('dailyWarningMetrics').innerHTML = '';
-                    document.getElementById('dailyWarningsList').innerHTML = '';
-                    return;
-                }
+        async function executePipeline() { if (isExecuting) return; isExecuting = true; document.getElementById('executeBtn').disabled = true; showAlert('Pipeline engaged.', 'info'); const r = await fetch(`${API_BASE}/execute`, { method: 'POST' }); if (r.ok) startStatusPolling(); }
+        function startStatusPolling() { const itv = setInterval(async () => { const r = await fetch(`${API_BASE}/status`); const s = await r.json(); updateStages(s.agents_status); if (!s.is_running) { clearInterval(itv); isExecuting = false; document.getElementById('executeBtn').disabled = false; loadResults(); showAlert('Cycle complete.', 'info'); } }, 1500); }
+        function updateStages(stats) { const stages = ['stage1','stage2','stage3','stage4','stage5']; const keys = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter']; keys.forEach((k, i) => { const el = document.getElementById(stages[i]); if (stats[k]?.status === 'running') el.classList.add('active'); else if (stats[k]?.status === 'success') { el.classList.remove('active'); el.style.background = 'rgba(255,255,255,0.4)'; el.style.borderColor = '#fff'; } }); }
 
-                const meta = payload.meta || {};
-                guardianMeta = meta;
-                const summary = payload.executive_summary || {};
-                const trend = summary.trend || {};
-                const trendBasis = String(trend.basis || 'triggered').toLowerCase();
-                const trendLabel = trendBasis === 'events'
-                    ? 'Event Trend (latest day vs previous day)'
-                    : 'Risk Trend (vs previous snapshot)';
-                const generatedAt = meta.generated_at_local || meta.generated_at_utc || '-';
-                const gcs = payload.gcs_status || {};
-                const dataSource = (meta.data_source || '-').toUpperCase();
-                const rawParts = Array.isArray(meta.raw_dt_segments) ? meta.raw_dt_segments : [];
-                const scope = meta.scope || 'default';
-                const globalEventCount = meta.global_event_count ?? meta.event_count ?? 0;
-                document.getElementById('guardianMeta').innerHTML =
-                    `Generated: <strong>${escapeHtml(generatedAt)}</strong> | Persona: <strong>${escapeHtml(meta.persona || '-')}</strong> | Data Mode: <strong>${escapeHtml(meta.data_mode || '-')}</strong> | Scope: <strong>${escapeHtml(scope)}</strong> | Source: <strong>${escapeHtml(dataSource)}</strong>${rawParts.length ? ` | Partitions: <strong>${escapeHtml(rawParts.length)}</strong>` : ''} | Global Events: <strong>${escapeHtml(globalEventCount)}</strong>${gcs.ok ? '' : ` | GCS: <span class="muted">${escapeHtml(gcs.message || 'fallback local')}</span>`}`;
+        async function loadResults() { const r = await fetch(`${API_BASE}/results`); const d = await r.json(); if (d.status !== 'success') return; document.getElementById('resultsSection').style.display = 'block'; document.getElementById('resultsSummary').innerHTML = `<div class="card" style="padding:25px; margin-bottom:30px; background:rgba(255,255,255,0.15);"><p style="font-size:1.1em; font-weight:800;">Summary: ${d.stages.news_gathering?.count || 0} signals ingested.</p></div>`; renderRiskMatrix(d.stages.analysis?.analysis); }
 
-                document.getElementById('guardianExecutiveGrid').innerHTML = [
-                    kpiCard('High-Risk Countries', summary.high_risk_country_count ?? 0),
-                    `
-                        <div class="kpi-card">
-                            <div class="kpi-label">Total Risk Alerts</div>
-                            <div class="kpi-value">${escapeHtml(summary.total_risk_alert_count ?? 0)}</div>
-                            <span class="trend-pill trend-flat">high-risk ${escapeHtml(summary.high_risk_alert_count ?? 0)}</span>
-                        </div>
-                    `,
-                    `
-                        <div class="kpi-card">
-                            <div class="kpi-label">${escapeHtml(trendLabel)}</div>
-                            <div class="kpi-value">${escapeHtml(trendText(trend))}</div>
-                            <span class="trend-pill ${trendDirectionClass(trend.direction)}">
-                                ${escapeHtml(`current ${trend.current_triggered ?? '-'} | prev ${trend.previous_triggered ?? '-'}`)}
-                            </span>
-                        </div>
-                    `,
-                ].join('');
-
-                const g = payload.google_downside || {};
-                if (g.status === 'success') {
-                    const sig = (g.top_signals || []).slice(0, 3).map(x => `${x.name}: ${x.value}`).join(' | ');
-                    const staleText = g.is_stale ? ` | Stale: ${escapeHtml(g.staleness_days ?? '?')}d` : '';
-                    document.getElementById('googleRiskCard').innerHTML = `
-                        <div class="google-risk-title">Google Downside Risk</div>
-                        <div class="google-risk-main">${escapeHtml(g.percent ?? 0)}% (${escapeHtml(g.level || '-')})</div>
-                        <div class="google-risk-sub">Model: ${escapeHtml(g.model_name || '-')} | As of: ${escapeHtml(g.as_of_date || '-')}${staleText}</div>
-                        <div class="google-risk-sub">Signals: ${escapeHtml(sig || '-')}</div>
-                    `;
-                } else {
-                    document.getElementById('googleRiskCard').innerHTML = `
-                        <div class="google-risk-title">Google Downside Risk</div>
-                        <div class="google-risk-sub">Unavailable: ${escapeHtml(g.reason || 'not available')}</div>
-                    `;
-                }
-
-                const fx = payload.fx_summary || {};
-                const fxAtRisk = (fx.countries || []).filter(item => Number(item.fx_score || 0) > 0);
-                const fxTop = fxAtRisk.slice(0, 5);
-                const fxTopHtml = fxTop.map(item => `
-                    <div class="fx-item">
-                        <span>${escapeHtml(item.country)} (${escapeHtml(item.fx_level)})</span>
-                        <strong>${escapeHtml(item.fx_score)}</strong>
-                    </div>
-                `).join('');
-                document.getElementById('fxRiskCard').innerHTML = `
-                    <div class="google-risk-title">FX Risk (11 Countries)</div>
-                    <div class="google-risk-main">${escapeHtml(fxAtRisk.length ?? 0)} At-Risk Countries</div>
-                    <div class="google-risk-sub">Monitored: ${escapeHtml(fx.monitored_count ?? 11)} | Medium+: ${escapeHtml(fx.medium_or_above_country_count ?? 0)} | As of: ${escapeHtml(fx.as_of_dt || '-')}</div>
-                    <div class="google-risk-sub">High-risk countries: ${escapeHtml(fx.high_risk_country_count ?? 0)}</div>
-                    <div class="fx-list">${fxTopHtml || '<span class="muted">No at-risk countries right now.</span>'}</div>
-                `;
-
-                const cmp = payload.daily_comparison || {};
-                const latestDt = cmp.latest_dt || '-';
-                const prevDt = cmp.previous_dt || '-';
-                const latestEvents = Number(cmp.latest_events || 0);
-                const prevEvents = Number(cmp.previous_events || 0);
-                const deltaEvents = Number(cmp.delta_events || 0);
-                const changePct = prevEvents > 0 ? ((deltaEvents / prevEvents) * 100) : null;
-                document.getElementById('dailyWarningHead').textContent =
-                    `Daily Comparison Board: ${latestDt} vs ${prevDt}`;
-                document.getElementById('dailyWarningMetrics').innerHTML = [
-                    `<div class="warning-metric"><div class="warning-metric-label">Latest Events</div><div class="warning-metric-value">${escapeHtml(latestEvents)}</div></div>`,
-                    `<div class="warning-metric"><div class="warning-metric-label">Previous Events</div><div class="warning-metric-value">${escapeHtml(prevEvents)}</div></div>`,
-                    `<div class="warning-metric"><div class="warning-metric-label">Delta</div><div class="warning-metric-value">${deltaEvents > 0 ? '+' : ''}${escapeHtml(deltaEvents)}</div></div>`,
-                    `<div class="warning-metric"><div class="warning-metric-label">Change %</div><div class="warning-metric-value">${changePct === null ? 'N/A' : `${changePct.toFixed(1)}%`}</div></div>`,
-                ].join('');
-                const warnings = Array.isArray(cmp.warnings) ? cmp.warnings : [];
-                document.getElementById('dailyWarningsList').innerHTML = warnings.map((w) => `
-                    <div class="warning-item ${escapeHtml(String(w.level || 'info').toLowerCase())}">
-                        <span class="warning-badge">${escapeHtml(w.level || 'info')}</span>
-                        <span class="warning-title">${escapeHtml(w.title || 'Warning')}</span>
-                        <span>${escapeHtml(w.detail || '')}</span>
-                    </div>
-                `).join('');
-
-                document.getElementById('guardianKpiGrid').innerHTML = [
-                    kpiCard('Events', meta.event_count ?? 0),
-                    kpiCard('Alerts', meta.alert_count ?? 0),
-                    kpiCard('Triggered', meta.triggered_count ?? 0),
-                    kpiCard('Threshold', meta.threshold ?? '-'),
-                    kpiCard('Sources (Enabled)', meta.enabled_source_count ?? 0),
-                    kpiCard('Sources (Healthy)', meta.healthy_enabled_source_count ?? 0),
-                ].join('');
-
-                const board = payload.country_rank_top5 || [];
-                document.getElementById('countryBoardGrid').innerHTML = board.map((item, idx) => `
-                    <div class="country-card rank-${Math.min(idx + 1, 5)}">
-                        <div class="country-name">${escapeHtml(item.country)}</div>
-                        <div class="country-score">alerts: ${escapeHtml(item.alert_count)}</div>
-                        <div class="country-meta">top: ${escapeHtml(item.top_category || 'Unclassified')}</div>
-                    </div>
-                `).join('');
-
-                const alerts = payload.critical_alerts_top5 || [];
-                guardianTopAlerts = alerts;
-                document.getElementById('criticalAlertsTableBody').innerHTML = alerts.map((a, idx) => {
-                    const title = escapeHtml(a.title || '');
-                    const url = a.url ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">${title || 'open link'}</a>` : title;
-                    return `
-                        <tr>
-                            <td>${escapeHtml(a.country || '-')}</td>
-                            <td>${escapeHtml(a.category || '-')}</td>
-                            <td>${escapeHtml(a.score ?? 0)}</td>
-                            <td><span class="${levelClass(a.risk_level)}">${escapeHtml(a.risk_level || 'None')}</span></td>
-                            <td>${escapeHtml(a.source || '-')}</td>
-                            <td class="alert-title">${url}</td>
-                            <td>${escapeHtml(a.published_at || '-')}</td>
-                            <td><button class="alert-action-btn" onclick="openAlertInsight(${idx})">Analyze</button></td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (error) {
-                document.getElementById('guardianMeta').innerHTML =
-                    `<span class="muted">Guardian dashboard load failed: ${escapeHtml(error.message)}</span>`;
-                document.getElementById('dailyWarningHead').textContent = 'Daily comparison unavailable';
-                document.getElementById('dailyWarningMetrics').innerHTML = '';
-                document.getElementById('dailyWarningsList').innerHTML = '';
+        function renderRiskMatrix(analysis) {
+            const gridEl = document.getElementById('riskMatrixGrid'); const itemsEl = document.getElementById('riskMatrixItems');
+            if (!gridEl || !itemsEl || !analysis) return;
+            const summary = analysis.matrix_summary; const scored = analysis.scored_items || [];
+            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">P \\ I</th>';
+            IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
+            gridHtml += '</tr></thead><tbody>';
+            for (let p = 5; p >= 1; p--) {
+                gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
+                for (let i = 1; i <= 5; i++) { const level = MATRIX_LEVEL[p-1][i-1]; const count = summary ? (summary[p-1][i-1] || '0') : '0'; gridHtml += `<td class="matrix-cell-${level.toLowerCase()}"><div style="font-size:1.6em; font-weight:800;">${count}</div><div style="font-size:0.65em; opacity:0.8;">${level}</div></td>`; }
+                gridHtml += '</tr>';
             }
+            gridHtml += '</tbody></table>'; gridEl.innerHTML = gridHtml;
+            document.getElementById('riskMatrixItemsHeader').innerHTML = `Scored Intelligence (${scored.length})`;
+            itemsEl.innerHTML = scored.map(item => `<div class="card" style="padding:35px; background:rgba(255,255,255,0.2);"><div style="display:flex; justify-content:space-between; margin-bottom:20px;"><span style="font-size:0.8rem; font-weight:800; background:rgba(255,255,255,0.25); padding:6px 14px; border-radius:999px;">${item.matrix_level}</span></div><div style="font-weight:800; font-size:1.25em; margin-bottom:20px;">${escapeHtml(item.title)}</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;"><div style="background:rgba(0,0,0,0.1); padding:15px;"><div style="font-size:0.7em; font-weight:800; text-transform:uppercase;">Prob</div><div>${item.probability}</div></div><div style="background:rgba(0,0,0,0.1); padding:15px;"><div style="font-size:0.7em; font-weight:800; text-transform:uppercase;">Impact</div><div>${item.impact}</div></div></div><div style="font-size:0.95em; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;"><strong>Rationale:</strong> ${escapeHtml(item.impact_reasoning || 'N/A')}</div></div>`).join('');
         }
 
-        async function openGuardianDashboard() {
-            const modal = document.getElementById('guardianModal');
-            modal.classList.add('show');
-            // If pipeline is currently running, show the loading overlay right away
-            if (isExecuting) {
-                const overlay = document.getElementById('guardianPipelineOverlay');
-                if (overlay) overlay.classList.add('active');
-            } else {
-                await loadGuardianDashboard();
-                if (!guardianRefreshInterval) {
-                    guardianRefreshInterval = setInterval(() => {
-                        loadGuardianDashboard();
-                    }, 30000);
-                }
-            }
-        }
-
-        function openDataDashboard() {
-            const modal = document.getElementById('dataModal');
-            modal.classList.add('show');
-            // If pipeline is currently running, show the loading overlay right away
-            if (isExecuting) {
-                const overlay = document.getElementById('dataPipelineOverlay');
-                if (overlay) overlay.classList.add('active');
-            }
-        }
-
-        function closeDataDashboard(event) {
-             if (event && event.target && event.target.id !== 'dataModal') {
-                 return;
-             }
-            const modal = document.getElementById('dataModal');
-             modal.classList.remove('show');
-        }
-
-        function refreshDataDashboard() {
-            const iframe = document.getElementById('dataDashboardFrame');
-            if (iframe) iframe.src = iframe.src; // reload iframe
-        }
-
-        function closeGuardianDashboard(event) {
-            if (event && event.target && event.target.id !== 'guardianModal') {
-                return;
-            }
-            const modal = document.getElementById('guardianModal');
-            modal.classList.remove('show');
-            if (guardianRefreshInterval) {
-                clearInterval(guardianRefreshInterval);
-                guardianRefreshInterval = null;
-            }
-        }
-
-        function openAlertInsight(index) {
-            const alert = guardianTopAlerts[index];
-            if (!alert) return;
-
-            const threshold = Number(guardianMeta.threshold ?? 40);
-            const score = Number(alert.score ?? 0);
-            const triggered = score >= threshold ? 'Triggered' : 'Not Triggered';
-
-            document.getElementById('alertInsightMeta').innerHTML =
-                `Published: <strong>${escapeHtml(alert.published_at || '-')}</strong> | Source: <strong>${escapeHtml(alert.source || '-')}</strong>`;
-            document.getElementById('insightScore').textContent = `${alert.score ?? 0} (${alert.risk_level || 'None'})`;
-            document.getElementById('insightCountryCategory').textContent = `${alert.country || '-'} / ${alert.category || '-'}`;
-            document.getElementById('insightTriggerCheck').textContent = `${triggered} (threshold ${threshold})`;
-            document.getElementById('insightTitle').textContent = alert.title || '-';
-            document.getElementById('insightRecommendation').textContent = alert.recommendation || 'No recommendation provided.';
-            document.getElementById('insightRationale').textContent = alert.rationale || `Generated by ${alert.recommendation_source || 'rule'} model; no extra rationale text.`;
-            document.getElementById('insightLink').innerHTML = alert.url
-                ? `<a href="${escapeHtml(alert.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(alert.url)}</a>`
-                : '-';
-
-            document.getElementById('alertInsightModal').classList.add('show');
-        }
-
-        function closeAlertInsight(event) {
-            if (event && event.target && event.target.id !== 'alertInsightModal') {
-                return;
-            }
-            document.getElementById('alertInsightModal').classList.remove('show');
-        }
-
-        // ── Pipeline stage definitions (order matters) ──────────────────────
-        const PIPELINE_STAGE_DEFS = [
-            { key: 'news_gatherer',    stageKey: 'news_gathering',      label: 'Stage 1 — Gathering news & events',        icon: '📰' },
-            { key: 'risk_classifier',  stageKey: 'risk_classification',  label: 'Stage 2 — Classifying risks',              icon: '⚠️' },
-            { key: 'database_manager', stageKey: 'database',             label: 'Stage 3 — Storing data to database',       icon: '💾' },
-            { key: 'analyzer',         stageKey: 'analysis',             label: 'Stage 4 — Running risk analysis',          icon: '🔍' },
-            { key: 'reporter',         stageKey: 'reporting',            label: 'Stage 5 — Generating reports & snapshots', icon: '📊' },
-        ];
-
-        function renderPipelineSteps(containerId, agentStatuses) {
-            const el = document.getElementById(containerId);
-            if (!el) return;
-            el.innerHTML = PIPELINE_STAGE_DEFS.map(def => {
-                const agentStatus = (agentStatuses || {})[def.key] || {};
-                const st = agentStatus.status || 'idle';
-                const isDone   = st === 'success';
-                const isFailed = st === 'failed';
-                const isActive = st === 'running';
-                const cls  = isDone ? 'done' : isFailed ? 'done' : isActive ? 'active' : '';
-                const icon = isDone ? '✅' : isFailed ? '❌' : isActive ? '⏳' : '○';
-                return `<div class="pipeline-step ${cls}">
-                    <i class="pipeline-step-icon">${icon}</i>${def.label}
-                </div>`;
-            }).join('');
-        }
-
-        function showDashboardLoading(agentStatuses) {
-            ['guardianPipelineOverlay', 'dataPipelineOverlay'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('active');
-            });
-            renderPipelineSteps('guardianPipelineSteps', agentStatuses);
-            renderPipelineSteps('dataPipelineSteps', agentStatuses);
-        }
-
-        function hideDashboardLoading() {
-            ['guardianPipelineOverlay', 'dataPipelineOverlay'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.remove('active');
-            });
-        }
-        // ── End pipeline stage helpers ────────────────────────────────────────
-
-        async function executePipeline() {
-            if (isExecuting) return;
-
-            isExecuting = true;
-            document.getElementById('executeBtn').disabled = true;
-            showAlert('Starting analysis pipeline...', 'info');
-
-            try {
-                const response = await fetch(`${API_BASE}/execute`, { method: 'POST' });
-                const data = await response.json();
-
-                if (data.status === 'started') {
-                    updatePipelineStages();
-                    startStatusPolling();
-                }
-            } catch (error) {
-                showAlert('Error starting pipeline: ' + error.message, 'error');
-                isExecuting = false;
-                document.getElementById('executeBtn').disabled = false;
-            }
-        }
-
-        async function startStatusPolling() {
-            // Show loading overlays in both dashboards immediately
-            showDashboardLoading({});
-
-            statusUpdateInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_BASE}/status`);
-                    const status = await response.json();
-
-                    updateAgentStatuses(status.agents_status);
-                    // Keep loading overlays in sync with live agent statuses
-                    renderPipelineSteps('guardianPipelineSteps', status.agents_status);
-                    renderPipelineSteps('dataPipelineSteps', status.agents_status);
-
-                    if (!status.is_running && isExecuting) {
-                        isExecuting = false;
-                        document.getElementById('executeBtn').disabled = false;
-                        clearInterval(statusUpdateInterval);
-
-                        // Final step render before hiding
-                        renderPipelineSteps('guardianPipelineSteps', status.agents_status);
-                        renderPipelineSteps('dataPipelineSteps', status.agents_status);
-
-                        await loadResults();
-
-                        // Refresh both dashboards then hide overlays
-                        await loadPersonaDashboard();
-                        await loadGuardianDashboard();
-                        const dataFrame = document.getElementById('dataDashboardFrame');
-                        if (dataFrame) dataFrame.src = dataFrame.src;
-
-                        hideDashboardLoading();
-                        showAlert('Pipeline completed — dashboards refreshed.', 'info');
-                    }
-                } catch (error) {
-                    console.error('Status update failed:', error);
-                }
-            }, 1000);
-        }
-
-        function toggleAgentDetail(card) {
-            // Don't expand if user is selecting text
-            if (window.getSelection().toString()) return;
-            const isExpanded = card.classList.contains('expanded');
-            // Accordion: close all cards first
-            document.querySelectorAll('.card.agent-card').forEach(c => c.classList.remove('expanded'));
-            // Open this card only if it was previously closed
-            if (!isExpanded) card.classList.add('expanded');
-        }
-
-        // Prevent clicks inside the detail panel from bubbling up to the card toggle
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.agent-detail').forEach(function (el) {
-                el.addEventListener('click', function (e) { e.stopPropagation(); });
-            });
-            const personaSwitcher = document.getElementById('personaSwitcher');
-            if (personaSwitcher) {
-                personaSwitcher.addEventListener('change', function (e) {
-                    currentPersona = String(e.target.value || 'cash_manager');
-                    localStorage.setItem('argusPersona', currentPersona);
-                    syncPersonaChrome();
-                    loadPersonaDashboard();
-                });
-            }
-            const loginPersona = document.getElementById('loginPersona');
-            if (loginPersona) {
-                loginPersona.addEventListener('change', function (e) {
-                    updateLoginPersonaPreview(String(e.target.value || 'cash_manager'));
-                });
-            }
-        });
-
-        function updateAgentStatuses(statuses) {
-            const statusMap = {
-                'news_gatherer': 'newsGathererStatus',
-                'risk_classifier': 'classifierStatus',
-                'database_manager': 'databaseStatus',
-                'analyzer': 'analyzerStatus',
-                'reporter': 'reporterStatus'
-            };
-
-            for (const [agent, elementId] of Object.entries(statusMap)) {
-                const element = document.getElementById(elementId);
-                if (element && statuses[agent]) {
-                    const status = statuses[agent].status;
-                    const badge = element.querySelector('.status-badge');
-                    badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-                    badge.className = `status-badge status-${status}`;
-                }
-            }
-        }
-
-        function updatePipelineStages() {
-            const stages = ['stage1', 'stage2', 'stage3', 'stage4', 'stage5'];
-            let currentStage = 0;
-
-            const stageInterval = setInterval(() => {
-                stages.forEach((stageId, index) => {
-                    const element = document.getElementById(stageId);
-                    element.classList.remove('active', 'completed');
-                    if (index < currentStage) {
-                        element.classList.add('completed');
-                    } else if (index === currentStage) {
-                        element.classList.add('active');
-                    }
-                });
-
-                currentStage++;
-                if (currentStage > stages.length) {
-                    clearInterval(stageInterval);
-                }
-            }, 3000);
-        }
-
-        async function loadResults() {
-            try {
-                const response = await fetch(`${API_BASE}/results`);
-                const results = await response.json();
-
-                if (results.status === 'success' && results.stages) {
-                    displayResults(results);
-                    document.getElementById('resultsSection').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Failed to load results:', error);
-            }
-        }
-
-        function displayResults(results) {
-            const stages = results.stages;
-
-            // Summary
-            let summary = '<div class="result-item">';
-            if (stages.news_gathering && stages.news_gathering.status === 'success') {
-                summary += `<p><span class="result-label">📰 News Gathered:</span> ${stages.news_gathering.count} items</p>`;
-            }
-            if (stages.risk_classification && stages.risk_classification.status === 'success') {
-                summary += `<p><span class="result-label">⚠️ Items Classified:</span> ${stages.risk_classification.count}</p>`;
-                if (stages.risk_classification.distribution) {
-                    const dist = stages.risk_classification.distribution;
-                    summary += `<p><span class="result-label">Distribution:</span> Critical: ${dist.Critical || 0}, High: ${dist.High || 0}, Medium: ${dist.Medium || 0}</p>`;
-                }
-            }
-            summary += '</div>';
-            document.getElementById('resultsSummary').innerHTML = summary;
-
-            // Distribution
-            if (stages.risk_classification && stages.risk_classification.distribution) {
-                const dist = stages.risk_classification.distribution;
-                let html = '<div class="risk-distribution">';
-                html += `<div class="risk-box risk-critical">Critical<br>${dist.Critical || 0}</div>`;
-                html += `<div class="risk-box risk-high">High<br>${dist.High || 0}</div>`;
-                html += `<div class="risk-box risk-medium">Medium<br>${dist.Medium || 0}</div>`;
-                html += `<div class="risk-box risk-low">Low<br>${dist.Low || 0}</div>`;
-                html += '</div>';
-                document.getElementById('riskDistribution').innerHTML = html;
-            }
-
-            // Load full report
-            loadReport();
-        }
-
-        async function loadReport() {
-            try {
-                const response = await fetch(`${API_BASE}/demo/report`);
-                const report = await response.json();
-
-                if (report.recommendations) {
-                    const recsHtml = report.recommendations.map(r => `<p>• ${r}</p>`).join('');
-                    document.getElementById('recommendationsContainer').innerHTML = recsHtml;
-                }
-
-                if (report.top_keywords) {
-                    const kwHtml = report.top_keywords.map(k => `<span style="display: inline-block; padding: 5px 10px; background: #667eea; color: white; border-radius: 5px; margin: 5px;">${k}</span>`).join('');
-                    document.getElementById('keywordsContainer').innerHTML = kwHtml;
-                }
-            } catch (error) {
-                console.error('Failed to load report:', error);
-            }
-        }
-
-        async function resetSystem() {
-            if (confirm('Are you sure you want to reset the system?')) {
-                try {
-                    await fetch(`${API_BASE}/reset`, { method: 'POST' });
-                    document.getElementById('resultsSection').style.display = 'none';
-                    document.getElementById('executeBtn').disabled = false;
-                    isExecuting = false;
-                    showAlert('System reset complete', 'info');
-                } catch (error) {
-                    showAlert('Reset failed: ' + error.message, 'error');
-                }
-            }
-        }
-
-        function switchTab(event, tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-            // Show selected tab
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        function showAlert(message, type) {
-            const alert = document.getElementById('alert');
-            alert.textContent = message;
-            alert.className = `alert alert-${type} show`;
-            setTimeout(() => alert.classList.remove('show'), 5000);
-        }
-
-        function addLog(message, level = 'INFO') {
-            const logsContainer = document.getElementById('logsContainer');
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `<span class="log-timestamp">[${time}]</span><span class="log-level">${level}</span>${message}`;
-            logsContainer.appendChild(logEntry);
-            logsContainer.scrollTop = logsContainer.scrollHeight;
-        }
-
-        // Update footer
-        setInterval(() => {
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-        }, 1000);
-
-        // Initial page load and periodic dashboard refresh
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadPersonas();
-            bootstrapPersonaState();
-            await loadPersonaDashboard();
-            await loadResults();
-        });
+        function toggleAgentDetail(card) { const det = card.querySelector('.agent-detail'); det.style.display = det.style.display === 'none' ? 'block' : 'none'; }
+        function showAlert(msg, type) { const al = document.getElementById('alert'); al.textContent = msg; al.style.display = 'block'; setTimeout(() => al.style.display = 'none', 5000); }
+        function resetSystem() { if (confirm('Reset system?')) fetch(`${API_BASE}/reset`, { method: 'POST' }).then(() => location.reload()); }
+        document.addEventListener('DOMContentLoaded', async () => { await loadPersonas(); setInterval(() => { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }, 1000); });
     </script>
 </body>
 </html>

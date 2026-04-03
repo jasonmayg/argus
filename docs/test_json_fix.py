@@ -77,7 +77,7 @@ def test_flask_endpoints():
     print("TEST 2: Flask API Endpoints")
     print("="*70)
 
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:5050"
     endpoints = [
         ("/api/status", "GET", "Status endpoint"),
         ("/api/results", "GET", "Results endpoint"),
@@ -85,7 +85,7 @@ def test_flask_endpoints():
         ("/api/guardian/dashboard", "GET", "Guardian dashboard"),
     ]
 
-    print("\n⏳ Testing endpoints (ensure Flask is running on http://localhost:5000)...")
+    print("\n⏳ Testing endpoints (ensure Flask is running on http://localhost:5050)...")
 
     for endpoint, method, description in endpoints:
         try:

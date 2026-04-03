@@ -197,7 +197,7 @@ INDEX.md                   - This file
 1. Read: **README.md**
 2. Run: `pip install flask flask-cors crawl4ai anthropic`
 3. Run: `python frontend_app.py`
-4. Open: http://localhost:5000
+4. Open: http://localhost:5050
 5. Click: "Start Pipeline"
 
 ### Path 2: "I Want Complete Understanding" (30 min)
@@ -409,7 +409,7 @@ Edit: `templates/dashboard.html`
 
 | Issue | Solution | Document |
 |-------|----------|----------|
-| Flask won't start | Check port 5000 | RUN_FRONTEND.md |
+| Flask won't start | Check port 5050 | RUN_FRONTEND.md |
 | Missing modules | Install dependencies | INSTALL_DEPENDENCIES.md |
 | Dashboard not loading | Clear cache, refresh | RUN_FRONTEND.md |
 | Crawler is slow | Fed site may be slow | FED_CRAWLER_GUIDE.md |
@@ -445,7 +445,7 @@ Your ARGUS installation is successful when:
 - [x] `pip install` completes without errors
 - [x] `python verify_system.py` shows all checks ✅
 - [x] `python frontend_app.py` starts server
-- [x] http://localhost:5000 loads in browser
+- [x] http://localhost:5050 loads in browser
 - [x] "Start Pipeline" button executes 5 stages
 - [x] Results display in dashboard
 - [x] System logs show agent execution
@@ -484,7 +484,7 @@ Your ARGUS installation is successful when:
 1. Read README.md (2 min)
 2. Run: `pip install flask flask-cors crawl4ai anthropic`
 3. Run: `python frontend_app.py`
-4. Open: http://localhost:5000
+4. Open: http://localhost:5050
 
 **Questions?** Check the relevant document listed above.
 

@@ -79,7 +79,7 @@ class DatabaseAgent(Agent):
    ```
 
 2. **Open dashboard**:
-   Open http://localhost:5000
+   Open http://localhost:5050
 
 3. **Click "Start Pipeline"**:
    Pipeline should now execute without threading errors
@@ -244,7 +244,7 @@ After applying the fix:
 - [ ] Read this document
 - [ ] Verified `agents_system.py` is updated
 - [ ] Restarted `python frontend_app.py`
-- [ ] Opened http://localhost:5000
+- [ ] Opened http://localhost:5050
 - [ ] Clicked "Start Pipeline"
 - [ ] Pipeline completed successfully
 - [ ] No SQLite threading errors
