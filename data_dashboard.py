@@ -784,42 +784,17 @@ _DATA_DASHBOARD_HTML = r"""
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>ARGUS Data Dashboard</title>
+  <title>ARGUS Data Infrastructure</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial; margin: 0; background: #f6f7fb; }
-    header { background: #4f46e5; color: white; padding: 18px 20px; }
-    header h1 { margin: 0; font-size: 20px; }
-    header p { margin: 6px 0 0; opacity: .9; font-size: 13px; }
-    .wrap { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
-    .grid { display: grid; gap: 12px; }
-    .grid.cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .card { background: white; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.06); padding: 14px; }
-    .card h3 { margin: 0 0 8px; font-size: 13px; color: #111827; }
-    .kpi { font-size: 22px; font-weight: 700; color: #111827; }
-    .sub { font-size: 12px; color: #6b7280; margin-top: 6px; }
-    .grid.main { grid-template-columns: 420px 1fr; align-items: start; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    select, input { padding: 8px 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: white; }
-    button { padding: 9px 12px; border-radius: 10px; border: 0; background: #111827; color: white; cursor: pointer; }
-    button.secondary { background: #4f46e5; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 8px 8px; border-bottom: 1px solid #eef2f7; text-align: left; }
-    th { color: #374151; font-weight: 600; background: #f9fafb; position: sticky; top: 0; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eef2ff; color: #3730a3; }
-    .muted { color: #6b7280; }
-    .ok { color: #065f46; font-weight: 600; }
-    .no { color: #9ca3af; }
-    @media (max-width: 980px) {
-      .grid.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid.main { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/data_console.css">
 </head>
 <body>
 <header>
-  <h1>ARGUS · Treasury / Macro Risk Monitoring Console</h1>
-  <p>Inventory · Coverage · Single-series chart · Cross-country comparison</p>
+  <div>
+    <h1>ARGUS // DATA INFRASTRUCTURE CONSOLE</h1>
+    <p>Inventory · Coverage · Signal Analysis</p>
+  </div>
+  <div class="pill" id="kpi_dir">-</div>
 </header>
 
 <div class="wrap">

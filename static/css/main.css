@@ -1,0 +1,293 @@
+:root {
+    --bg-color: #F4F6F8;
+    --card-bg: #FFFFFF;
+    --text-main: #1A202C;
+    --text-secondary: #4A5568;
+    --text-muted: #718096;
+    --primary: #0052CC;
+    --primary-hover: #0047B3;
+    --border: #E1E4E8;
+    --border-hover: #CBD5E1;
+    --success-bg: #DCFCE7;
+    --success-text: #166534;
+    --warning-bg: #FEF3C7;
+    --warning-text: #92400E;
+    --danger-bg: #FEE2E2;
+    --danger-text: #991B1B;
+    --idle-bg: #E2E8F0;
+    --idle-text: #475569;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.5;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 16px 24px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+header p {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: border-color 0.2s;
+}
+
+.card:hover {
+    border-color: var(--border-hover);
+}
+
+.card h2 {
+    color: var(--text-main);
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.agent-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: #F8FAFC;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-idle { background: var(--idle-bg); color: var(--idle-text); }
+.status-running { background: var(--warning-bg); color: var(--warning-text); animation: pulse 2s infinite; }
+.status-success { background: var(--success-bg); color: var(--success-text); }
+.status-failed { background: var(--danger-bg); color: var(--danger-text); }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 8px 14px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    color: var(--text-main);
+}
+
+button:hover {
+    background: #F8FAFC;
+    border-color: var(--border-hover);
+}
+
+.btn-execute { background: var(--primary); color: white; border: none; }
+.btn-execute:hover { background: var(--primary-hover); }
+.btn-reset { background: #FFFFFF; color: var(--danger-text); border-color: var(--danger-bg); }
+.btn-reset:hover { background: var(--danger-bg); }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 32, 44, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal-shell {
+    width: min(1250px, 95vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #FFFFFF;
+    border-radius: 4px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.guardian-section {
+    padding: 24px;
+    color: var(--text-main);
+}
+
+.guardian-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+
+.subsection-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 24px 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.matrix-grid {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid var(--border);
+}
+
+.matrix-grid th, .matrix-grid td {
+    padding: 12px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.matrix-axis-label {
+    background: #F8FAFC;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.matrix-cell-extreme { background: #FEE2E2; color: #991B1B; }
+.matrix-cell-high { background: #FFEDD5; color: #9A3412; }
+.matrix-cell-medium { background: #FEF9C3; color: #854D0E; }
+.matrix-cell-low { background: #DCFCE7; color: #166534; }
+
+.pipeline-visualization {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.pipeline-stages {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.stage {
+    text-align: center;
+    padding: 12px;
+    border-radius: 4px;
+    background: #F8FAFC;
+    border: 1px solid var(--border);
+}
+
+.stage h3 { font-size: 16px; margin-bottom: 4px; }
+.stage p { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); }
+
+.stage.active {
+    border-color: var(--primary);
+    background: #EFF6FF;
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.results-section {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.log-section {
+    background: #1A202C;
+    color: #E2E8F0;
+    padding: 16px;
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    max-height: 250px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.log-entry {
+    border-bottom: 1px solid #2D3748;
+    padding: 4px 0;
+}
+
+.footer {
+    text-align: center;
+    color: var(--text-muted);
+    margin-top: 40px;
+    font-size: 11px;
+    padding-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+    .dashboard { grid-template-columns: 1fr; }
+    .pipeline-stages { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+}

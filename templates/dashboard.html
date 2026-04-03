@@ -3,372 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARGUS - Multi-Agent Risk Analysis System</title>
+    <title>ARGUS - Institutional Risk Analysis</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-attachment: fixed;
-            min-height: 100vh;
-            padding: 40px 20px;
-            color: #fff;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-        }
-
-        header h1 {
-            font-size: 2.2em;
-            font-weight: 800;
-            margin-bottom: 12px;
-            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            letter-spacing: -0.02em;
-        }
-
-        header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-            font-weight: 400;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 24px;
-            margin-bottom: 30px;
-            align-items: start;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 18px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            color: #fff;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-
-        .card h2 {
-            color: #fff;
-            margin-bottom: 18px;
-            font-size: 1.25em;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-        }
-
-        .agent-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 12px 0;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        .status-badge {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .status-idle { background: rgba(255,255,255,0.2); color: #fff; }
-        .status-running { background: #fff3cd; color: #856404; animation: pulse 1s infinite; }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-failed { background: #f8d7da; color: #721c24; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 40px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 14px 28px;
-            font-size: 0.95em;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-execute { background: #28a745; color: white; }
-        .btn-guardian { background: #6366f1; color: white; }
-        .btn-data { background: #7c3aed; color: white; }
-        .btn-persona { background: #ec4899; color: white; }
-        .btn-reset { background: rgba(220, 53, 69, 0.8); color: white; }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 20px;
-        }
-
-        .modal-overlay.show { display: flex; }
-
-        .modal-shell {
-            width: min(1250px, 95vw);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .guardian-section {
-            background: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 28px;
-            padding: 50px;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
-            color: #1e293b;
-        }
-
-        .guardian-header h2 {
-            font-size: 1.8em;
-            font-weight: 800;
-            color: #1e293b;
-            margin-bottom: 15px;
-        }
-
-        .subsection-title {
-            font-size: 1.3em;
-            font-weight: 800;
-            color: #1e293b;
-            margin: 30px 0 20px;
-        }
-
-        .matrix-grid {
-            border-collapse: separate;
-            border-spacing: 8px;
-            width: 100%;
-        }
-
-        .matrix-grid th, .matrix-grid td {
-            padding: 20px;
-            border-radius: 14px;
-            text-align: center;
-            font-weight: 800;
-            transition: all 0.3s ease;
-        }
-
-        .matrix-axis-label {
-            background: rgba(0,0,0,0.05);
-            color: #64748b;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .matrix-cell-extreme { background: rgba(239, 68, 68, 0.9) !important; color: #fff; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
-        .matrix-cell-high { background: rgba(249, 115, 22, 0.9) !important; color: #fff; box-shadow: 0 0 15px rgba(249, 115, 22, 0.2); }
-        .matrix-cell-medium { background: rgba(234, 179, 8, 0.9) !important; color: #fff; }
-        .matrix-cell-low { background: rgba(34, 197, 94, 0.9) !important; color: #fff; }
-
-        .pipeline-visualization {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .pipeline-stages {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 30px 0;
-        }
-
-        .stage {
-            flex: 1;
-            text-align: center;
-            padding: 25px;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            margin: 0 12px;
-        }
-
-        .stage.active { background: rgba(255, 255, 255, 0.4); border-color: #fff; transform: scale(1.05); }
-
-        .results-section {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .log-section {
-            background: rgba(0, 0, 0, 0.2);
-            color: #e2e8f0;
-            padding: 30px;
-            border-radius: 18px;
-            font-family: 'Inter', monospace;
-            max-height: 250px;
-            overflow-y: auto;
-            font-size: 0.9em;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .footer {
-            text-align: center;
-            opacity: 0.8;
-            margin-top: 60px;
-            font-size: 0.95em;
-        }
-
-        @media (max-width: 900px) {
-            .dashboard { grid-template-columns: 1fr; }
-            .pipeline-stages { flex-direction: column; gap: 15px; }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🤖 ARGUS Multi-Agent System</h1>
-            <p>Institutional Grade Risk Monitoring & Analysis Platform</p>
+            <div>
+                <h1>ARGUS // RISK INTELLIGENCE</h1>
+                <p>Institutional Grade Monitoring & Multi-Agent Analysis</p>
+            </div>
+            <div style="text-align: right;">
+                <div id="lastUpdate" style="font-family: monospace; font-size: 11px; color: var(--text-muted);">IDLE</div>
+                <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">System Heartbeat</div>
+            </div>
         </header>
 
-        <div class="alert alert-info" id="alert" style="display:none; padding:18px; margin-bottom:25px; border-radius:12px; background:rgba(255,255,255,0.3); text-align:center; font-weight:700;"></div>
+        <div id="alert" style="display:none; padding:10px 16px; margin-bottom:16px; border-radius:4px; background:var(--primary); color:white; font-weight:600; font-size:12px;"></div>
 
         <div class="controls">
-            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">▶️ Start Pipeline</button>
-            <button class="btn-persona" onclick="openPersonaDashboard()">👤 Cash Manager Dashboard</button>
-            <button class="btn-guardian" id="guardianBtn" onclick="openGuardianDashboard()">🌍 Guardian View</button>
-            <button class="btn-data" id="dataBtn" onclick="openDataDashboard()">📊 Data View</button>
-            <button class="btn-reset" id="resetBtn" onclick="resetSystem()" style="display:none;">🔄 Reset</button>
+            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">RUN PIPELINE</button>
+            <button onclick="openPersonaDashboard()">CASH MANAGER VIEW</button>
+            <button onclick="openGuardianDashboard()">GLOBAL GUARDIAN</button>
+            <button onclick="openDataDashboard()">DATA INFRASTRUCTURE</button>
+            <button class="btn-reset" id="resetBtn" onclick="resetSystem()" style="display:none;">RESET SYSTEM</button>
         </div>
 
         <div class="dashboard">
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>📰 Data Agent</h2>
+                <h2>DATA INGESTION AGENT</h2>
                 <div class="card-content" id="newsGathererStatus">
-                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="opacity: 0.9;">Ingesting institutional telemetry and news feeds.</p>
+                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Monitoring institutional telemetry and global news feeds.</p>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
-                    <p style="font-size: 0.9em;">Verified sources: Fed, World Bank, FRED, GDELT, and custom SPA crawlers.</p>
+                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+                    <p style="font-size: 11px; color: var(--text-muted);">Sources: Federal Reserve, FRED, USGS, GDELT, Custom SPA Crawlers.</p>
                 </div>
             </div>
 
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>⚠️ Risk Classifier</h2>
+                <h2>RISK TAXONOMY ENGINE</h2>
                 <div class="card-content" id="classifierStatus">
-                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="opacity: 0.9;">Taxonomizing signals into risk categories.</p>
+                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Classifying signals into sovereign and systemic risk categories.</p>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
-                    <p style="font-size: 0.9em;">High-priority signals: Liquidity pressure, defaults, and regulatory shifts.</p>
+                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+                    <p style="font-size: 11px; color: var(--text-muted);">Taxonomy: Liquidity, Regulatory, Geopolitical, Macroeconomic.</p>
                 </div>
             </div>
 
             <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>🔍 Analysis Agent</h2>
+                <h2>ANALYTICAL REASONING</h2>
                 <div class="card-content" id="analyzerStatus">
-                    <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="opacity: 0.9;">Executing 2D matrix mapping and LLM reasoning.</p>
+                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Executing 2D matrix mapping and LLM-driven inference.</p>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.2);">
-                    <p style="font-size: 0.9em;">Probability vs Impact vector analysis driven by Claude 3.5 Sonnet.</p>
+                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+                    <p style="font-size: 11px; color: var(--text-muted);">Engine: Claude 3.5 Sonnet / GPT-4o // Vector Logic.</p>
                 </div>
             </div>
         </div>
 
         <div class="pipeline-visualization">
-            <h2 style="font-size: 1.3em; text-align: center; margin-bottom: 25px;">Operational Pipeline Flow</h2>
+            <h2 style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Operational Pipeline Status</h2>
             <div class="pipeline-stages">
-                <div class="stage" id="stage1"><h3>📰</h3><p>Ingestion</p></div>
-                <div class="stage" id="stage2"><h3>⚠️</h3><p>Classification</p></div>
-                <div class="stage" id="stage3"><h3>💾</h3><p>Persistence</p></div>
-                <div class="stage" id="stage4"><h3>🔍</h3><p>Analysis</p></div>
-                <div class="stage" id="stage5"><h3>📊</h3><p>Reporting</p></div>
+                <div class="stage" id="stage1"><p>Ingestion</p></div>
+                <div class="stage" id="stage2"><p>Classification</p></div>
+                <div class="stage" id="stage3"><p>Persistence</p></div>
+                <div class="stage" id="stage4"><p>Analysis</p></div>
+                <div class="stage" id="stage5"><p>Reporting</p></div>
             </div>
         </div>
 
         <div class="results-section" id="resultsSection" style="display: none;">
-            <h2 style="font-size: 1.6em; font-weight: 800; margin-bottom: 30px;">📈 Intelligence Output</h2>
-            <div id="resultsSummary"></div>
-            <div id="riskMatrix" style="margin-top:30px;">
+            <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 2px solid var(--primary); display: inline-block;">INTELLIGENCE OUTPUT</h2>
+            <div id="resultsSummary" style="margin-bottom: 20px;"></div>
+            <div id="riskMatrix">
                 <h3 class="subsection-title">2D Risk Assessment Matrix</h3>
-                <div class="matrix-grid-container" style="overflow-x: auto; margin-bottom: 40px;"><div id="riskMatrixGrid"></div></div>
-                <h3 class="subsection-title" id="riskMatrixItemsHeader">Evidence & Rationale</h3>
-                <div id="riskMatrixItems" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;"></div>
+                <div class="matrix-grid-container" style="overflow-x: auto; margin-bottom: 24px;"><div id="riskMatrixGrid"></div></div>
+                <h3 class="subsection-title" id="riskMatrixItemsHeader">Scored Intelligence Nodes</h3>
+                <div id="riskMatrixItems" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;"></div>
             </div>
         </div>
 
-        <div class="results-section">
-            <h2 style="font-size: 1.4em; font-weight: 800; margin-bottom: 25px;">📋 Operational Logs</h2>
-            <div class="log-section" id="logsContainer"><div class="log-entry">Argus Intelligence Engine v2.1 initialized.</div></div>
+        <div class="card" style="margin-bottom: 30px;">
+            <h2 style="font-size: 12px; font-weight: 700;">OPERATIONAL LOGS</h2>
+            <div class="log-section" id="logsContainer"><div class="log-entry">ARGUS Intelligence Engine v2.5 // Ready for deployment.</div></div>
         </div>
 
-        <div class="footer"><p>ARGUS Multi-Agent Platform &copy; 2026 | Cycle Heartbeat: <span id="lastUpdate">-</span></p></div>
+        <div class="footer"><p>CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY</p></div>
     </div>
 
     <!-- MODALS -->
     <div class="modal-overlay" id="personaModal" onclick="closePersonaDashboard(event)">
         <div class="modal-shell">
             <div class="guardian-section" onclick="event.stopPropagation()">
-                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>👤 Role-Based Dashboard</h2>
-                    <button class="btn-reset" onclick="closePersonaDashboard()" style="padding: 8px 16px; font-size: 0.85em;">Exit View</button>
+                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
+                    <h2>OPERATIONAL ROLE-BASED DASHBOARD</h2>
+                    <button class="btn-reset" onclick="closePersonaDashboard()" style="padding: 4px 12px; font-size: 11px;">CLOSE VIEW</button>
                 </div>
-                <div id="personaSummaryText" style="margin: 25px 0; color: #1e293b; font-weight: 700; font-size: 1.2em;"></div>
-                <div id="personaMeta" style="font-size: 0.9em; color: #64748b; margin-bottom: 35px; padding: 20px; background: rgba(0,0,0,0.05); border-radius: 14px; border: 1px solid rgba(0,0,0,0.05);"></div>
-                <div id="personaKpiGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 35px;"></div>
-                <div id="personaCardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 35px;"></div>
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 24px;">
-                    <div class="card" style="background:rgba(255,255,255,0.4); border-color:rgba(0,0,0,0.1); color:#1e293b; padding:30px;"><h3 style="font-size: 1.1em; margin-bottom:20px; color:#1e293b; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Strategic Directives</h3><ol id="personaActionList" style="padding-left:20px; font-size:1em; line-height:1.7;"></ol></div>
-                    <div class="card" style="background:rgba(255,255,255,0.4); border-color:rgba(0,0,0,0.1); color:#1e293b; padding:30px;"><h3 style="font-size: 1.1em; margin-bottom:20px; color:#1e293b; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Exposure Watchlist</h3><ul id="personaCountryList" style="list-style:none; font-size:1em;"></ul></div>
+                <div id="personaSummaryText" style="margin-bottom: 20px; color: var(--text-main); font-weight: 700; font-size: 14px;"></div>
+                <div id="personaMeta" style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px; padding: 12px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 4px;"></div>
+                <div id="personaKpiGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;"></div>
+                <div id="personaCardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;"></div>
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 16px;">
+                    <div class="card" style="padding:20px;">
+                        <h3 style="font-size: 11px; margin-bottom:16px; color:var(--text-main); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Strategic Directives</h3>
+                        <ol id="personaActionList" style="padding-left:16px; font-size:12px; line-height:1.6; color: var(--text-secondary);"></ol>
+                    </div>
+                    <div class="card" style="padding:20px;">
+                        <h3 style="font-size: 11px; margin-bottom:16px; color:var(--text-main); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Exposure Watchlist</h3>
+                        <ul id="personaCountryList" style="list-style:none; font-size:12px;"></ul>
+                    </div>
                 </div>
-                <div style="margin-top: 40px; text-align: center;"><button class="btn-guardian" onclick="openPersonaLogin()">Switch Focus Persona</button></div>
+                <div style="margin-top: 24px; text-align: center;"><button onclick="openPersonaLogin()">SWITCH ANALYTICAL FOCUS</button></div>
             </div>
         </div>
     </div>
@@ -376,34 +127,70 @@
     <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
         <div class="modal-shell">
             <div class="guardian-section" onclick="event.stopPropagation()">
-                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>🌍 Global Guardian Dashboard</h2>
-                    <div style="display:flex; gap:12px;"><button class="btn-guardian" onclick="loadGuardianDashboard()" style="padding: 10px 20px;">Refresh Data</button><button class="btn-reset" onclick="closeGuardianDashboard()" style="padding: 10px 20px;">Close</button></div>
+                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
+                    <h2>GLOBAL GUARDIAN MONITOR</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="loadGuardianDashboard()" style="padding: 6px 12px;">REFRESH DATA</button>
+                        <button class="btn-reset" onclick="closeGuardianDashboard()" style="padding: 6px 12px;">CLOSE</button>
+                    </div>
                 </div>
-                <div id="guardianMeta" style="margin: 25px 0; font-size: 0.95em; color: #64748b;"></div>
-                <div id="guardianExecutiveGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;"></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;"><div id="googleRiskCard" class="card" style="background:rgba(255,255,255,0.4); color:#1e293b; padding:30px;"></div><div id="fxRiskCard" class="card" style="background:rgba(255,255,255,0.4); color:#1e293b; padding:30px;"></div></div>
-                <div id="countryBoardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px;"></div>
+                <div id="guardianMeta" style="margin-bottom: 20px; font-size: 11px; color: var(--text-muted); font-family: monospace;"></div>
+                <div id="guardianExecutiveGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div id="googleRiskCard" class="card"></div>
+                    <div id="fxRiskCard" class="card"></div>
+                </div>
+                <div id="countryBoardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
                 <h3 class="subsection-title">Critical Intelligence Alerts</h3>
-                <div style="overflow-x:auto; background:rgba(255,255,255,0.5); border-radius:18px;"><table style="width:100%; border-collapse:collapse; font-size:0.95em;"><thead style="background:rgba(0,0,0,0.05);"><tr><th style="padding:18px; text-align:left;">Jurisdiction</th><th style="padding:18px; text-align:left;">Taxonomy</th><th style="padding:18px; text-align:left;">Intensity</th><th style="padding:18px; text-align:left;">Headline</th><th style="padding:18px; text-align:left;">Action</th></tr></thead><tbody id="criticalAlertsTableBody"></tbody></table></div>
+                <div style="overflow-x:auto; border:1px solid var(--border); border-radius:4px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead style="background:#F8FAFC; border-bottom:1px solid var(--border);">
+                            <tr>
+                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Jurisdiction</th>
+                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Taxonomy</th>
+                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Intensity</th>
+                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Headline</th>
+                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="criticalAlertsTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="dataModal" onclick="closeDataDashboard(event)">
-      <div class="modal-shell"><div class="guardian-section" onclick="event.stopPropagation()"><div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center;"><h2>📊 Global Data Infrastructure</h2><button class="btn-reset" onclick="closeDataDashboard()">Close</button></div><iframe id="dataDashboardFrame" style="width:100%; height:75vh; border:none; border-radius:20px; background:rgba(0,0,0,0.05);" src="/data"></iframe></div></div>
+      <div class="modal-shell">
+        <div class="guardian-section" onclick="event.stopPropagation()">
+            <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
+                <h2>GLOBAL DATA INFRASTRUCTURE</h2>
+                <button class="btn-reset" onclick="closeDataDashboard()">CLOSE</button>
+            </div>
+            <iframe id="dataDashboardFrame" style="width:100%; height:75vh; border:1px solid var(--border); border-radius:4px; background:#F8FAFC;" src="/data"></iframe>
+        </div>
+      </div>
     </div>
 
     <div class="modal-overlay" id="personaLoginOverlay">
-        <div class="modal-shell" style="max-width:650px;">
-            <div class="guardian-section" style="padding:60px;">
-                <h2 style="text-align:center; margin-bottom:35px; font-weight:800;">Operational Profile Focus</h2>
-                <div style="display:grid; gap:25px;">
-                    <div><label style="display:block; font-size:0.85em; font-weight:800; color:#64748b; margin-bottom:10px; text-transform:uppercase;">Operator Name</label><input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:16px; border-radius:14px; border:1px solid #cbd5e1; font-size:1.05em;"></div>
-                    <div><label style="display:block; font-size:0.85em; font-weight:800; color:#64748b; margin-bottom:10px; text-transform:uppercase;">Analytical Persona</label><select id="loginPersona" style="width:100%; padding:16px; border-radius:14px; border:1px solid #cbd5e1; font-size:1.05em;"></select></div>
-                    <div style="background:rgba(0,0,0,0.04); padding:25px; border-radius:16px;"><div id="loginPersonaHeadline" style="font-weight:800; color:#1e293b; margin-bottom:8px;">-</div><div id="loginPersonaCopy" style="font-size:0.95em; color:#475569;">-</div></div>
-                    <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:#6366f1; padding:18px;">Configure Environment</button>
-                    <button type="button" onclick="closePersonaLogin()" style="width:100%; border:none; background:transparent; color:#64748b; font-weight:700;">Close</button>
+        <div class="modal-shell" style="max-width:500px;">
+            <div class="guardian-section" style="padding:40px;">
+                <h2 style="text-align:center; margin-bottom:24px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Analytical Focus Selection</h2>
+                <div style="display:grid; gap:20px;">
+                    <div>
+                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Operator Identity</label>
+                        <input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Analytical Persona</label>
+                        <select id="loginPersona" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;"></select>
+                    </div>
+                    <div style="background:#F8FAFC; padding:16px; border-radius:4px; border:1px solid var(--border);">
+                        <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
+                        <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.4;">-</div>
+                    </div>
+                    <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none;">CONFIGURE ENVIRONMENT</button>
+                    <button type="button" onclick="closePersonaLogin()" style="width:100%; border:none; background:transparent; color:var(--text-muted); font-weight:600; font-size:11px;">CANCEL</button>
                 </div>
             </div>
         </div>
@@ -420,7 +207,13 @@
         const MATRIX_LEVEL = [['Low','Low','Low','Medium','Medium'],['Low','Low','Medium','Medium','High'],['Low','Medium','Medium','High','High'],['Medium','Medium','High','High','Extreme'],['Medium','High','High','Extreme','Extreme']];
 
         function escapeHtml(text) { return text === null || text === undefined ? '' : String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-        function kpiCard(label, value) { return `<div class="card" style="padding:25px; background:rgba(255,255,255,0.4); color:#1e293b; border:1px solid rgba(0,0,0,0.1);"><div style="font-size:0.75em; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:8px;">${escapeHtml(label)}</div><div style="font-size:1.7em; font-weight:800;">${escapeHtml(value)}</div></div>`; }
+        
+        function kpiCard(label, value) { 
+            return `<div class="card">
+                <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; letter-spacing:0.02em;">${escapeHtml(label)}</div>
+                <div style="font-size:20px; font-weight:700; color:var(--text-main); line-height:1.2;">${escapeHtml(value)}</div>
+            </div>`; 
+        }
 
         async function openPersonaDashboard() { document.getElementById('personaModal').classList.add('show'); await loadPersonaDashboard(); }
         function closePersonaDashboard(e) { if (e && e.target.id !== 'personaModal' && e.target.type !== 'button') return; document.getElementById('personaModal').classList.remove('show'); }
@@ -445,52 +238,156 @@
             const r = await fetch(`${API_BASE}/persona/dashboard?persona=${currentPersona}`); const d = await r.json();
             if (d.status !== 'success') return;
             document.getElementById('personaSummaryText').textContent = d.summary.subheadline;
-            document.getElementById('personaMeta').innerHTML = `Active Session: <strong>${d.title}</strong> | Cycle: <strong>${d.summary.generated_at}</strong>`;
-            document.getElementById('personaKpiGrid').innerHTML = [kpiCard('Focus', d.title), kpiCard('Telemetry', d.summary.event_count), kpiCard('Integrity', 'Optimal')].join('');
-            document.getElementById('personaCardGrid').innerHTML = d.cards.map(c => `<div class="card" style="background:rgba(255,255,255,0.6); color:#1e293b;"><div style="font-weight:800; margin-bottom:12px; color:#4f46e5; text-transform:uppercase; font-size:0.85em;">${escapeHtml(c.title)}</div><div style="font-size:2.2em; font-weight:800; margin-bottom:8px;">${escapeHtml(c.metric)}</div><div style="font-size:0.95em; opacity:0.8;">${escapeHtml(c.detail)}</div></div>`).join('');
-            document.getElementById('personaActionList').innerHTML = d.actions.map(a => `<li style="margin-bottom:15px;">${escapeHtml(a)}</li>`).join('');
-            document.getElementById('personaCountryList').innerHTML = d.top_countries.map(c => `<li style="padding:12px 0; border-bottom:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between;"><span>${escapeHtml(c.country)}</span><strong style="color:#4f46e5;">${c.max_score}</strong></li>`).join('');
+            document.getElementById('personaMeta').innerHTML = `ACTIVE FOCUS: <strong>${d.title}</strong> // CYCLE: <strong>${d.summary.generated_at}</strong>`;
+            document.getElementById('personaKpiGrid').innerHTML = [kpiCard('Current Profile', d.title), kpiCard('Signal Count', d.summary.event_count), kpiCard('System State', 'NOMINAL')].join('');
+            document.getElementById('personaCardGrid').innerHTML = d.cards.map(c => `
+                <div class="card">
+                    <div style="font-weight:700; margin-bottom:10px; color:var(--primary); text-transform:uppercase; font-size:10px; letter-spacing:0.02em;">${escapeHtml(c.title)}</div>
+                    <div style="font-size:22px; font-weight:700; margin-bottom:4px;">${escapeHtml(c.metric)}</div>
+                    <div style="font-size:11px; color: var(--text-secondary);">${escapeHtml(c.detail)}</div>
+                </div>`).join('');
+            document.getElementById('personaActionList').innerHTML = d.actions.map(a => `<li style="margin-bottom:12px;">${escapeHtml(a)}</li>`).join('');
+            document.getElementById('personaCountryList').innerHTML = d.top_countries.map(c => `
+                <li style="padding:10px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:500;">${escapeHtml(c.country)}</span>
+                    <strong style="color:var(--primary); font-family:monospace;">${c.max_score}</strong>
+                </li>`).join('');
         }
 
         async function loadGuardianDashboard() {
             const r = await fetch(`${API_BASE}/guardian/dashboard`); const d = await r.json();
             if (d.status !== 'success') return;
-            document.getElementById('guardianMeta').textContent = `Global Cycle: ${d.meta.generated_at_local}`;
-            document.getElementById('guardianExecutiveGrid').innerHTML = [kpiCard('Jurisdictions', d.executive_summary.high_risk_country_count), kpiCard('Active Alerts', d.executive_summary.total_risk_alert_count), kpiCard('Incident Index', d.executive_summary.high_risk_alert_count)].join('');
-            document.getElementById('googleRiskCard').innerHTML = `<h4 style="font-weight:800; text-transform:uppercase; font-size:0.85em; color:#64748b; margin-bottom:12px;">Google Downside</h4><div style="font-size:2.8em; font-weight:800; color:#1e293b;">${d.google_downside.percent}%</div><p style="font-size:0.9em; color:#64748b;">Confidence: ${d.google_downside.level}</p>`;
-            document.getElementById('fxRiskCard').innerHTML = `<h4 style="font-weight:800; text-transform:uppercase; font-size:0.85em; color:#64748b; margin-bottom:12px;">FX Volatility</h4><div style="font-size:2.8em; font-weight:800; color:#1e293b;">${d.fx_summary.high_risk_country_count} <small>Pairs</small></div><p style="font-size:0.9em; color:#64748b;">Exposure Detected</p>`;
-            document.getElementById('countryBoardGrid').innerHTML = d.country_rank_top5.map(c => `<div class="card" style="padding:22px; background:rgba(255,255,255,0.3); color:#1e293b;"><strong>${escapeHtml(c.country)}</strong><div style="font-size:0.9em; color:#64748b;">${c.alert_count} Alerts</div></div>`).join('');
+            document.getElementById('guardianMeta').textContent = `GLOBAL_CYCLE_REF: ${d.meta.generated_at_local}`;
+            document.getElementById('guardianExecutiveGrid').innerHTML = [kpiCard('Monitored Jurisdictions', d.executive_summary.high_risk_country_count), kpiCard('Active Alerts', d.executive_summary.total_risk_alert_count), kpiCard('High-Risk Nodes', d.executive_summary.high_risk_alert_count)].join('');
+            document.getElementById('googleRiskCard').innerHTML = `
+                <h4 style="font-weight:700; text-transform:uppercase; font-size:10px; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Downside Risk Index</h4>
+                <div style="font-size:24px; font-weight:700; color:var(--text-main); margin: 8px 0;">${d.google_downside.percent}%</div>
+                <p style="font-size:11px; color:var(--text-secondary);">CONFIDENCE_LEVEL: ${d.google_downside.level}</p>`;
+            document.getElementById('fxRiskCard').innerHTML = `
+                <h4 style="font-weight:700; text-transform:uppercase; font-size:10px; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">FX Volatility Scan</h4>
+                <div style="font-size:24px; font-weight:700; color:var(--text-main); margin: 8px 0;">${d.fx_summary.high_risk_country_count} <small style="font-size:12px; font-weight:500;">Pairs</small></div>
+                <p style="font-size:11px; color:var(--text-secondary);">EXPOSURE DETECTED</p>`;
+            document.getElementById('countryBoardGrid').innerHTML = d.country_rank_top5.map(c => `
+                <div class="card" style="padding:12px;">
+                    <div style="font-weight:700; font-size:12px;">${escapeHtml(c.country)}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:monospace;">${c.alert_count} Alerts</div>
+                </div>`).join('');
             guardianTopAlerts = d.critical_alerts_top5 || [];
-            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => `<tr><td style="padding:20px; font-weight:800;">${escapeHtml(a.country)}</td><td style="padding:20px;">${escapeHtml(a.category)}</td><td style="padding:20px;"><strong style="color:#ef4444;">${a.score}</strong></td><td style="padding:20px;">${escapeHtml(a.title)}</td><td style="padding:20px;"><button class="btn-guardian" style="padding:8px 14px; font-size:0.8em;">Inspect</button></td></tr>`).join('');
+            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:12px; font-weight:700;">${escapeHtml(a.country)}</td>
+                    <td style="padding:12px; color:var(--text-secondary);">${escapeHtml(a.category)}</td>
+                    <td style="padding:12px;"><span class="status-badge" style="background:var(--danger-bg); color:var(--danger-text);">${a.score}</span></td>
+                    <td style="padding:12px; font-size:11px;">${escapeHtml(a.title)}</td>
+                    <td style="padding:12px;"><button style="padding:4px 8px; font-size:10px;">INSPECT</button></td>
+                </tr>`).join('');
         }
 
-        async function executePipeline() { if (isExecuting) return; isExecuting = true; document.getElementById('executeBtn').disabled = true; showAlert('Pipeline engaged.', 'info'); const r = await fetch(`${API_BASE}/execute`, { method: 'POST' }); if (r.ok) startStatusPolling(); }
-        function startStatusPolling() { const itv = setInterval(async () => { const r = await fetch(`${API_BASE}/status`); const s = await r.json(); updateStages(s.agents_status); if (!s.is_running) { clearInterval(itv); isExecuting = false; document.getElementById('executeBtn').disabled = false; loadResults(); showAlert('Cycle complete.', 'info'); } }, 1500); }
-        function updateStages(stats) { const stages = ['stage1','stage2','stage3','stage4','stage5']; const keys = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter']; keys.forEach((k, i) => { const el = document.getElementById(stages[i]); if (stats[k]?.status === 'running') el.classList.add('active'); else if (stats[k]?.status === 'success') { el.classList.remove('active'); el.style.background = 'rgba(255,255,255,0.4)'; el.style.borderColor = '#fff'; } }); }
+        async function executePipeline() { 
+            if (isExecuting) return; 
+            isExecuting = true; 
+            document.getElementById('executeBtn').disabled = true; 
+            showAlert('INTELLIGENCE PIPELINE ENGAGED', 'info'); 
+            const r = await fetch(`${API_BASE}/execute`, { method: 'POST' }); 
+            if (r.ok) startStatusPolling(); 
+        }
 
-        async function loadResults() { const r = await fetch(`${API_BASE}/results`); const d = await r.json(); if (d.status !== 'success') return; document.getElementById('resultsSection').style.display = 'block'; document.getElementById('resultsSummary').innerHTML = `<div class="card" style="padding:25px; margin-bottom:30px; background:rgba(255,255,255,0.15);"><p style="font-size:1.1em; font-weight:800;">Summary: ${d.stages.news_gathering?.count || 0} signals ingested.</p></div>`; renderRiskMatrix(d.stages.analysis?.analysis); }
+        function startStatusPolling() { 
+            const itv = setInterval(async () => { 
+                const r = await fetch(`${API_BASE}/status`); 
+                const s = await r.json(); 
+                updateStages(s.agents_status); 
+                if (!s.is_running) { 
+                    clearInterval(itv); 
+                    isExecuting = false; 
+                    document.getElementById('executeBtn').disabled = false; 
+                    loadResults(); 
+                    showAlert('OPERATIONAL CYCLE COMPLETE', 'info'); 
+                } 
+            }, 1500); 
+        }
+
+        function updateStages(stats) { 
+            const stages = ['stage1','stage2','stage3','stage4','stage5']; 
+            const keys = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter']; 
+            keys.forEach((k, i) => { 
+                const el = document.getElementById(stages[i]); 
+                if (stats[k]?.status === 'running') el.classList.add('active'); 
+                else if (stats[k]?.status === 'success') { 
+                    el.classList.remove('active'); 
+                    el.style.borderColor = 'var(--success-text)';
+                    el.style.background = 'var(--success-bg)';
+                } 
+            }); 
+        }
+
+        async function loadResults() { 
+            const r = await fetch(`${API_BASE}/results`); 
+            const d = await r.json(); 
+            if (d.status !== 'success') return; 
+            document.getElementById('resultsSection').style.display = 'block'; 
+            document.getElementById('resultsSummary').innerHTML = `
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <p style="font-size:13px; font-weight:700;">CYCLE COMPLETE: ${d.stages.news_gathering?.count || 0} signals ingested and taxonomized.</p>
+                </div>`; 
+            renderRiskMatrix(d.stages.analysis?.analysis); 
+        }
 
         function renderRiskMatrix(analysis) {
             const gridEl = document.getElementById('riskMatrixGrid'); const itemsEl = document.getElementById('riskMatrixItems');
             if (!gridEl || !itemsEl || !analysis) return;
             const summary = analysis.matrix_summary; const scored = analysis.scored_items || [];
-            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">P \\ I</th>';
+            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">PROB \\ IMPACT</th>';
             IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
             gridHtml += '</tr></thead><tbody>';
             for (let p = 5; p >= 1; p--) {
                 gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
-                for (let i = 1; i <= 5; i++) { const level = MATRIX_LEVEL[p-1][i-1]; const count = summary ? (summary[p-1][i-1] || '0') : '0'; gridHtml += `<td class="matrix-cell-${level.toLowerCase()}"><div style="font-size:1.6em; font-weight:800;">${count}</div><div style="font-size:0.65em; opacity:0.8;">${level}</div></td>`; }
+                for (let i = 1; i <= 5; i++) { 
+                    const level = MATRIX_LEVEL[p-1][i-1]; 
+                    const count = summary ? (summary[p-1][i-1] || '0') : '0'; 
+                    gridHtml += `<td class="matrix-cell-${level.toLowerCase()}">
+                        <div style="font-size:14px; font-weight:700;">${count}</div>
+                        <div style="font-size:8px; opacity:0.8; text-transform:uppercase;">${level}</div>
+                    </td>`; 
+                }
                 gridHtml += '</tr>';
             }
             gridHtml += '</tbody></table>'; gridEl.innerHTML = gridHtml;
-            document.getElementById('riskMatrixItemsHeader').innerHTML = `Scored Intelligence (${scored.length})`;
-            itemsEl.innerHTML = scored.map(item => `<div class="card" style="padding:35px; background:rgba(255,255,255,0.2);"><div style="display:flex; justify-content:space-between; margin-bottom:20px;"><span style="font-size:0.8rem; font-weight:800; background:rgba(255,255,255,0.25); padding:6px 14px; border-radius:999px;">${item.matrix_level}</span></div><div style="font-weight:800; font-size:1.25em; margin-bottom:20px;">${escapeHtml(item.title)}</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;"><div style="background:rgba(0,0,0,0.1); padding:15px;"><div style="font-size:0.7em; font-weight:800; text-transform:uppercase;">Prob</div><div>${item.probability}</div></div><div style="background:rgba(0,0,0,0.1); padding:15px;"><div style="font-size:0.7em; font-weight:800; text-transform:uppercase;">Impact</div><div>${item.impact}</div></div></div><div style="font-size:0.95em; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;"><strong>Rationale:</strong> ${escapeHtml(item.impact_reasoning || 'N/A')}</div></div>`).join('');
+            document.getElementById('riskMatrixItemsHeader').textContent = `SCORED INTELLIGENCE NODES (${scored.length})`;
+            itemsEl.innerHTML = scored.map(item => `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                        <span class="status-badge" style="font-size:9px; background:var(--bg-color); color:var(--text-main); border:1px solid var(--border);">${item.matrix_level}</span>
+                        <span style="font-family:monospace; font-size:10px; color:var(--text-muted);">REF: ${Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+                    </div>
+                    <div style="font-weight:700; font-size:13px; margin-bottom:12px; line-height:1.4;">${escapeHtml(item.title)}</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                        <div style="background:#F8FAFC; padding:8px; border:1px solid var(--border); border-radius:2px;">
+                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px;">Probability</div>
+                            <div style="font-size:11px; font-weight:600;">${item.probability}</div>
+                        </div>
+                        <div style="background:#F8FAFC; padding:8px; border:1px solid var(--border); border-radius:2px;">
+                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px;">Impact</div>
+                            <div style="font-size:11px; font-weight:600;">${item.impact}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:11px; line-height:1.5; color:var(--text-secondary);">
+                        <strong style="font-size:9px; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Rationale</strong>
+                        ${escapeHtml(item.impact_reasoning || 'N/A')}
+                    </div>
+                </div>`).join('');
         }
 
         function toggleAgentDetail(card) { const det = card.querySelector('.agent-detail'); det.style.display = det.style.display === 'none' ? 'block' : 'none'; }
         function showAlert(msg, type) { const al = document.getElementById('alert'); al.textContent = msg; al.style.display = 'block'; setTimeout(() => al.style.display = 'none', 5000); }
-        function resetSystem() { if (confirm('Reset system?')) fetch(`${API_BASE}/reset`, { method: 'POST' }).then(() => location.reload()); }
-        document.addEventListener('DOMContentLoaded', async () => { await loadPersonas(); setInterval(() => { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }, 1000); });
+        function resetSystem() { if (confirm('INITIALIZE SYSTEM RESET?')) fetch(`${API_BASE}/reset`, { method: 'POST' }).then(() => location.reload()); }
+        document.addEventListener('DOMContentLoaded', async () => { 
+            await loadPersonas(); 
+            setInterval(() => { 
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = now.toISOString().replace('T', ' ').substr(0, 19); 
+            }, 1000); 
+        });
     </script>
 </body>
 </html>

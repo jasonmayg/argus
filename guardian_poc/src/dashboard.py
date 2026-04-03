@@ -245,10 +245,10 @@ if selected_country == "All":
         border = f"2px solid {color}"
         col.markdown(
             f"""
-            <div style="border:{border};border-radius:12px;padding:10px;background:#f9fafb;margin-bottom:8px;">
-              <div style="font-size:13px;color:#475467;">{row['country']}</div>
-              <div style="font-size:22px;font-weight:700;color:{color};">{score:.1f} ({risk_level})</div>
-              <div style="font-size:12px;color:#667085;">alerts: {int(row['alert_count'])} | top: {row['top_category']}</div>
+            <div style="border:1px solid #E1E4E8;border-radius:4px;padding:12px;background:#FFFFFF;margin-bottom:8px;box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #E1E4E8;padding-bottom:4px;margin-bottom:8px;">{row['country']}</div>
+              <div style="font-size:20px;font-weight:700;color:{color};">{score:.1f} <span style="font-size:12px;font-weight:600;">({risk_level})</span></div>
+              <div style="font-size:10px;color:#718096;margin-top:6px;font-family:monospace;">ALERTS: {int(row['alert_count'])} | TOP: {row['top_category']}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -270,12 +270,12 @@ else:
         top_category = row["top_category"]
         st.markdown(
             f"""
-            <div style="border:3px solid {color};border-radius:16px;padding:18px;background:#f8fafc;margin-bottom:10px;">
-              <div style="font-size:16px;color:#475467;">Focused Country</div>
-              <div style="font-size:34px;font-weight:800;color:#101828;">{selected_country}</div>
-              <div style="font-size:28px;font-weight:700;color:{color};margin-top:6px;">{score:.1f} ({risk_level})</div>
-              <div style="font-size:14px;color:#667085;margin-top:6px;">Top Category: {top_category}</div>
-              <div style="font-size:14px;color:#667085;">Alerts: {alert_count} | Avg Score: {avg_score:.1f}</div>
+            <div style="border:1px solid {color};border-left:4px solid {color};border-radius:4px;padding:20px;background:#FFFFFF;margin-bottom:16px;box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;margin-bottom:4px;">Focused Country Profile</div>
+              <div style="font-size:28px;font-weight:700;color:#1A202C;">{selected_country}</div>
+              <div style="font-size:24px;font-weight:700;color:{color};margin-top:4px;">{score:.1f} <span style="font-size:14px;font-weight:600;">({risk_level})</span></div>
+              <div style="font-size:12px;color:#475569;margin-top:12px;border-top:1px solid #E1E4E8;padding-top:8px;">Top Category: <strong>{top_category}</strong></div>
+              <div style="font-size:12px;color:#475569;">Alerts: <strong>{alert_count}</strong> | Avg Score: <strong>{avg_score:.1f}</strong></div>
             </div>
             """,
             unsafe_allow_html=True,
