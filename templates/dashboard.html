@@ -10,139 +10,56 @@
     <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div>
-                <h1>ARGUS // RISK INTELLIGENCE</h1>
-                <p>Institutional Grade Monitoring & Multi-Agent Analysis</p>
-            </div>
-            <div style="text-align: right;">
-                <div id="lastUpdate" style="font-family: monospace; font-size: 11px; color: var(--text-muted);">IDLE</div>
-                <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">System Heartbeat</div>
-            </div>
-        </header>
-
-        <div id="alert" style="display:none; padding:10px 16px; margin-bottom:16px; border-radius:4px; background:var(--primary); color:white; font-weight:600; font-size:12px;"></div>
-
-        <div class="controls">
-            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">RUN PIPELINE</button>
-            <button onclick="openPersonaDashboard()">CASH MANAGER VIEW</button>
-            <button onclick="openGuardianDashboard()">GLOBAL GUARDIAN</button>
-            <button onclick="openDataDashboard()">DATA INFRASTRUCTURE</button>
-            <button class="btn-reset" id="resetBtn" onclick="resetSystem()" style="display:none;">RESET SYSTEM</button>
-        </div>
-
-        <div class="dashboard">
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>DATA INGESTION AGENT</h2>
-                <div class="card-content" id="newsGathererStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Monitoring institutional telemetry and global news feeds.</p>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-branding">
+                    <h1>ARGUS | AI</h1>
+                    <div style="font-size: 9px; color: #718096; margin-top: 4px;">INSTITUTIONAL RISK v2.5</div>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Sources: Federal Reserve, FRED, USGS, GDELT, Custom SPA Crawlers.</p>
+                <div class="sidebar-toggle" onclick="toggleSidebar()">
+                    <span style="font-size: 16px;">☰</span>
                 </div>
             </div>
-
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>RISK TAXONOMY ENGINE</h2>
-                <div class="card-content" id="classifierStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Classifying signals into sovereign and systemic risk categories.</p>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" onclick="switchModule('persona', this)">
+                    <span>👤</span> <span>Persona Dashboard</span>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Taxonomy: Liquidity, Regulatory, Geopolitical, Macroeconomic.</p>
+                <div class="nav-item" onclick="switchModule('guardian', this)">
+                    <span>🌍</span> <span>Global Guardian</span>
                 </div>
-            </div>
-
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>ANALYTICAL REASONING</h2>
-                <div class="card-content" id="analyzerStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Executing 2D matrix mapping and LLM-driven inference.</p>
+                <div class="nav-item" onclick="switchModule('data_infra', this)">
+                    <span>📊</span> <span>Data Infrastructure</span>
                 </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Engine: Claude 3.5 Sonnet / GPT-4o // Vector Logic.</p>
+                <div class="nav-item" onclick="switchModule('pipeline', this)">
+                    <span>⚙️</span> <span>Pipeline & Logs</span>
                 </div>
+            </nav>
+            <div class="sidebar-footer" style="padding: 24px; border-top: 1px solid #2D3748;">
+                <button class="btn-execute" id="executeBtn" style="width: 100%; justify-content: center;" onclick="executePipeline()">
+                    <span>▶️</span> <span>RUN PIPELINE</span>
+                </button>
+                <button class="btn-reset" id="resetBtn" style="width: 100%; justify-content: center; margin-top: 8px; display:none;" onclick="resetSystem()">
+                    <span>🔄</span> <span>RESET</span>
+                </button>
             </div>
-        </div>
+        </aside>
 
-        <div class="pipeline-visualization">
-            <h2 style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Operational Pipeline Status</h2>
-            <div class="pipeline-stages">
-                <div class="stage" id="stage1"><p>Ingestion</p></div>
-                <div class="stage" id="stage2"><p>Classification</p></div>
-                <div class="stage" id="stage3"><p>Persistence</p></div>
-                <div class="stage" id="stage4"><p>Analysis</p></div>
-                <div class="stage" id="stage5"><p>Reporting</p></div>
-            </div>
-        </div>
-
-        <div class="results-section" id="resultsSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
-                <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Intelligence Pipeline Results</h2>
-                <div id="resultsSummaryCount" style="font-size: 11px; font-weight: 700; color: var(--text-muted);"></div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 300px; gap: 24px;">
-                <!-- Main View: Unified Event List -->
-                <div id="unifiedEventContainer">
-                    <h3 class="subsection-title" id="riskMatrixItemsHeader" style="margin-top: 0;">Unified Event List</h3>
-                    <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 4px;">
-                        <table class="data-table" id="eventTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 120px;">Date</th>
-                                    <th style="width: 120px;">Source</th>
-                                    <th style="width: 100px;">Country</th>
-                                    <th style="width: 120px;">Impact</th>
-                                    <th>Headline</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riskMatrixItems"></tbody>
-                        </table>
+        <main class="main-content">
+            <!-- MODULE: PERSONA DASHBOARD (DEFAULT) -->
+            <section id="view-persona" class="module-view active">
+                <header style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1>PERSONA | OPERATIONAL VIEW</h1>
+                        <p>Role-Based Risk Directives & Focus</p>
                     </div>
-                </div>
-
-                <!-- Sidebar: Matrix Visualization -->
-                <div id="matrixSidebar">
-                    <h3 class="subsection-title" style="margin-top: 0;">Risk Matrix</h3>
-                    <div class="matrix-grid-container" id="riskMatrixGrid" style="margin-bottom: 16px;"></div>
-                    <div style="background: #F8FAFC; border: 1px solid var(--border); padding: 12px; border-radius: 4px;">
-                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Matrix Key</div>
-                        <div style="display: grid; gap: 6px;">
-                            <div class="risk-badge risk-extreme"><div class="dot"></div> Extreme</div>
-                            <div class="risk-badge risk-high"><div class="dot"></div> High</div>
-                            <div class="risk-badge risk-medium"><div class="dot"></div> Medium</div>
-                            <div class="risk-badge risk-low"><div class="dot"></div> Low</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 30px;">
-            <h2 style="font-size: 12px; font-weight: 700;">OPERATIONAL LOGS</h2>
-            <div class="log-section" id="logsContainer"><div class="log-entry">ARGUS Intelligence Engine v2.5 // Ready for deployment.</div></div>
-        </div>
-
-        <div class="footer"><p>CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY</p></div>
-    </div>
-
-    <!-- MODALS (NOW DRAWERS) -->
-    <div class="modal-overlay" id="personaOverlay" onclick="closePersonaDashboard(event)"></div>
-    <div class="modal-shell" id="personaModal">
-        <div class="drawer-header">
-            <h2>OPERATIONAL ROLE-BASED DASHBOARD</h2>
-            <button class="btn-reset" onclick="closePersonaDashboard()" style="padding: 4px 12px; font-size: 11px;">CLOSE</button>
-        </div>
-        <div class="drawer-content">
-            <div class="guardian-section" style="padding:0;">
+                    <button class="secondary" onclick="openPersonaLogin()" style="padding: 6px 12px; font-size: 10px; text-transform: uppercase;">CHANGE PERSONA</button>
+                </header>
                 <div id="personaSummaryText" style="margin-bottom: 20px; color: var(--text-main); font-weight: 700; font-size: 14px;"></div>
                 <div id="personaMeta" style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px; padding: 12px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 4px;"></div>
-                <div id="personaKpiGrid" style="display:grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px;"></div>
-                <div id="personaCardGrid" style="display:grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 20px;"></div>
-                <div style="display:grid; grid-template-columns: 1fr; gap: 16px;">
+                <div id="personaKpiGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;"></div>
+                <div id="personaCardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;"></div>
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 16px;">
                     <div class="card" style="padding:20px;">
                         <h3 style="font-size: 11px; margin-bottom:16px; color:var(--text-main); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Strategic Directives</h3>
                         <ol id="personaActionList" style="padding-left:16px; font-size:12px; line-height:1.6; color: var(--text-secondary);"></ol>
@@ -152,22 +69,17 @@
                         <ul id="personaCountryList" style="list-style:none; font-size:12px;"></ul>
                     </div>
                 </div>
-                <div style="margin-top: 24px; text-align: center;"><button onclick="openPersonaLogin()">SWITCH ANALYTICAL FOCUS</button></div>
-            </div>
-        </div>
-    </div>
+            </section>
 
-    <div class="modal-overlay" id="guardianOverlay" onclick="closeGuardianDashboard(event)"></div>
-    <div class="modal-shell" id="guardianModal" style="width: min(850px, 95vw);">
-        <div class="drawer-header">
-            <h2>GLOBAL GUARDIAN MONITOR</h2>
-            <div style="display:flex; gap:8px;">
-                <button onclick="loadGuardianDashboard()" style="padding: 6px 12px;">REFRESH</button>
-                <button class="btn-reset" onclick="closeGuardianDashboard()" style="padding: 6px 12px;">CLOSE</button>
-            </div>
-        </div>
-        <div class="drawer-content">
-            <div class="guardian-section" style="padding:0;">
+            <!-- MODULE: GLOBAL GUARDIAN -->
+            <section id="view-guardian" class="module-view">
+                <header>
+                    <div>
+                        <h1>GLOBAL GUARDIAN MONITOR</h1>
+                        <p>Real-time Sovereign & Macro Intelligence</p>
+                    </div>
+                    <button onclick="loadGuardianDashboard()" style="padding: 6px 12px;">REFRESH DATA</button>
+                </header>
                 <div id="guardianMeta" style="margin-bottom: 20px; font-size: 11px; color: var(--text-muted); font-family: monospace;"></div>
                 <div id="guardianExecutiveGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;"></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
@@ -177,56 +89,134 @@
                 <div id="countryBoardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
                 <h3 class="subsection-title">Critical Intelligence Alerts</h3>
                 <div style="overflow-x:auto; border:1px solid var(--border); border-radius:4px;">
-                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                        <thead style="background:#F8FAFC; border-bottom:1px solid var(--border);">
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Jurisdiction</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Taxonomy</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Intensity</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Headline</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Action</th>
+                                <th>Jurisdiction</th>
+                                <th>Taxonomy</th>
+                                <th>Intensity</th>
+                                <th>Headline</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="criticalAlertsTableBody"></tbody>
                     </table>
                 </div>
+            </section>
+
+            <!-- MODULE: DATA INFRA -->
+            <section id="view-data_infra" class="module-view">
+                <header>
+                    <div>
+                        <h1>GLOBAL DATA INFRASTRUCTURE</h1>
+                        <p>Inventory | Coverage | Signal Analysis</p>
+                    </div>
+                </header>
+                <iframe id="dataDashboardFrame" style="width:100%; height:calc(100vh - 120px); border:1px solid var(--border); border-radius:4px; background:#F8FAFC;" src="/data"></iframe>
+            </section>
+
+            <!-- MODULE: PIPELINE & LOGS -->
+            <section id="view-pipeline" class="module-view">
+                <header>
+                    <div>
+                        <h1>PIPELINE OPERATIONS</h1>
+                        <p>Institutional Grade Monitoring | Multi-Agent Analysis</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div id="lastUpdate" style="font-family: monospace; font-size: 11px; color: var(--text-muted);">IDLE</div>
+                        <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">System Heartbeat</div>
+                    </div>
+                </header>
+
+                <div id="alert" style="display:none; padding:10px 16px; margin-bottom:16px; border-radius:4px; background:var(--primary); color:white; font-weight:600; font-size:12px;"></div>
+
+                <div id="pipelineStatusSection" style="display: none;">
+                    <div class="dashboard">
+                        <!-- Agent status cards (optional placeholders) -->
+                    </div>
+                    <div class="pipeline-visualization">
+                        <!-- Stages visualization (optional placeholders) -->
+                    </div>
+                </div>
+
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
+                        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Intelligence Pipeline Results</h2>
+                        <div id="resultsSummaryCount" style="font-size: 11px; font-weight: 700; color: var(--text-muted);"></div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 24px;">
+                        <div id="unifiedEventContainer">
+                            <h3 class="subsection-title" id="riskMatrixItemsHeader" style="margin-top: 0;">Unified Event List</h3>
+                            <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 4px;">
+                                <table class="data-table" id="eventTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 120px;">Date</th>
+                                            <th style="width: 120px;">Source</th>
+                                            <th style="width: 100px;">Country</th>
+                                            <th style="width: 120px;">Impact</th>
+                                            <th>Headline</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="riskMatrixItems"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="matrixSidebar">
+                            <h3 class="subsection-title" style="margin-top: 0;">Risk Matrix</h3>
+                            <div class="matrix-grid-container" id="riskMatrixGrid" style="margin-bottom: 16px;"></div>
+                            <div style="background: #F8FAFC; border: 1px solid var(--border); padding: 12px; border-radius: 4px;">
+                                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Matrix Key</div>
+                                <div style="display: grid; gap: 6px;">
+                                    <div class="risk-badge risk-extreme"><div class="dot"></div> Extreme</div>
+                                    <div class="risk-badge risk-high"><div class="dot"></div> High</div>
+                                    <div class="risk-badge risk-medium"><div class="dot"></div> Medium</div>
+                                    <div class="risk-badge risk-low"><div class="dot"></div> Low</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 24px;">
+                    <h2 style="font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+                        OPERATIONAL LOGS
+                        <button class="secondary" onclick="togglePipelineStatus()" style="font-size: 9px; padding: 2px 8px; text-transform: uppercase;">TOGGLE STATUS CARDS</button>
+                    </h2>
+                    <div class="log-section" id="logsContainer"><div class="log-entry">ARGUS Intelligence Engine v2.5 | Ready for deployment.</div></div>
+                </div>
+            </section>
+
+            <div class="footer"><p>CONFIDENTIAL | ARGUS MULTI-AGENT PLATFORM &copy; 2026 | INSTITUTIONAL ACCESS ONLY</p></div>
+        </main>
+    </div>
+
+    <!-- SMALL DIALOG OVERLAYS -->
+    <div class="modal-overlay" id="loginOverlay" onclick="closePersonaLogin(event)">
+        <div class="modal-shell" style="width: 450px; left: 50%; top: 50%; transform: translate(-50%, -50%); height: auto;">
+            <div class="drawer-header">
+                <h2>ANALYTICAL FOCUS SELECTION</h2>
+                <button class="btn-reset" onclick="closePersonaLogin()">CANCEL</button>
             </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="dataOverlay" onclick="closeDataDashboard(event)"></div>
-    <div class="modal-shell" id="dataModal" style="width: 90vw;">
-        <div class="drawer-header">
-            <h2>GLOBAL DATA INFRASTRUCTURE</h2>
-            <button class="btn-reset" onclick="closeDataDashboard()">CLOSE</button>
-        </div>
-        <div class="drawer-content" style="padding:0;">
-            <iframe id="dataDashboardFrame" style="width:100%; height:calc(100vh - 50px); border:none; background:#F8FAFC;" src="/data"></iframe>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="loginOverlay" onclick="closePersonaLogin(event)"></div>
-    <div class="modal-shell" id="personaLoginOverlay" style="width: 450px;">
-        <div class="drawer-header">
-            <h2>ANALYTICAL FOCUS SELECTION</h2>
-            <button class="btn-reset" onclick="closePersonaLogin()">CANCEL</button>
-        </div>
-        <div class="drawer-content">
-            <div class="guardian-section" style="padding:0;">
-                <div style="display:grid; gap:20px;">
-                    <div>
-                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Operator Identity</label>
-                        <input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;">
+            <div class="drawer-content">
+                <div class="guardian-section" style="padding:0;">
+                    <div style="display:grid; gap:20px;">
+                        <div>
+                            <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Operator Identity</label>
+                            <input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Analytical Persona</label>
+                            <select id="loginPersona" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;"></select>
+                        </div>
+                        <div style="background:#F8FAFC; padding:16px; border-radius:4px; border:1px solid var(--border);">
+                            <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
+                            <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.4;">-</div>
+                        </div>
+                        <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none;">CONFIGURE ENVIRONMENT</button>
                     </div>
-                    <div>
-                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Analytical Persona</label>
-                        <select id="loginPersona" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;"></select>
-                    </div>
-                    <div style="background:#F8FAFC; padding:16px; border-radius:4px; border:1px solid var(--border);">
-                        <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
-                        <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.4;">-</div>
-                    </div>
-                    <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none;">CONFIGURE ENVIRONMENT</button>
                 </div>
             </div>
         </div>
@@ -251,24 +241,28 @@
             </div>`; 
         }
 
-        function openDrawer(modalId, overlayId) {
-            document.getElementById(modalId).classList.add('open');
-            document.getElementById(overlayId).classList.add('show');
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
         }
 
-        function closeDrawer(modalId, overlayId) {
-            document.getElementById(modalId).classList.remove('open');
-            document.getElementById(overlayId).classList.remove('show');
+        function togglePipelineStatus() {
+            const el = document.getElementById('pipelineStatusSection');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function openPersonaDashboard() { openDrawer('personaModal', 'personaOverlay'); await loadPersonaDashboard(); }
-        function closePersonaDashboard(e) { if (e && e.target.id !== 'personaOverlay' && e.target.type !== 'button') return; closeDrawer('personaModal', 'personaOverlay'); }
-        async function openGuardianDashboard() { openDrawer('guardianModal', 'guardianOverlay'); await loadGuardianDashboard(); }
-        function closeGuardianDashboard(e) { if (e && e.target.id !== 'guardianOverlay' && e.target.type !== 'button') return; closeDrawer('guardianModal', 'guardianOverlay'); }
-        function openDataDashboard() { openDrawer('dataModal', 'dataOverlay'); }
-        function closeDataDashboard(e) { if (e && e.target.id !== 'dataOverlay' && e.target.type !== 'button') return; closeDrawer('dataModal', 'dataOverlay'); }
-        function openPersonaLogin() { openDrawer('personaLoginOverlay', 'loginOverlay'); }
-        function closePersonaLogin(e) { if (e && e.target.id !== 'loginOverlay' && e.target.type !== 'button') return; closeDrawer('personaLoginOverlay', 'loginOverlay'); }
+        function switchModule(moduleId, navEl) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navEl.classList.add('active');
+            document.querySelectorAll('.module-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${moduleId}`).classList.add('active');
+            
+            // Trigger specific loads
+            if (moduleId === 'persona') loadPersonaDashboard();
+            if (moduleId === 'guardian') loadGuardianDashboard();
+        }
+
+        function openPersonaLogin() { document.getElementById('loginOverlay').classList.add('show'); }
+        function closePersonaLogin(e) { if (e && e.target.id !== 'loginOverlay' && e.target.type !== 'button') return; document.getElementById('loginOverlay').classList.remove('show'); }
 
         async function loadPersonas() {
             const r = await fetch(`${API_BASE}/personas`); const d = await r.json(); availablePersonas = d.personas || [];
@@ -284,7 +278,7 @@
             const r = await fetch(`${API_BASE}/persona/dashboard?persona=${currentPersona}`); const d = await r.json();
             if (d.status !== 'success') return;
             document.getElementById('personaSummaryText').textContent = d.summary.subheadline;
-            document.getElementById('personaMeta').innerHTML = `ACTIVE FOCUS: <strong>${d.title}</strong> // CYCLE: <strong>${d.summary.generated_at}</strong>`;
+            document.getElementById('personaMeta').innerHTML = `ACTIVE FOCUS: <strong>${d.title}</strong> | CYCLE: <strong>${d.summary.generated_at}</strong>`;
             document.getElementById('personaKpiGrid').innerHTML = [kpiCard('Current Profile', d.title), kpiCard('Signal Count', d.summary.event_count), kpiCard('System State', 'NOMINAL')].join('');
             document.getElementById('personaCardGrid').innerHTML = d.cards.map(c => `
                 <div class="card">
@@ -372,7 +366,7 @@
             const d = await r.json(); 
             if (d.status !== 'success') return; 
             document.getElementById('resultsSection').style.display = 'block'; 
-            document.getElementById('resultsSummaryCount').textContent = `TOTAL SIGNALS: ${d.stages.news_gathering?.count || 0} // SYSTEM STATE: NOMINAL`;
+            document.getElementById('resultsSummaryCount').textContent = `TOTAL SIGNALS: ${d.stages.news_gathering?.count || 0} | SYSTEM STATE: NOMINAL`;
             renderRiskMatrix(d.stages.analysis?.analysis); 
         }
 

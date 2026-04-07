@@ -791,7 +791,7 @@ _DATA_DASHBOARD_HTML = r"""
 <body>
 <header>
   <div>
-    <h1>ARGUS // DATA INFRASTRUCTURE CONSOLE</h1>
+    <h1>ARGUS | DATA INFRASTRUCTURE CONSOLE</h1>
     <p>Inventory · Coverage · Signal Analysis</p>
   </div>
   <div class="pill" id="kpi_dir">-</div>
