@@ -230,14 +230,15 @@ button:hover {
     border-collapse: collapse;
     width: 100%;
     border: 1px solid var(--border);
+    table-layout: fixed;
 }
 
 .matrix-grid th, .matrix-grid td {
-    padding: 12px;
+    padding: 8px 4px;
     border: 1px solid var(--border);
     text-align: center;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .matrix-axis-label {
@@ -245,12 +246,80 @@ button:hover {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-size: 9px !important;
 }
 
-.matrix-cell-extreme { background: #FEE2E2; color: #991B1B; }
-.matrix-cell-high { background: #FFEDD5; color: #9A3412; }
-.matrix-cell-medium { background: #FEF9C3; color: #854D0E; }
-.matrix-cell-low { background: #DCFCE7; color: #166534; }
+.matrix-cell-extreme { background: #fee2e2; color: #991b1b; }
+.matrix-cell-high { background: #ffedd5; color: #9a3412; }
+.matrix-cell-medium { background: #fef9c3; color: #854d0e; }
+.matrix-cell-low { background: #dcfce7; color: #166534; }
+
+/* Professional Table Styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: white;
+}
+
+.data-table th {
+    background: #F8FAFC;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.02em;
+}
+
+.data-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+    vertical-align: top;
+}
+
+.data-table tr:hover {
+    background: #FBFCFD;
+}
+
+/* Risk Badges */
+.risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.risk-extreme { color: #DC2626; }
+.risk-extreme .dot { background: #DC2626; }
+.risk-high { color: #EA580C; }
+.risk-high .dot { background: #EA580C; }
+.risk-medium { color: #CA8A04; }
+.risk-medium .dot { background: #CA8A04; }
+.risk-low { color: #16A34A; }
+.risk-low .dot { background: #16A34A; }
+
+.headline-text {
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.headline-text:hover {
+    text-decoration: underline;
+}
 
 .pipeline-visualization {
     background: white;
