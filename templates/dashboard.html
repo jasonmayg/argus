@@ -130,12 +130,42 @@
 
                 <div id="alert" style="display:none; padding:10px 16px; margin-bottom:16px; border-radius:4px; background:var(--primary); color:white; font-weight:600; font-size:12px;"></div>
 
-                <div id="pipelineStatusSection" style="display: none;">
+                <div id="pipelineStatusSection">
                     <div class="dashboard">
-                        <!-- Agent status cards (optional placeholders) -->
+                        <div class="card agent-card">
+                            <h2>DATA INGESTION AGENT</h2>
+                            <div class="card-content" id="newsGathererStatus">
+                                <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                                <p style="color: var(--text-secondary); font-size: 12px;">Monitoring institutional telemetry and global news feeds.</p>
+                            </div>
+                        </div>
+
+                        <div class="card agent-card">
+                            <h2>RISK TAXONOMY ENGINE</h2>
+                            <div class="card-content" id="classifierStatus">
+                                <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                                <p style="color: var(--text-secondary); font-size: 12px;">Classifying signals into sovereign and systemic risk categories.</p>
+                            </div>
+                        </div>
+
+                        <div class="card agent-card">
+                            <h2>ANALYTICAL REASONING</h2>
+                            <div class="card-content" id="analyzerStatus">
+                                <div class="agent-status"><span class="agent-name">Status</span><span class="status-badge status-idle">Idle</span></div>
+                                <p style="color: var(--text-secondary); font-size: 12px;">Executing 2D matrix mapping and LLM-driven inference.</p>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="pipeline-visualization">
-                        <!-- Stages visualization (optional placeholders) -->
+                        <h2 style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Operational Pipeline Flow</h2>
+                        <div class="pipeline-stages">
+                            <div class="stage" id="stage1"><p>Ingestion</p></div>
+                            <div class="stage" id="stage2"><p>Classification</p></div>
+                            <div class="stage" id="stage3"><p>Persistence</p></div>
+                            <div class="stage" id="stage4"><p>Analysis</p></div>
+                            <div class="stage" id="stage5"><p>Reporting</p></div>
+                        </div>
                     </div>
                 </div>
 
@@ -145,40 +175,51 @@
                         <div id="resultsSummaryCount" style="font-size: 11px; font-weight: 700; color: var(--text-muted);"></div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 24px;">
-                        <div id="unifiedEventContainer">
-                            <h3 class="subsection-title" id="riskMatrixItemsHeader" style="margin-top: 0;">Unified Event List</h3>
-                            <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 4px;">
-                                <table class="data-table" id="eventTable">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 120px;">Date</th>
-                                            <th style="width: 120px;">Source</th>
-                                            <th style="width: 100px;">Country</th>
-                                            <th style="width: 120px;">Impact</th>
-                                            <th>Headline</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="riskMatrixItems"></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="matrixSidebar">
-                            <h3 class="subsection-title" style="margin-top: 0;">Risk Matrix</h3>
-                            <div class="matrix-grid-container" id="riskMatrixGrid" style="margin-bottom: 16px;"></div>
-                            <div style="background: #F8FAFC; border: 1px solid var(--border); padding: 12px; border-radius: 4px;">
-                                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Matrix Key</div>
-                                <div style="display: grid; gap: 6px;">
-                                    <div class="risk-badge risk-extreme"><div class="dot"></div> Extreme</div>
-                                    <div class="risk-badge risk-high"><div class="dot"></div> High</div>
-                                    <div class="risk-badge risk-medium"><div class="dot"></div> Medium</div>
-                                    <div class="risk-badge risk-low"><div class="dot"></div> Low</div>
-                                </div>
+                    <!-- Row 1: Risk Matrix -->
+                    <div id="matrixFullRow" style="margin-bottom: 32px;">
+                        <h3 class="subsection-title" style="margin-top: 0;">2D Risk Assessment Matrix</h3>
+                        <div class="matrix-grid-container" id="riskMatrixGrid" style="max-width: 800px;"></div>
+                        <div style="background: #F8FAFC; border: 1px solid var(--border); padding: 12px; border-radius: 4px; margin-top: 12px; display: flex; gap: 24px; align-items: center;">
+                            <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Matrix Key:</div>
+                            <div style="display: flex; gap: 16px;">
+                                <div class="risk-badge risk-extreme"><div class="dot"></div> Extreme</div>
+                                <div class="risk-badge risk-high"><div class="dot"></div> High</div>
+                                <div class="risk-badge risk-medium"><div class="dot"></div> Medium</div>
+                                <div class="risk-badge risk-low"><div class="dot"></div> Low</div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Row 2: Unified Event List -->
+                    <div id="unifiedEventContainer">
+                        <h3 class="subsection-title" id="riskMatrixItemsHeader">Unified Event List</h3>
+                        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 4px;">
+                            <table class="data-table" id="eventTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">Date</th>
+                                        <th style="width: 120px;">Source</th>
+                                        <th style="width: 100px;">Country</th>
+                                        <th style="width: 120px;">Impact</th>
+                                        <th>Headline</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="riskMatrixItems"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
+...
+    <!-- ALERT DETAIL OVERLAY (FOR GUARDIAN) -->
+    <div class="modal-overlay" id="alertDetailOverlay" onclick="closeAlertDetail(event)">
+        <div class="modal-shell" style="width: 600px; left: 50%; top: 50%; transform: translate(-50%, -50%); height: auto;">
+            <div class="drawer-header">
+                <h2 id="alertDetailTitle">INTELLIGENCE NODE DETAIL</h2>
+                <button class="btn-reset" onclick="closeAlertDetail()">CLOSE</button>
+            </div>
+            <div class="drawer-content" id="alertDetailContent"></div>
+        </div>
+    </div>
 
                 <div class="card" style="margin-top: 24px;">
                     <h2 style="font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
@@ -294,6 +335,43 @@
                 </li>`).join('');
         }
 
+        function showGuardianAlertDetail(index) {
+            const alert = guardianTopAlerts[index];
+            if (!alert) return;
+            document.getElementById('alertDetailTitle').textContent = `${alert.country} | ${alert.category}`;
+            document.getElementById('alertDetailContent').innerHTML = `
+                <div style="display:grid; gap:16px;">
+                    <div class="card" style="border-left: 4px solid var(--primary);">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Intelligence Headline</div>
+                        <div style="font-size:16px; font-weight:700;">${escapeHtml(alert.title)}</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                        <div class="card">
+                            <div style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Risk Intensity</div>
+                            <div style="font-size:18px; font-weight:700; color:var(--danger-text);">${alert.score}</div>
+                        </div>
+                        <div class="card">
+                            <div style="font-size:9px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Source Node</div>
+                            <div style="font-size:14px; font-weight:600;">${escapeHtml(alert.source)}</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Operational Rationale</div>
+                        <div style="font-size:12px; line-height:1.6; color:var(--text-secondary);">${escapeHtml(alert.rationale || 'No rationale provided.')}</div>
+                    </div>
+                    <div class="card">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Strategic Recommendation</div>
+                        <div style="font-size:12px; line-height:1.6; color:var(--text-secondary);">${escapeHtml(alert.recommendation || 'No recommendation provided.')}</div>
+                    </div>
+                    <div style="text-align:right; margin-top:8px;">
+                        <a href="${escapeHtml(alert.url)}" target="_blank" class="headline-text" style="font-size:11px;">OPEN SOURCE MATERIAL ↗</a>
+                    </div>
+                </div>`;
+            document.getElementById('alertDetailOverlay').classList.add('show');
+        }
+
+        function closeAlertDetail(e) { if (e && e.target.id !== 'alertDetailOverlay' && e.target.type !== 'button') return; document.getElementById('alertDetailOverlay').classList.remove('show'); }
+
         async function loadGuardianDashboard() {
             const r = await fetch(`${API_BASE}/guardian/dashboard`); const d = await r.json();
             if (d.status !== 'success') return;
@@ -313,13 +391,13 @@
                     <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:monospace;">${c.alert_count} Alerts</div>
                 </div>`).join('');
             guardianTopAlerts = d.critical_alerts_top5 || [];
-            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => `
+            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map((a, i) => `
                 <tr style="border-bottom:1px solid var(--border);">
                     <td style="padding:12px; font-weight:700;">${escapeHtml(a.country)}</td>
                     <td style="padding:12px; color:var(--text-secondary);">${escapeHtml(a.category)}</td>
                     <td style="padding:12px;"><span class="status-badge" style="background:var(--danger-bg); color:var(--danger-text);">${a.score}</span></td>
                     <td style="padding:12px; font-size:11px;">${escapeHtml(a.title)}</td>
-                    <td style="padding:12px;"><button style="padding:4px 8px; font-size:10px;">INSPECT</button></td>
+                    <td style="padding:12px;"><button onclick="showGuardianAlertDetail(${i})" style="padding:4px 8px; font-size:10px; text-transform:uppercase;">INSPECT</button></td>
                 </tr>`).join('');
         }
 
@@ -378,16 +456,17 @@
             const scored = analysis.scored_items || [];
             
             // Build Matrix
-            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">P \\ I</th>';
-            IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label" style="font-size: 8px;">${lbl.substr(0, 3)}</th>`);
+            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label" style="width: 100px;">PROBABILITY \\ IMPACT</th>';
+            IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
             gridHtml += '</tr></thead><tbody>';
             for (let p = 5; p >= 1; p--) {
-                gridHtml += `<tr><th class="matrix-axis-label" style="font-size: 8px;">${PROB_LABELS[p-1].substr(0, 3)}</th>`;
+                gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
                 for (let i = 1; i <= 5; i++) { 
                     const level = MATRIX_LEVEL[p-1][i-1]; 
                     const count = summary ? (summary[p-1][i-1] || '0') : '0'; 
                     gridHtml += `<td class="matrix-cell-${level.toLowerCase()}">
-                        <div style="font-size:11px; font-weight:700;">${count}</div>
+                        <div style="font-size:14px; font-weight:700;">${count}</div>
+                        <div style="font-size:8px; opacity:0.7; text-transform:uppercase; margin-top:2px;">${level}</div>
                     </td>`; 
                 }
                 gridHtml += '</tr>';
