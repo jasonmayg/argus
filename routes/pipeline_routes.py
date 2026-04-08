@@ -13,8 +13,10 @@ Handles:
 """
 
 import asyncio
+import json
 import threading
 from datetime import datetime
+from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
 
@@ -25,6 +27,22 @@ from state import execution_state, get_orchestrator, reset_orchestrator
 
 pipeline_bp = Blueprint("pipeline", __name__)
 
+# ── Result persistence path ───────────────────────────────────────────────
+RESULTS_PATH = Path("shared_storage/latest_results.json")
+
+
+def _save_results(result: dict) -> None:
+    """Persist pipeline results to disk so other modules can read them."""
+    try:
+        RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        clean = sanitize_for_json(result)
+        RESULTS_PATH.write_text(
+            json.dumps(clean, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        print(f"[pipeline_routes] WARNING: could not save results to {RESULTS_PATH}: {e}")
+
 
 @pipeline_bp.route("/")
 def index():
@@ -34,10 +52,10 @@ def index():
 @pipeline_bp.route("/api/status")
 def get_status():
     return jsonify({
-        "is_running": execution_state["is_running"],
+        "is_running":    execution_state["is_running"],
         "current_stage": execution_state["current_stage"],
         "agents_status": get_orchestrator().get_agent_summary(),
-        "timestamp": datetime.now().isoformat(),
+        "timestamp":     datetime.now().isoformat(),
     })
 
 
@@ -55,6 +73,10 @@ def execute_pipeline():
             loop.close()
             execution_state["result"] = result
             execution_state["current_stage"] = "completed"
+
+            # ★ Persist results to disk so ai_routes / classify_news can read them
+            _save_results(result)
+
         except Exception as e:
             execution_state["result"] = {"error": str(e)}
             execution_state["current_stage"] = "failed"
@@ -68,16 +90,7 @@ def execute_pipeline():
 
 @pipeline_bp.route("/api/analyze", methods=["POST"])
 def analyze_items():
-    """Synchronous analysis endpoint for the Bridge Manager.
-
-    Accepts:
-        POST {"news_items": [...], "source_file": "optional_label"}
-
-    Returns:
-        Enriched JSON with 2D risk-matrix scores for every item, plus an
-        aggregate summary.  Runs the RiskClassifier and AnalysisAgent inline
-        (blocking); use /api/execute for the full async pipeline instead.
-    """
+    """Synchronous analysis endpoint for the Bridge Manager."""
     body = request.get_json(silent=True) or {}
     news_items = body.get("news_items")
 
@@ -129,8 +142,18 @@ def analyze_items():
 
 @pipeline_bp.route("/api/results")
 def get_results():
+    # First try in-memory result
     if execution_state["result"]:
         return jsonify(sanitize_for_json(execution_state["result"]))
+
+    # Fallback: read from disk (survives server restarts)
+    if RESULTS_PATH.exists():
+        try:
+            data = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+            return jsonify(data)
+        except Exception:
+            pass
+
     return jsonify({"status": "no_results"})
 
 
@@ -138,7 +161,7 @@ def get_results():
 def get_agent_logs(agent_name):
     orchestrator = get_orchestrator()
     agent_map = {
-        "news_gatherer":  orchestrator.news_gatherer,
+        "news_gatherer":   orchestrator.news_gatherer,
         "risk_classifier": orchestrator.risk_classifier,
         "database":        orchestrator.database_manager,
         "analyzer":        orchestrator.analyzer,

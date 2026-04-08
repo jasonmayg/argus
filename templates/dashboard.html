@@ -3,391 +3,1886 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARGUS - Institutional Risk Analysis</title>
+    <title>ARGUS — Treasury Risk Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
+
+<!-- ═══════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════ -->
+<aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">A</div>
+        <div>
+            <div class="sidebar-logo-text">ARGUS</div>
+            <div class="sidebar-logo-sub">Risk Intelligence</div>
+        </div>
+    </div>
+
+    <!-- Role Switcher -->
+    <div class="sidebar-role" onclick="openPersonaLogin()">
+        <div class="sidebar-role-label">Active Role</div>
+        <div class="sidebar-role-name" id="sidebarRoleName">Cash Manager</div>
+    </div>
+
+    <!-- Main Nav -->
+    <nav class="sidebar-nav">
+        <div class="sidebar-section-label">Workspace</div>
+
+        <a class="nav-item active" onclick="showPage('home', this)">
+            <span class="nav-icon">⌂</span>
+            Home
+        </a>
+        <a class="nav-item" onclick="showPage('risk', this)">
+            <span class="nav-icon">◈</span>
+            Risk Monitor
+            <span class="nav-badge" id="riskBadge" style="display:none;">!</span>
+        </a>
+        <a class="nav-item" onclick="showPage('chat', this)">
+            <span class="nav-icon">◎</span>
+            Guardian Chat
+        </a>
+        <a class="nav-item" onclick="showPage('cash', this)">
+            <span class="nav-icon">◇</span>
+            Cash Position
+        </a>
+        <a class="nav-item" onclick="showPage('news', this)">
+            <span class="nav-icon">◉</span>
+            News
+        </a>
+        <a class="nav-item" onclick="showPage('data', this)">
+            <span class="nav-icon">▦</span>
+            Data Source
+        </a>
+    </nav>
+
+    <!-- Spacer pushes everything below to bottom -->
+    <div style="flex:1;"></div>
+
+    <!-- System Status -->
+    <div class="sidebar-status">
+        <div class="status-dot" id="systemDot"></div>
+        <span id="systemStatusText">SYSTEM NOMINAL</span>
+    </div>
+
+    <!-- Daily Jobs Button fixed at bottom -->
+    <div style="padding: 12px 10px 4px;">
+        <button class="btn btn-primary" id="executeBtn" onclick="executePipeline()"
+            style="width:100%; justify-content:center; padding:10px; font-size:12px; letter-spacing:0.06em; border-radius:4px;">
+            &#9654;&nbsp; Daily Jobs
+        </button>
+    </div>
+
+    <!-- Footer clock -->
+    <div class="sidebar-footer">
+        <div class="nav-item" style="color: var(--sidebar-section-label); font-size:10px; cursor:default;">
+            <span class="nav-icon">◌</span>
+            <span id="sidebarClock">--:--:-- UTC</span>
+        </div>
+    </div>
+
+</aside>
+
+
+<!-- ═══════════════════════════════════════════
+     MAIN SHELL
+═══════════════════════════════════════════ -->
+<div class="app-shell">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-title" id="topbarTitle">Home</div>
+        <div class="topbar-right">
+            <div class="topbar-clock" id="topbarClock">—</div>
+            <span class="status-badge status-idle" id="pipelineStatusBadge">Idle</span>
+        </div>
+    </div>
+
+    <!-- Page Content -->
+    <div class="page-content">
+
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner"></div>
+
+        <!-- ─────────────────────────────────────
+             PAGE: HOME
+        ───────────────────────────────────── -->
+        <div class="page active" id="page-home">
+
+            <!-- ① Persona + status bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center;
+                        background:white; border:1px solid var(--border); border-radius:6px;
+                        padding:9px 16px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:9px; font-weight:700; text-transform:uppercase;
+                                letter-spacing:0.1em; color:var(--text-muted); font-family:var(--font-mono);">
+                        Active Role
+                    </div>
+                    <div style="font-size:12px; font-weight:600; color:var(--text-main);"
+                         id="homeRoleName">Cash Manager</div>
+                    <button class="btn btn-sm btn-ghost" onclick="openPersonaLogin()"
+                        style="font-size:10px; padding:2px 8px; color:var(--primary);">Switch</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <div style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);"
+                         id="homeLastRun">Last run: —</div>
+                    <span class="status-badge status-idle" id="homePipelineBadge">Idle</span>
+                </div>
+            </div>
+
+            <!-- ② Top row: Brief (left) + KPIs (right) -->
+            <div style="display:grid; grid-template-columns:1.6fr 1fr; gap:10px; margin-bottom:10px;">
+
+                <!-- Intelligence Brief -->
+                <div class="brief-card" style="margin-bottom:0;">
+                    <div class="brief-header">
+                        <div class="brief-title">⬡ Intelligence Brief</div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <div class="brief-meta" id="briefMeta">—</div>
+                            <button class="btn btn-sm" onclick="generateBrief()" id="briefBtn">Generate</button>
+                        </div>
+                    </div>
+                    <div class="brief-body loading" id="briefBody">
+                        Click Generate or run Daily Jobs to produce an AI intelligence brief.
+                    </div>
+                    <div class="brief-signals" id="briefSignals"></div>
+                </div>
+
+                <!-- KPI column -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Risk Level</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
+                             id="kpiRisk">—</div>
+                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Overall</div>
+                    </div>
+                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Countries</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
+                             id="kpiCountries">—</div>
+                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Monitored</div>
+                    </div>
+                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Signals</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
+                             id="kpiSignals">—</div>
+                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Last run</div>
+                    </div>
+                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Trend</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
+                             id="kpiTrend">—</div>
+                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Direction</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ③ Pipeline progress — compact, only when running -->
+            <div id="pipelineCard" style="display:none; margin-bottom:10px;">
+                <div style="background:white; border:1px solid var(--primary); border-radius:6px;
+                            padding:10px 16px; display:flex; align-items:center; gap:12px;">
+                    <span class="status-badge status-running">Running</span>
+                    <div style="flex:1; display:grid; grid-template-columns:repeat(5,1fr); gap:6px;">
+                        <div class="stage" id="stage1"><p>Ingestion</p></div>
+                        <div class="stage" id="stage2"><p>Classification</p></div>
+                        <div class="stage" id="stage3"><p>Persistence</p></div>
+                        <div class="stage" id="stage4"><p>Analysis</p></div>
+                        <div class="stage" id="stage5"><p>Reporting</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ④ Risk category cards (from news DB) -->
+            <div style="margin-bottom:10px;">
+                <div style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
+                            color:var(--text-muted); font-family:var(--font-mono); margin-bottom:8px;">
+                    Risk Signal Categories
+                </div>
+                <div id="riskCategoryCards" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px;">
+                    <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;
+                                grid-column:1/-1;">Loading risk categories…</div>
+                </div>
+            </div>
+
+            <!-- ⑤ Operational Logs — slim, hidden by default -->
+            <div class="card" style="padding:10px 14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;
+                            cursor:pointer;" onclick="toggleHomeLogs()">
+                    <div style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+                                color:var(--text-muted); font-family:var(--font-mono);">
+                        Operational Logs
+                    </div>
+                    <span style="font-size:10px; color:var(--text-muted);" id="homeLogsToggle">Show ▾</span>
+                </div>
+                <div id="homeLogsInner" style="display:none; margin-top:8px;">
+                    <div class="log-section" id="logsContainer" style="max-height:100px;">
+                        <div class="log-entry">ARGUS Intelligence Engine v2.5 // Ready.</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Hidden agent status elements (still needed by JS) -->
+            <div style="display:none;">
+                <div id="newsGathererStatus"></div>
+                <div id="classifierStatus"></div>
+                <div id="analyzerStatus"></div>
+            </div>
+
+        </div><!-- /page-home -->
+
+
+        <!-- ─────────────────────────────────────
+             PAGE: RISK MONITOR
+        ───────────────────────────────────── -->
+        <div class="page" id="page-risk">
+
+            <!-- Executive KPIs -->
+            <div class="kpi-row" style="margin-bottom:20px;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Monitored Jurisdictions</div>
+                    <div class="kpi-value" id="riskKpiCountries">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Active Alerts</div>
+                    <div class="kpi-value" id="riskKpiAlerts">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">High-Risk Nodes</div>
+                    <div class="kpi-value" id="riskKpiHigh">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Downside Risk Index</div>
+                    <div class="kpi-value" id="riskKpiDownside">—</div>
+                    <div class="kpi-sub" id="riskKpiDownsideSub"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">FX High-Risk Pairs</div>
+                    <div class="kpi-value" id="riskKpiFX">—</div>
+                </div>
+            </div>
+
+            <!-- Top Countries -->
+            <div class="card" style="margin-bottom:20px;">
+                <div class="section-title">Top Risk Jurisdictions</div>
+                <div id="countryBoardGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px;"></div>
+            </div>
+
+            <!-- Two-column alerts: News + Data -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+
+                <!-- News Alerts -->
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;
+                                padding:12px 16px; border-bottom:1px solid var(--border);
+                                background:#F8FAFC;">
+                        <div style="font-size:10px; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.08em; color:var(--text-muted); font-family:var(--font-mono);">
+                            📰 News Alerts
+                        </div>
+                        <span class="status-badge" id="newsAlertCount"
+                              style="background:var(--idle-bg); color:var(--idle-text);">—</span>
+                    </div>
+                    <div style="overflow-y:auto; max-height:360px;">
+                        <table class="data-table" style="font-size:11px;">
+                            <thead>
+                                <tr>
+                                    <th>Country</th>
+                                    <th>Category</th>
+                                    <th>Score</th>
+                                    <th>Headline</th>
+                                </tr>
+                            </thead>
+                            <tbody id="criticalAlertsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Data Alerts -->
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;
+                                padding:12px 16px; border-bottom:1px solid var(--border);
+                                background:#F8FAFC;">
+                        <div style="font-size:10px; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.08em; color:var(--text-muted); font-family:var(--font-mono);">
+                            📊 Data Alerts
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span class="status-badge" id="dataAlertHighCount"
+                                  style="display:none; background:var(--danger-bg); color:var(--danger-text);">0 High</span>
+                            <span class="status-badge" id="dataAlertTotalCount"
+                                  style="background:var(--idle-bg); color:var(--idle-text);">—</span>
+                            <button class="btn btn-sm btn-ghost" onclick="loadDataAlerts(true)"
+                                style="font-size:10px; padding:2px 6px;">↻</button>
+                        </div>
+                    </div>
+                    <div style="overflow-y:auto; max-height:360px;" id="dataAlertsBody">
+                        <div style="text-align:center; padding:32px; color:var(--text-muted);
+                                    font-size:11px; font-family:var(--font-mono);">
+                            Loading data alerts…
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Risk Matrix -->
+            <div class="card" id="riskMatrixSection" style="display:none; margin-bottom:20px;">
+                <div class="section-title">2D Risk Assessment Matrix</div>
+                <div style="overflow-x:auto; margin-bottom:24px;">
+                    <div id="riskMatrixGrid"></div>
+                </div>
+                <div class="section-title" id="riskMatrixItemsHeader">Scored Intelligence Nodes</div>
+                <div id="riskMatrixItems" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:16px;"></div>
+            </div>
+
+            <!-- Empty state -->
+            <div id="riskEmptyState" class="card" style="text-align:center; padding:48px; color:var(--text-muted);">
+                <div style="font-size:32px; margin-bottom:12px;">◈</div>
+                <div style="font-size:13px; font-weight:600; margin-bottom:6px;">No pipeline data yet</div>
+                <div style="font-size:12px;">Run the pipeline from Home to populate risk data.</div>
+                <button class="btn btn-primary" style="margin-top:20px;" onclick="showPage('home', null)">Go to Home</button>
+            </div>
+
+        </div><!-- /page-risk -->
+
+
+        <!-- ─────────────────────────────────────
+             PAGE: GUARDIAN CHAT
+        ───────────────────────────────────── -->
+        <div class="page" id="page-chat">
+            <div class="chat-shell">
+
+                <!-- History Panel -->
+                <div class="chat-history-panel">
+                    <div class="chat-history-header">
+                        Conversations
+                        <button class="btn btn-sm btn-ghost" onclick="newChatSession()" style="font-size:16px; padding:0 4px;">＋</button>
+                    </div>
+                    <div class="chat-history-list" id="chatHistoryList">
+                        <!-- populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Chat Main -->
+                <div class="chat-main">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message ai">
+                            <div class="chat-avatar ai">A</div>
+                            <div class="chat-bubble">
+                                Hello. I'm the ARGUS Guardian. I have access to your pipeline results, risk data, and market signals.<br><br>
+                                Ask me anything — current risk exposure, country analysis, pipeline results, or market conditions.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <textarea class="chat-input" id="chatInput" rows="1"
+                            placeholder="Ask about risk exposure, country analysis, pipeline results…"
+                            onkeydown="handleChatKey(event)"
+                            oninput="autoResize(this)"></textarea>
+                        <button class="btn btn-primary" onclick="sendChatMessage()" id="chatSendBtn">Send</button>
+                    </div>
+                </div>
+
+            </div>
+        </div><!-- /page-chat -->
+
+
+        <!-- ─────────────────────────────────────
+             PAGE: CASH POSITION
+        ───────────────────────────────────── -->
+        <div class="page" id="page-cash">
+
+            <!-- Header row -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">
+                        SIMULATED DATA — Google Treasury Global Cash Position
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);" id="cashAsOf">—</div>
+                    <button class="btn btn-sm" onclick="renderCashPage()">↻ Refresh</button>
+                </div>
+            </div>
+
+            <!-- Global summary KPIs -->
+            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px;" id="cashKpiRow"></div>
+
+            <!-- Currency filter -->
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                <span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+                             color:var(--text-muted); font-family:var(--font-mono);">Filter:</span>
+                <button class="btn btn-sm cash-filter active" data-filter="all" onclick="filterCash('all',this)">All Regions</button>
+                <button class="btn btn-sm cash-filter" data-filter="americas" onclick="filterCash('americas',this)">Americas</button>
+                <button class="btn btn-sm cash-filter" data-filter="europe" onclick="filterCash('europe',this)">Europe</button>
+                <button class="btn btn-sm cash-filter" data-filter="apac" onclick="filterCash('apac',this)">Asia Pacific</button>
+            </div>
+
+            <!-- Main table -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <table class="data-table" id="cashTable" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th style="width:160px;">Entity / Country</th>
+                            <th>Currency</th>
+                            <th style="text-align:right;">Local Balance</th>
+                            <th style="text-align:right;">USD Equivalent</th>
+                            <th style="text-align:right;">% of Total</th>
+                            <th style="text-align:right;">30-Day Change</th>
+                            <th>Risk Level</th>
+                            <th>FX Rate</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cashTableBody"></tbody>
+                    <tfoot id="cashTableFoot"></tfoot>
+                </table>
+            </div>
+
+            <!-- Bottom row: bar chart + history chart -->
+            <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:14px; margin-top:14px;">
+
+                <!-- Bar chart -->
+                <div class="card" style="padding:16px;">
+                    <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+                                 color:var(--text-muted); font-family:var(--font-mono); margin-bottom:12px;">
+                        USD Equivalent by Entity (Top 10)
+                    </div>
+                    <div id="cashBarChart" style="display:flex; flex-direction:column; gap:6px;"></div>
+                </div>
+
+                <!-- History trend chart -->
+                <div class="card" style="padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+                                     color:var(--text-muted); font-family:var(--font-mono);">
+                            Historical Trend — USD (Top 5 Entities)
+                        </div>
+                        <select id="cashHistoryCountry" onchange="renderCashHistoryChart()"
+                            style="font-size:11px; padding:4px 8px; border:1px solid var(--border);
+                                   border-radius:4px; font-family:var(--font-mono); background:white;">
+                            <option value="top5">Top 5</option>
+                            <option value="USA">USA</option>
+                            <option value="UK">UK</option>
+                            <option value="Germany">Germany</option>
+                            <option value="France">France</option>
+                            <option value="Japan">Japan</option>
+                            <option value="China">China</option>
+                            <option value="Canada">Canada</option>
+                            <option value="Brazil">Brazil</option>
+                            <option value="India">India</option>
+                            <option value="Australia">Australia</option>
+                            <option value="Mexico">Mexico</option>
+                            <option value="South Korea">South Korea</option>
+                            <option value="Hong Kong">Hong Kong</option>
+                        </select>
+                    </div>
+                    <div id="cashHistoryChartWrap" style="height:220px; position:relative;">
+                        <canvas id="cashHistoryChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div><!-- /page-cash -->
+
+
+        <!-- ─────────────────────────────────────
+             PAGE: NEWS
+        ───────────────────────────────────── -->
+        <div class="page" id="page-news">
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);" id="newsLastFetch">—</div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span id="newsSelectedCount" style="display:none; font-size:11px;
+                          font-family:var(--font-mono); color:var(--primary);">0 selected</span>
+                    <button class="btn btn-sm" id="analyzeSelectedBtn" style="display:none;
+                            background:var(--primary);color:white;border:none;"
+                            onclick="analyzeSelectedNews()">
+                        ✦ Analyze Selected
+                    </button>
+                    <button class="btn btn-sm" onclick="loadNews()">↻ Refresh</button>
+                </div>
+            </div>
+
+            <!-- News grid -->
+            <div class="news-grid" id="newsGrid">
+                <div style="grid-column:1/-1; text-align:center; padding:48px; color:var(--text-muted);">
+                    <div style="font-size:24px; margin-bottom:12px;">◉</div>
+                    <div>Loading news feed…</div>
+                </div>
+            </div>
+
+            <!-- Analysis result panel (hidden by default) -->
+            <div id="newsAnalysisPanel" style="display:none; margin-top:16px;">
+                <div class="card" style="border-left:3px solid var(--primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase;
+                                    letter-spacing:0.08em; color:var(--primary); font-family:var(--font-mono);">
+                            ✦ Personalised Analysis
+                        </div>
+                        <button class="btn btn-sm btn-ghost" onclick="closeNewsAnalysis()">✕ Close</button>
+                    </div>
+                    <div id="newsAnalysisBody" style="font-size:13px; line-height:1.7; color:var(--text-secondary);">
+                        Analysing…
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /page-news -->
+
+
+        <!-- ─────────────────────────────────────
+             PAGE: DATA SOURCE
+        ───────────────────────────────────── -->
+        <div class="page" id="page-data">
+            <div class="card" style="padding:0; overflow:hidden;">
+                <iframe id="dataDashboardFrame"
+                    style="width:100%; height:calc(100vh - 52px - 48px - 32px); border:none; display:block;"
+                    src="/data"></iframe>
+            </div>
+        </div><!-- /page-data -->
+
+    </div><!-- /page-content -->
+
+    <div class="app-footer">
+        CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY
+    </div>
+
+</div><!-- /app-shell -->
+
+
+<!-- ═══════════════════════════════════════════
+     PERSONA LOGIN MODAL
+═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="personaLoginOverlay" onclick="handlePersonaOverlayClick(event)">
+    <div style="background:white; border-radius:6px; padding:40px; width:min(480px,95vw); box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+        <h2 style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:24px; font-family:var(--font-mono);">
+            Select Analytical Role
+        </h2>
+        <div style="display:grid; gap:16px;">
             <div>
-                <h1>ARGUS // RISK INTELLIGENCE</h1>
-                <p>Institutional Grade Monitoring & Multi-Agent Analysis</p>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Operator Name</label>
+                <input id="loginName" type="text" placeholder="e.g. Lead Strategist"
+                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;">
             </div>
-            <div style="text-align: right;">
-                <div id="lastUpdate" style="font-family: monospace; font-size: 11px; color: var(--text-muted);">IDLE</div>
-                <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">System Heartbeat</div>
+            <div>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Analytical Persona</label>
+                <select id="loginPersona"
+                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;"></select>
             </div>
-        </header>
-
-        <div id="alert" style="display:none; padding:10px 16px; margin-bottom:16px; border-radius:4px; background:var(--primary); color:white; font-weight:600; font-size:12px;"></div>
-
-        <div class="controls">
-            <button class="btn-execute" id="executeBtn" onclick="executePipeline()">RUN PIPELINE</button>
-            <button onclick="openPersonaDashboard()">CASH MANAGER VIEW</button>
-            <button onclick="openGuardianDashboard()">GLOBAL GUARDIAN</button>
-            <button onclick="openDataDashboard()">DATA INFRASTRUCTURE</button>
-            <button class="btn-reset" id="resetBtn" onclick="resetSystem()" style="display:none;">RESET SYSTEM</button>
-        </div>
-
-        <div class="dashboard">
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>DATA INGESTION AGENT</h2>
-                <div class="card-content" id="newsGathererStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Monitoring institutional telemetry and global news feeds.</p>
-                </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Sources: Federal Reserve, FRED, USGS, GDELT, Custom SPA Crawlers.</p>
-                </div>
+            <div style="background:#F8FAFC; padding:14px; border-radius:4px; border:1px solid var(--border);">
+                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
+                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.5;">-</div>
             </div>
-
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>RISK TAXONOMY ENGINE</h2>
-                <div class="card-content" id="classifierStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Classifying signals into sovereign and systemic risk categories.</p>
-                </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Taxonomy: Liquidity, Regulatory, Geopolitical, Macroeconomic.</p>
-                </div>
-            </div>
-
-            <div class="card agent-card" onclick="toggleAgentDetail(this)">
-                <h2>ANALYTICAL REASONING</h2>
-                <div class="card-content" id="analyzerStatus">
-                    <div class="agent-status"><span class="agent-name">Pipeline Status</span><span class="status-badge status-idle">Idle</span></div>
-                    <p style="color: var(--text-secondary); font-size: 12px;">Executing 2D matrix mapping and LLM-driven inference.</p>
-                </div>
-                <div class="agent-detail" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                    <p style="font-size: 11px; color: var(--text-muted);">Engine: Claude 3.5 Sonnet / GPT-4o // Vector Logic.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="pipeline-visualization">
-            <h2 style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;">Operational Pipeline Status</h2>
-            <div class="pipeline-stages">
-                <div class="stage" id="stage1"><p>Ingestion</p></div>
-                <div class="stage" id="stage2"><p>Classification</p></div>
-                <div class="stage" id="stage3"><p>Persistence</p></div>
-                <div class="stage" id="stage4"><p>Analysis</p></div>
-                <div class="stage" id="stage5"><p>Reporting</p></div>
-            </div>
-        </div>
-
-        <div class="results-section" id="resultsSection" style="display: none;">
-            <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 2px solid var(--primary); display: inline-block;">INTELLIGENCE OUTPUT</h2>
-            <div id="resultsSummary" style="margin-bottom: 20px;"></div>
-            <div id="riskMatrix">
-                <h3 class="subsection-title">2D Risk Assessment Matrix</h3>
-                <div class="matrix-grid-container" style="overflow-x: auto; margin-bottom: 24px;"><div id="riskMatrixGrid"></div></div>
-                <h3 class="subsection-title" id="riskMatrixItemsHeader">Scored Intelligence Nodes</h3>
-                <div id="riskMatrixItems" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;"></div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 30px;">
-            <h2 style="font-size: 12px; font-weight: 700;">OPERATIONAL LOGS</h2>
-            <div class="log-section" id="logsContainer"><div class="log-entry">ARGUS Intelligence Engine v2.5 // Ready for deployment.</div></div>
-        </div>
-
-        <div class="footer"><p>CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY</p></div>
-    </div>
-
-    <!-- MODALS -->
-    <div class="modal-overlay" id="personaModal" onclick="closePersonaDashboard(event)">
-        <div class="modal-shell">
-            <div class="guardian-section" onclick="event.stopPropagation()">
-                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
-                    <h2>OPERATIONAL ROLE-BASED DASHBOARD</h2>
-                    <button class="btn-reset" onclick="closePersonaDashboard()" style="padding: 4px 12px; font-size: 11px;">CLOSE VIEW</button>
-                </div>
-                <div id="personaSummaryText" style="margin-bottom: 20px; color: var(--text-main); font-weight: 700; font-size: 14px;"></div>
-                <div id="personaMeta" style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px; padding: 12px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 4px;"></div>
-                <div id="personaKpiGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;"></div>
-                <div id="personaCardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;"></div>
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 16px;">
-                    <div class="card" style="padding:20px;">
-                        <h3 style="font-size: 11px; margin-bottom:16px; color:var(--text-main); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Strategic Directives</h3>
-                        <ol id="personaActionList" style="padding-left:16px; font-size:12px; line-height:1.6; color: var(--text-secondary);"></ol>
-                    </div>
-                    <div class="card" style="padding:20px;">
-                        <h3 style="font-size: 11px; margin-bottom:16px; color:var(--text-main); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Exposure Watchlist</h3>
-                        <ul id="personaCountryList" style="list-style:none; font-size:12px;"></ul>
-                    </div>
-                </div>
-                <div style="margin-top: 24px; text-align: center;"><button onclick="openPersonaLogin()">SWITCH ANALYTICAL FOCUS</button></div>
-            </div>
+            <button type="button" onclick="savePersonaSelection()"
+                style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none; border-radius:4px; font-size:12px; font-weight:700; letter-spacing:0.08em; cursor:pointer;">
+                CONFIRM ROLE
+            </button>
+            <button type="button" onclick="closePersonaLogin()"
+                style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer;">
+                CANCEL
+            </button>
         </div>
     </div>
+</div>
 
-    <div class="modal-overlay" id="guardianModal" onclick="closeGuardianDashboard(event)">
-        <div class="modal-shell">
-            <div class="guardian-section" onclick="event.stopPropagation()">
-                <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
-                    <h2>GLOBAL GUARDIAN MONITOR</h2>
-                    <div style="display:flex; gap:8px;">
-                        <button onclick="loadGuardianDashboard()" style="padding: 6px 12px;">REFRESH DATA</button>
-                        <button class="btn-reset" onclick="closeGuardianDashboard()" style="padding: 6px 12px;">CLOSE</button>
-                    </div>
-                </div>
-                <div id="guardianMeta" style="margin-bottom: 20px; font-size: 11px; color: var(--text-muted); font-family: monospace;"></div>
-                <div id="guardianExecutiveGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;"></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <div id="googleRiskCard" class="card"></div>
-                    <div id="fxRiskCard" class="card"></div>
-                </div>
-                <div id="countryBoardGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
-                <h3 class="subsection-title">Critical Intelligence Alerts</h3>
-                <div style="overflow-x:auto; border:1px solid var(--border); border-radius:4px;">
-                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                        <thead style="background:#F8FAFC; border-bottom:1px solid var(--border);">
-                            <tr>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Jurisdiction</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Taxonomy</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Intensity</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Headline</th>
-                                <th style="padding:12px; text-align:left; font-weight:700; text-transform:uppercase; font-size:10px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="criticalAlertsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Modal overlay styles (inline for modal only) -->
+<style>
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,14,26,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+</style>
 
-    <div class="modal-overlay" id="dataModal" onclick="closeDataDashboard(event)">
-      <div class="modal-shell">
-        <div class="guardian-section" onclick="event.stopPropagation()">
-            <div class="guardian-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px;">
-                <h2>GLOBAL DATA INFRASTRUCTURE</h2>
-                <button class="btn-reset" onclick="closeDataDashboard()">CLOSE</button>
-            </div>
-            <iframe id="dataDashboardFrame" style="width:100%; height:75vh; border:1px solid var(--border); border-radius:4px; background:#F8FAFC;" src="/data"></iframe>
-        </div>
-      </div>
-    </div>
 
-    <div class="modal-overlay" id="personaLoginOverlay">
-        <div class="modal-shell" style="max-width:500px;">
-            <div class="guardian-section" style="padding:40px;">
-                <h2 style="text-align:center; margin-bottom:24px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Analytical Focus Selection</h2>
-                <div style="display:grid; gap:20px;">
-                    <div>
-                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Operator Identity</label>
-                        <input id="loginName" type="text" placeholder="e.g. Lead Strategist" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;">
-                    </div>
-                    <div>
-                        <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">Analytical Persona</label>
-                        <select id="loginPersona" style="width:100%; padding:10px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:inherit;"></select>
-                    </div>
-                    <div style="background:#F8FAFC; padding:16px; border-radius:4px; border:1px solid var(--border);">
-                        <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
-                        <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.4;">-</div>
-                    </div>
-                    <button type="button" onclick="savePersonaSelection()" style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none;">CONFIGURE ENVIRONMENT</button>
-                    <button type="button" onclick="closePersonaLogin()" style="width:100%; border:none; background:transparent; color:var(--text-muted); font-weight:600; font-size:11px;">CANCEL</button>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+const API_BASE = '/api';
+let isExecuting = false;
+let currentPersona = localStorage.getItem('argusPersona') || 'cash_manager';
+let availablePersonas = [];
+let guardianTopAlerts = [];
 
-    <script>
-        const API_BASE = '/api';
-        let isExecuting = false;
-        let guardianTopAlerts = [];
-        let currentPersona = 'cash_manager';
-        let availablePersonas = [];
-        const PROB_LABELS = ['Unlikely','Seldom','Occasional','Likely','Frequent'];
-        const IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic'];
-        const MATRIX_LEVEL = [['Low','Low','Low','Medium','Medium'],['Low','Low','Medium','Medium','High'],['Low','Medium','Medium','High','High'],['Medium','Medium','High','High','Extreme'],['Medium','High','High','Extreme','Extreme']];
+const PROB_LABELS   = ['Unlikely','Seldom','Occasional','Likely','Frequent'];
+const IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic'];
+const MATRIX_LEVEL  = [
+    ['Low','Low','Low','Medium','Medium'],
+    ['Low','Low','Medium','Medium','High'],
+    ['Low','Medium','Medium','High','High'],
+    ['Medium','Medium','High','High','Extreme'],
+    ['Medium','High','High','Extreme','Extreme']
+];
 
-        function escapeHtml(text) { return text === null || text === undefined ? '' : String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-        
-        function kpiCard(label, value) { 
-            return `<div class="card">
-                <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; letter-spacing:0.02em;">${escapeHtml(label)}</div>
-                <div style="font-size:20px; font-weight:700; color:var(--text-main); line-height:1.2;">${escapeHtml(value)}</div>
-            </div>`; 
-        }
+// ── Utilities ──────────────────────────────
+function escapeHtml(t) {
+    return t == null ? '' : String(t)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-        async function openPersonaDashboard() { document.getElementById('personaModal').classList.add('show'); await loadPersonaDashboard(); }
-        function closePersonaDashboard(e) { if (e && e.target.id !== 'personaModal' && e.target.type !== 'button') return; document.getElementById('personaModal').classList.remove('show'); }
-        async function openGuardianDashboard() { document.getElementById('guardianModal').classList.add('show'); await loadGuardianDashboard(); }
-        function closeGuardianDashboard(e) { if (e && e.target.id !== 'guardianModal' && e.target.type !== 'button') return; document.getElementById('guardianModal').classList.remove('show'); }
-        function openDataDashboard() { document.getElementById('dataModal').classList.add('show'); }
-        function closeDataDashboard(e) { if (e && e.target.id !== 'dataModal' && e.target.type !== 'button') return; document.getElementById('dataModal').classList.remove('show'); }
-        function openPersonaLogin() { document.getElementById('personaLoginOverlay').classList.add('show'); }
-        function closePersonaLogin() { document.getElementById('personaLoginOverlay').classList.remove('show'); }
+function showAlert(msg) {
+    const el = document.getElementById('alertBanner');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 5000);
+}
 
-        async function loadPersonas() {
-            const r = await fetch(`${API_BASE}/personas`); const d = await r.json(); availablePersonas = d.personas || [];
-            const sel = document.getElementById('loginPersona');
-            sel.innerHTML = availablePersonas.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
-            updateLoginPersonaPreview(sel.value);
-            sel.onchange = (e) => updateLoginPersonaPreview(e.target.value);
-        }
-        function updateLoginPersonaPreview(val) { const p = availablePersonas.find(x => x.key === val); if (p) { document.getElementById('loginPersonaHeadline').textContent = p.label; document.getElementById('loginPersonaCopy').textContent = p.summary; } }
-        function savePersonaSelection() { currentPersona = document.getElementById('loginPersona').value; localStorage.setItem('argusPersona', currentPersona); closePersonaLogin(); loadPersonaDashboard(); }
+function log(msg, type = '') {
+    const container = document.getElementById('logsContainer');
+    const entry = document.createElement('div');
+    entry.className = `log-entry${type ? ' log-'+type : ''}`;
+    const ts = new Date().toISOString().replace('T',' ').substr(0,19);
+    entry.textContent = `[${ts}] ${msg}`;
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+}
 
-        async function loadPersonaDashboard() {
-            const r = await fetch(`${API_BASE}/persona/dashboard?persona=${currentPersona}`); const d = await r.json();
-            if (d.status !== 'success') return;
-            document.getElementById('personaSummaryText').textContent = d.summary.subheadline;
-            document.getElementById('personaMeta').innerHTML = `ACTIVE FOCUS: <strong>${d.title}</strong> // CYCLE: <strong>${d.summary.generated_at}</strong>`;
-            document.getElementById('personaKpiGrid').innerHTML = [kpiCard('Current Profile', d.title), kpiCard('Signal Count', d.summary.event_count), kpiCard('System State', 'NOMINAL')].join('');
-            document.getElementById('personaCardGrid').innerHTML = d.cards.map(c => `
-                <div class="card">
-                    <div style="font-weight:700; margin-bottom:10px; color:var(--primary); text-transform:uppercase; font-size:10px; letter-spacing:0.02em;">${escapeHtml(c.title)}</div>
-                    <div style="font-size:22px; font-weight:700; margin-bottom:4px;">${escapeHtml(c.metric)}</div>
-                    <div style="font-size:11px; color: var(--text-secondary);">${escapeHtml(c.detail)}</div>
-                </div>`).join('');
-            document.getElementById('personaActionList').innerHTML = d.actions.map(a => `<li style="margin-bottom:12px;">${escapeHtml(a)}</li>`).join('');
-            document.getElementById('personaCountryList').innerHTML = d.top_countries.map(c => `
-                <li style="padding:10px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:500;">${escapeHtml(c.country)}</span>
-                    <strong style="color:var(--primary); font-family:monospace;">${c.max_score}</strong>
-                </li>`).join('');
-        }
+// ── Page Navigation ─────────────────────────
+const PAGE_TITLES = {
+    home: 'Home',
+    risk: 'Risk Monitor',
+    chat: 'Guardian Chat',
+    cash: 'Cash Position',
+    news: 'News',
+    data: 'Data Source',
+};
 
-        async function loadGuardianDashboard() {
-            const r = await fetch(`${API_BASE}/guardian/dashboard`); const d = await r.json();
-            if (d.status !== 'success') return;
-            document.getElementById('guardianMeta').textContent = `GLOBAL_CYCLE_REF: ${d.meta.generated_at_local}`;
-            document.getElementById('guardianExecutiveGrid').innerHTML = [kpiCard('Monitored Jurisdictions', d.executive_summary.high_risk_country_count), kpiCard('Active Alerts', d.executive_summary.total_risk_alert_count), kpiCard('High-Risk Nodes', d.executive_summary.high_risk_alert_count)].join('');
-            document.getElementById('googleRiskCard').innerHTML = `
-                <h4 style="font-weight:700; text-transform:uppercase; font-size:10px; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">Downside Risk Index</h4>
-                <div style="font-size:24px; font-weight:700; color:var(--text-main); margin: 8px 0;">${d.google_downside.percent}%</div>
-                <p style="font-size:11px; color:var(--text-secondary);">CONFIDENCE_LEVEL: ${d.google_downside.level}</p>`;
-            document.getElementById('fxRiskCard').innerHTML = `
-                <h4 style="font-weight:700; text-transform:uppercase; font-size:10px; color:var(--text-muted); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px;">FX Volatility Scan</h4>
-                <div style="font-size:24px; font-weight:700; color:var(--text-main); margin: 8px 0;">${d.fx_summary.high_risk_country_count} <small style="font-size:12px; font-weight:500;">Pairs</small></div>
-                <p style="font-size:11px; color:var(--text-secondary);">EXPOSURE DETECTED</p>`;
-            document.getElementById('countryBoardGrid').innerHTML = d.country_rank_top5.map(c => `
-                <div class="card" style="padding:12px;">
-                    <div style="font-weight:700; font-size:12px;">${escapeHtml(c.country)}</div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:monospace;">${c.alert_count} Alerts</div>
-                </div>`).join('');
-            guardianTopAlerts = d.critical_alerts_top5 || [];
-            document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => `
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:12px; font-weight:700;">${escapeHtml(a.country)}</td>
-                    <td style="padding:12px; color:var(--text-secondary);">${escapeHtml(a.category)}</td>
-                    <td style="padding:12px;"><span class="status-badge" style="background:var(--danger-bg); color:var(--danger-text);">${a.score}</span></td>
-                    <td style="padding:12px; font-size:11px;">${escapeHtml(a.title)}</td>
-                    <td style="padding:12px;"><button style="padding:4px 8px; font-size:10px;">INSPECT</button></td>
-                </tr>`).join('');
-        }
+function showPage(pageId, navEl) {
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-        async function executePipeline() { 
-            if (isExecuting) return; 
-            isExecuting = true; 
-            document.getElementById('executeBtn').disabled = true; 
-            showAlert('INTELLIGENCE PIPELINE ENGAGED', 'info'); 
-            const r = await fetch(`${API_BASE}/execute`, { method: 'POST' }); 
-            if (r.ok) startStatusPolling(); 
-        }
+    // Show target
+    document.getElementById('page-' + pageId).classList.add('active');
+    document.getElementById('topbarTitle').textContent = PAGE_TITLES[pageId] || pageId;
 
-        function startStatusPolling() { 
-            const itv = setInterval(async () => { 
-                const r = await fetch(`${API_BASE}/status`); 
-                const s = await r.json(); 
-                updateStages(s.agents_status); 
-                if (!s.is_running) { 
-                    clearInterval(itv); 
-                    isExecuting = false; 
-                    document.getElementById('executeBtn').disabled = false; 
-                    loadResults(); 
-                    showAlert('OPERATIONAL CYCLE COMPLETE', 'info'); 
-                } 
-            }, 1500); 
-        }
+    // Mark nav active
+    if (navEl) navEl.classList.add('active');
 
-        function updateStages(stats) { 
-            const stages = ['stage1','stage2','stage3','stage4','stage5']; 
-            const keys = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter']; 
-            keys.forEach((k, i) => { 
-                const el = document.getElementById(stages[i]); 
-                if (stats[k]?.status === 'running') el.classList.add('active'); 
-                else if (stats[k]?.status === 'success') { 
-                    el.classList.remove('active'); 
-                    el.style.borderColor = 'var(--success-text)';
-                    el.style.background = 'var(--success-bg)';
-                } 
-            }); 
-        }
+    // Lazy-load page data
+    if (pageId === 'risk') {
+        loadGuardianDashboard();
+        loadDataAlerts();
+        // Reload matrix with merged GCS data if pipeline results exist
+        fetch(`${API_BASE}/results`).then(r => r.json()).then(d => {
+            if (d.status === 'success') renderRiskMatrix(d.stages.analysis?.analysis);
+        }).catch(() => {});
+    }
+    if (pageId === 'news') loadNews();
+    if (pageId === 'chat') renderChatHistory();
+    if (pageId === 'cash') renderCashPage();
+}
 
-        async function loadResults() { 
-            const r = await fetch(`${API_BASE}/results`); 
-            const d = await r.json(); 
-            if (d.status !== 'success') return; 
-            document.getElementById('resultsSection').style.display = 'block'; 
-            document.getElementById('resultsSummary').innerHTML = `
-                <div class="card" style="border-left: 4px solid var(--primary);">
-                    <p style="font-size:13px; font-weight:700;">CYCLE COMPLETE: ${d.stages.news_gathering?.count || 0} signals ingested and taxonomized.</p>
-                </div>`; 
-            renderRiskMatrix(d.stages.analysis?.analysis); 
-        }
+function toggleSection(id) {
+    const el = document.getElementById(id);
+    const isHidden = el.style.display === 'none';
+    el.style.display = isHidden ? 'block' : 'none';
+    const labelId = id === 'agentGrid' ? 'agentToggleLabel' : 'logsToggleLabel';
+    document.getElementById(labelId).textContent = isHidden ? 'Hide ▴' : 'Show ▾';
+}
 
-        function renderRiskMatrix(analysis) {
-            const gridEl = document.getElementById('riskMatrixGrid'); const itemsEl = document.getElementById('riskMatrixItems');
-            if (!gridEl || !itemsEl || !analysis) return;
-            const summary = analysis.matrix_summary; const scored = analysis.scored_items || [];
-            let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">PROB \\ IMPACT</th>';
-            IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
-            gridHtml += '</tr></thead><tbody>';
-            for (let p = 5; p >= 1; p--) {
-                gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
-                for (let i = 1; i <= 5; i++) { 
-                    const level = MATRIX_LEVEL[p-1][i-1]; 
-                    const count = summary ? (summary[p-1][i-1] || '0') : '0'; 
-                    gridHtml += `<td class="matrix-cell-${level.toLowerCase()}">
-                        <div style="font-size:14px; font-weight:700;">${count}</div>
-                        <div style="font-size:8px; opacity:0.8; text-transform:uppercase;">${level}</div>
-                    </td>`; 
-                }
-                gridHtml += '</tr>';
+function toggleAgentDetail(card) {
+    const det = card.querySelector('.agent-detail');
+    det.style.display = det.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Clock ───────────────────────────────────
+function startClock() {
+    function tick() {
+        const now = new Date();
+        const utc = now.toUTCString().replace('GMT','UTC').split(' ').slice(-2).join(' ');
+        const iso = now.toISOString().replace('T',' ').substr(0,19);
+        document.getElementById('topbarClock').textContent = iso + ' UTC';
+        document.getElementById('sidebarClock').textContent = now.toUTCString().substr(17,8) + ' UTC';
+    }
+    tick();
+    setInterval(tick, 1000);
+}
+
+// ── Persona ─────────────────────────────────
+async function loadPersonas() {
+    try {
+        const r = await fetch(`${API_BASE}/personas`);
+        const d = await r.json();
+        availablePersonas = d.personas || [];
+        const sel = document.getElementById('loginPersona');
+        sel.innerHTML = availablePersonas.map(p =>
+            `<option value="${p.key}"${p.key===currentPersona?' selected':''}>${p.label}</option>`
+        ).join('');
+        updateLoginPersonaPreview(sel.value);
+        sel.onchange = e => updateLoginPersonaPreview(e.target.value);
+        // Update sidebar label
+        const active = availablePersonas.find(p => p.key === currentPersona);
+        if (active) document.getElementById('sidebarRoleName').textContent = active.label;
+    } catch(e) {
+        console.warn('Could not load personas:', e);
+    }
+}
+
+function updateLoginPersonaPreview(val) {
+    const p = availablePersonas.find(x => x.key === val);
+    if (p) {
+        document.getElementById('loginPersonaHeadline').textContent = p.label;
+        document.getElementById('loginPersonaCopy').textContent = p.summary || '';
+    }
+}
+
+function openPersonaLogin() {
+    document.getElementById('personaLoginOverlay').classList.add('show');
+}
+function closePersonaLogin() {
+    document.getElementById('personaLoginOverlay').classList.remove('show');
+}
+function handlePersonaOverlayClick(e) {
+    if (e.target === document.getElementById('personaLoginOverlay')) closePersonaLogin();
+}
+function savePersonaSelection() {
+    currentPersona = document.getElementById('loginPersona').value;
+    localStorage.setItem('argusPersona', currentPersona);
+    const active = availablePersonas.find(p => p.key === currentPersona);
+    if (active) {
+        document.getElementById('sidebarRoleName').textContent = active.label;
+        const homeRole = document.getElementById('homeRoleName');
+        if (homeRole) homeRole.textContent = active.label;
+    }
+    closePersonaLogin();
+}
+
+// ── Pipeline ─────────────────────────────────
+async function executePipeline() {
+    if (isExecuting) return;
+    isExecuting = true;
+    const execBtnEl = document.getElementById('executeBtn');
+    if (execBtnEl) execBtnEl.disabled = true;
+    document.getElementById('pipelineCard').style.display = 'block';
+    const runBadge = document.getElementById('pipelineStatusBadge');
+    if (runBadge) { runBadge.className = 'status-badge status-running'; runBadge.textContent = 'Running'; }
+    const homeBadgeEl = document.getElementById('homePipelineBadge');
+    if (homeBadgeEl) { homeBadgeEl.className = 'status-badge status-running'; homeBadgeEl.textContent = 'Running'; }
+    showAlert('Intelligence pipeline engaged — monitoring execution…');
+    log('Pipeline initiated by operator.');
+
+    try {
+        const r = await fetch(`${API_BASE}/execute`, { method: 'POST' });
+        if (r.ok) startStatusPolling();
+        else throw new Error('Execute failed');
+    } catch(e) {
+        log('Pipeline start error: ' + e.message, 'error');
+        resetPipelineUI();
+    }
+}
+
+function startStatusPolling() {
+    const itv = setInterval(async () => {
+        try {
+            const r = await fetch(`${API_BASE}/status`);
+            const s = await r.json();
+            updateStages(s.agents_status);
+            if (!s.is_running) {
+                clearInterval(itv);
+                resetPipelineUI();
+                // Hide pipeline card after completion
+                const pc = document.getElementById('pipelineCard');
+                if (pc) pc.style.display = 'none';
+                await loadResults();
+                showAlert('Operational cycle complete — generating intelligence brief…');
+                log('Pipeline complete.', 'success');
+                const lastRunKpi = document.getElementById('kpiLastRun');
+                if (lastRunKpi) lastRunKpi.textContent = 'Just now';
+                // Auto-generate brief now that pipeline data is ready
+                await generateBrief();
+                // Refresh risk category cards
+                loadRiskCategories();
             }
-            gridHtml += '</tbody></table>'; gridEl.innerHTML = gridHtml;
-            document.getElementById('riskMatrixItemsHeader').textContent = `SCORED INTELLIGENCE NODES (${scored.length})`;
-            itemsEl.innerHTML = scored.map(item => `
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-                        <span class="status-badge" style="font-size:9px; background:var(--bg-color); color:var(--text-main); border:1px solid var(--border);">${item.matrix_level}</span>
-                        <span style="font-family:monospace; font-size:10px; color:var(--text-muted);">REF: ${Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
-                    </div>
-                    <div style="font-weight:700; font-size:13px; margin-bottom:12px; line-height:1.4;">${escapeHtml(item.title)}</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
-                        <div style="background:#F8FAFC; padding:8px; border:1px solid var(--border); border-radius:2px;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px;">Probability</div>
-                            <div style="font-size:11px; font-weight:600;">${item.probability}</div>
-                        </div>
-                        <div style="background:#F8FAFC; padding:8px; border:1px solid var(--border); border-radius:2px;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px;">Impact</div>
-                            <div style="font-size:11px; font-weight:600;">${item.impact}</div>
-                        </div>
-                    </div>
-                    <div style="font-size:11px; line-height:1.5; color:var(--text-secondary);">
-                        <strong style="font-size:9px; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Rationale</strong>
-                        ${escapeHtml(item.impact_reasoning || 'N/A')}
-                    </div>
-                </div>`).join('');
+        } catch(e) {
+            clearInterval(itv);
+            resetPipelineUI();
+        }
+    }, 1500);
+}
+
+function resetPipelineUI() {
+    isExecuting = false;
+    const execBtn = document.getElementById('executeBtn');
+    if (execBtn) execBtn.disabled = false;
+    const badge = document.getElementById('pipelineStatusBadge');
+    if (badge) { badge.className = 'status-badge status-idle'; badge.textContent = 'Idle'; }
+    const homeBadge = document.getElementById('homePipelineBadge');
+    if (homeBadge) { homeBadge.className = 'status-badge status-idle'; homeBadge.textContent = 'Idle'; }
+}
+
+function updateStages(stats) {
+    const stages = ['stage1','stage2','stage3','stage4','stage5'];
+    const keys   = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter'];
+    keys.forEach((k, i) => {
+        const el = document.getElementById(stages[i]);
+        if (!el) return;
+        if (stats[k]?.status === 'running') {
+            el.className = 'stage active';
+        } else if (stats[k]?.status === 'success') {
+            el.className = 'stage done';
+        }
+    });
+}
+
+// ── Results ──────────────────────────────────
+async function loadResults() {
+    try {
+        const r = await fetch(`${API_BASE}/results`);
+        const d = await r.json();
+        if (d.status !== 'success') return;
+
+        const count = d.stages.news_gathering?.count || 0;
+        document.getElementById('kpiSignals').textContent = count;
+        document.getElementById('kpiRisk').textContent = 'ELEVATED';
+        const now = new Date().toISOString().replace('T',' ').substr(0,16);
+        const lastRunEl = document.getElementById('homeLastRun');
+        if (lastRunEl) lastRunEl.textContent = 'Last run: ' + now + ' UTC';
+        document.getElementById('kpiLastRun') && (document.getElementById('kpiLastRun').textContent = 'Just now');
+
+        // Show risk badge in sidebar
+        document.getElementById('riskBadge').style.display = '';
+
+        await renderRiskMatrix(d.stages.analysis?.analysis);
+    } catch(e) {
+        log('Error loading results: ' + e.message, 'error');
+    }
+}
+
+async function renderRiskMatrix(analysis) {
+    if (!analysis) return;
+    document.getElementById('riskEmptyState').style.display = 'none';
+    document.getElementById('riskMatrixSection').style.display = 'block';
+
+    const gridEl  = document.getElementById('riskMatrixGrid');
+    const itemsEl = document.getElementById('riskMatrixItems');
+    const summary = analysis.matrix_summary;
+
+    // ★ Fetch GCS data alerts as matrix items
+    let gcsItems = [];
+    try {
+        const gr = await fetch('/api/data/alerts/matrix-items');
+        const gd = await gr.json();
+        if (gd.status === 'success') gcsItems = gd.items || [];
+    } catch(e) { /* GCS alerts unavailable, continue with news only */ }
+
+    // Merge: pipeline news items + GCS alert items
+    const newsScored = analysis.scored_items || [];
+    const allScored  = [...newsScored, ...gcsItems];
+
+    // Sort by severity: Extreme > High > Medium > Low, then by score desc
+    const _lvlOrder = { 'Extreme': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+    allScored.sort((a, b) => {
+        const la = _lvlOrder[a.matrix_level] ?? 9;
+        const lb = _lvlOrder[b.matrix_level] ?? 9;
+        if (la !== lb) return la - lb;
+        return (b.matrix_score || 0) - (a.matrix_score || 0);
+    });
+
+    // Rebuild summary grid counting both sources
+    // summary is a 5×5 array [prob][impact] from pipeline
+    // We add GCS items on top
+    const combinedSummary = Array.from({length:5}, () => Array(5).fill(0));
+
+    // Fill from existing pipeline summary
+    if (summary) {
+        for (let p = 0; p < 5; p++)
+            for (let i = 0; i < 5; i++)
+                combinedSummary[p][i] = Number(summary[p]?.[i] || 0);
+    }
+
+    // Add GCS items to summary
+    gcsItems.forEach(item => {
+        const p = Math.max(0, Math.min(4, (item.probability || 3) - 1));
+        const i = Math.max(0, Math.min(4, (item.impact      || 3) - 1));
+        combinedSummary[p][i]++;
+    });
+
+    let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">PROB \ IMPACT</th>';
+    IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
+    gridHtml += '</tr></thead><tbody>';
+    for (let p = 5; p >= 1; p--) {
+        gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
+        for (let i = 1; i <= 5; i++) {
+            const level = MATRIX_LEVEL[p-1][i-1];
+            const count = combinedSummary[p-1][i-1] || 0;
+            gridHtml += `<td class="matrix-cell-${level.toLowerCase()}">
+                <div style="font-size:14px;font-weight:700;">${count}</div>
+                <div style="font-size:8px;opacity:0.8;text-transform:uppercase;">${level}</div>
+            </td>`;
+        }
+        gridHtml += '</tr>';
+    }
+    gridHtml += '</tbody></table>';
+    gridEl.innerHTML = gridHtml;
+
+    document.getElementById('riskMatrixItemsHeader').textContent = `Scored Intelligence Nodes (${allScored.length} total — ${newsScored.length} news + ${gcsItems.length} data alerts)`;
+
+    // Color mapping by matrix level
+    const levelStyle = {
+        'Extreme': { bg:'#FEE2E2', border:'#EF4444', badge:'#991B1B', badgeBg:'#FEE2E2' },
+        'High':    { bg:'#FFF7ED', border:'#F97316', badge:'#9A3412', badgeBg:'#FFEDD5' },
+        'Medium':  { bg:'#FEFCE8', border:'#EAB308', badge:'#854D0E', badgeBg:'#FEF9C3' },
+        'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
+    };
+
+    itemsEl.innerHTML = allScored.map(item => {
+        const lvl   = item.matrix_level || 'Low';
+        const style = levelStyle[lvl] || levelStyle['Low'];
+        const prob  = Number(item.probability) || 1;
+        const imp   = Number(item.impact)      || 1;
+        return `
+        <div class="card" style="border-left:3px solid ${style.border}; background:${style.bg};">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <span class="status-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;">${lvl}</span>
+                    ${item.source === 'GCS Data Alert' ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#EFF6FF;color:var(--primary);font-family:var(--font-mono);">DATA</span>` : `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">NEWS</span>`}
+                </div>
+                <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
+                    P:${prob} × I:${imp}
+                </span>
+            </div>
+            <div style="font-weight:700;font-size:12px;margin-bottom:10px;line-height:1.4;color:var(--text-main);">${escapeHtml(item.title)}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,0.7);padding:7px 10px;border:1px solid rgba(0,0,0,0.06);border-radius:4px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Probability</div>
+                    <div style="font-size:13px;font-weight:700;color:${style.badge};">${item.probability}</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.7);padding:7px 10px;border:1px solid rgba(0,0,0,0.06);border-radius:4px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Impact</div>
+                    <div style="font-size:13px;font-weight:700;color:${style.badge};">${item.impact}</div>
+                </div>
+            </div>
+            <div style="font-size:11px;line-height:1.5;color:var(--text-secondary);">
+                <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:3px;">Rationale</span>
+                ${escapeHtml(item.impact_reasoning || '—')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Guardian Dashboard (Risk Monitor page) ───
+async function loadGuardianDashboard() {
+    try {
+        const r = await fetch(`${API_BASE}/guardian/dashboard`);
+        const d = await r.json();
+        if (d.status !== 'success') {
+            document.getElementById('riskEmptyState').style.display = 'block';
+            return;
+        }
+        document.getElementById('riskEmptyState').style.display = 'none';
+
+        // executive_summary fields
+        const es = d.executive_summary || {};
+        document.getElementById('riskKpiCountries').textContent = es.at_risk_country_count ?? es.high_risk_country_count ?? '—';
+        document.getElementById('riskKpiAlerts').textContent    = es.total_risk_alert_count ?? '—';
+        document.getElementById('riskKpiHigh').textContent      = es.high_risk_alert_count ?? '—';
+        document.getElementById('kpiCountries').textContent     = es.at_risk_country_count ?? '—';
+
+        // Trend indicator
+        const trend = es.trend || {};
+        if (trend.direction) {
+            const arrow = trend.direction === 'UP' ? '↑' : trend.direction === 'DOWN' ? '↓' : '→';
+            document.getElementById('riskKpiAlerts').textContent =
+                `${es.total_risk_alert_count ?? '—'} ${arrow}`;
         }
 
-        function toggleAgentDetail(card) { const det = card.querySelector('.agent-detail'); det.style.display = det.style.display === 'none' ? 'block' : 'none'; }
-        function showAlert(msg, type) { const al = document.getElementById('alert'); al.textContent = msg; al.style.display = 'block'; setTimeout(() => al.style.display = 'none', 5000); }
-        function resetSystem() { if (confirm('INITIALIZE SYSTEM RESET?')) fetch(`${API_BASE}/reset`, { method: 'POST' }).then(() => location.reload()); }
-        document.addEventListener('DOMContentLoaded', async () => { 
-            await loadPersonas(); 
-            setInterval(() => { 
-                const now = new Date();
-                document.getElementById('lastUpdate').textContent = now.toISOString().replace('T', ' ').substr(0, 19); 
-            }, 1000); 
+        // google_downside — may be unavailable
+        const gd = d.google_downside || {};
+        if (gd.status === 'unavailable') {
+            document.getElementById('riskKpiDownside').textContent    = 'N/A';
+            document.getElementById('riskKpiDownsideSub').textContent = gd.reason || 'Unavailable';
+        } else {
+            document.getElementById('riskKpiDownside').textContent    = (gd.percent ?? '—') + '%';
+            document.getElementById('riskKpiDownsideSub').textContent = gd.level || '';
+        }
+
+        // fx_summary
+        const fx = d.fx_summary || {};
+        document.getElementById('riskKpiFX').textContent = fx.high_risk_country_count ?? fx.medium_or_above_country_count ?? '—';
+
+        // country_rank_top5
+        const top5 = d.country_rank_top5 || [];
+        document.getElementById('countryBoardGrid').innerHTML = top5.map(c => {
+            const riskColor = c.risk_level === 'High' ? 'var(--danger-text)' :
+                              c.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--text-muted)';
+            return `<div class="card" style="padding:14px;">
+                <div style="font-weight:700;font-size:13px;">${escapeHtml(c.country)}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:var(--font-mono);">${c.alert_count} Alerts</div>
+                <div style="font-size:10px;margin-top:4px;color:${riskColor};font-weight:600;">${c.top_category || ''}</div>
+            </div>`;
+        }).join('');
+
+        // critical_alerts_top5
+        // fields: country, category, score, risk_level, severity, title, url, source, published_at
+        // Deduplicate alerts by title
+        const seen_titles = new Set();
+        guardianTopAlerts = (d.critical_alerts_top5 || []).filter(a => {
+            const key = (a.title || '').trim().toLowerCase();
+            if (seen_titles.has(key)) return false;
+            seen_titles.add(key);
+            return true;
         });
-    </script>
+        // Update news alert badge
+        const newsCountBadge = document.getElementById('newsAlertCount');
+        if (newsCountBadge) {
+            const nc = guardianTopAlerts.length;
+            newsCountBadge.textContent = nc + ' Alert' + (nc !== 1 ? 's' : '');
+            newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
+            newsCountBadge.style.color = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
+        }
+        document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => {
+            const scoreBg    = a.risk_level === 'High'   ? 'var(--danger-bg)'  :
+                               a.risk_level === 'Medium' ? 'var(--warning-bg)' : 'var(--idle-bg)';
+            const scoreColor = a.risk_level === 'High'   ? 'var(--danger-text)'  :
+                               a.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--idle-text)';
+            return `<tr>
+                <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country)}</td>
+                <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
+                <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${a.score ?? 0}</span></td>
+                <td style="font-size:11px;max-width:200px;">
+                    ${a.url
+                        ? `<a href="${escapeHtml(a.url)}" target="_blank"
+                            style="color:var(--text-main);text-decoration:none;display:-webkit-box;
+                            -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                            ${escapeHtml(a.title)}</a>`
+                        : `<span style="display:-webkit-box;-webkit-line-clamp:2;
+                            -webkit-box-orient:vertical;overflow:hidden;">
+                            ${escapeHtml(a.title)}</span>`}
+                </td>
+            </tr>`;
+        }).join('');
+
+    } catch(e) {
+        console.error('loadGuardianDashboard error:', e);
+        document.getElementById('riskEmptyState').style.display = 'block';
+    }
+}
+
+// ── AI Brief ─────────────────────────────────
+async function generateBrief() {
+    const btn  = document.getElementById('briefBtn');
+    const body = document.getElementById('briefBody');
+    const meta = document.getElementById('briefMeta');
+
+    btn.disabled = true;
+    btn.textContent = '…';
+    body.className = 'brief-body loading';
+    body.innerHTML = 'Generating intelligence brief<span class="typewriter-cursor"></span>';
+
+    try {
+        const r = await fetch(`${API_BASE}/brief`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ persona: currentPersona }) });
+        const d = await r.json();
+
+        if (d.status === 'success') {
+            body.className = 'brief-body';
+            await typewriterEffect(body, d.brief);
+            meta.textContent = 'Generated ' + new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC';
+
+            if (d.signals?.length) {
+                document.getElementById('briefSignals').innerHTML = d.signals.map(s =>
+                    `<span class="signal-pill ${s.level}">${s.label}</span>`
+                ).join('');
+            }
+        } else {
+            body.className = 'brief-body loading';
+            body.textContent = d.message || 'Brief generation failed. Run the pipeline first.';
+        }
+    } catch(e) {
+        body.className = 'brief-body loading';
+        body.textContent = 'Could not reach /api/brief — ensure backend is running.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Regenerate';
+}
+
+async function typewriterEffect(el, text) {
+    el.innerHTML = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'typewriter-cursor';
+    el.appendChild(cursor);
+
+    for (const char of text) {
+        cursor.insertAdjacentText('beforebegin', char);
+        await new Promise(r => setTimeout(r, 18));
+    }
+    cursor.remove();
+}
+
+// ── News ─────────────────────────────────────
+// ── News selection state ─────────────────────
+let selectedNewsIds = new Set();
+let allNewsItems    = [];
+
+function toggleNewsSelect(id, btn) {
+    if (selectedNewsIds.has(id)) {
+        selectedNewsIds.delete(id);
+        btn.style.background = 'white';
+        btn.style.color      = 'var(--text-muted)';
+        btn.textContent      = '+';
+    } else {
+        selectedNewsIds.add(id);
+        btn.style.background = 'var(--primary)';
+        btn.style.color      = 'white';
+        btn.textContent      = '✓';
+    }
+    updateNewsSelectionUI();
+}
+
+function updateNewsSelectionUI() {
+    const count    = selectedNewsIds.size;
+    const countEl  = document.getElementById('newsSelectedCount');
+    const analyzeEl= document.getElementById('analyzeSelectedBtn');
+    if (countEl)   { countEl.textContent = count + ' selected'; countEl.style.display = count ? '' : 'none'; }
+    if (analyzeEl) { analyzeEl.style.display = count ? '' : 'none'; }
+}
+
+function closeNewsAnalysis() {
+    document.getElementById('newsAnalysisPanel').style.display = 'none';
+    selectedNewsIds.clear();
+    updateNewsSelectionUI();
+    // Reset all + buttons
+    document.querySelectorAll('.news-select-btn').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color      = 'var(--text-muted)';
+        btn.textContent      = '+';
+    });
+}
+
+async function analyzeSelectedNews() {
+    if (!selectedNewsIds.size) return;
+
+    const panel  = document.getElementById('newsAnalysisPanel');
+    const body   = document.getElementById('newsAnalysisBody');
+    panel.style.display = 'block';
+    body.innerHTML = '<span style="color:var(--text-muted);font-style:italic;">Analysing selected news<span class="typewriter-cursor"></span></span>';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const selected = allNewsItems.filter(item =>
+        selectedNewsIds.has(String(item.id || item.title))
+    );
+
+    const headlines = selected.map((n, i) =>
+        `${i+1}. ${n.title} [${n.risk_category || n.risk_level || 'General'}]`
+    ).join('\n');
+
+    try {
+        const r = await fetch(`${API_BASE}/chat`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                message:  `As a treasury risk analyst, analyse these ${selected.length} news items for me:\n\n${headlines}\n\nFor each item briefly explain:\n1. What is the hidden implication for treasury operations?\n2. What specific action do you recommend?\n\nThen provide an overall assessment of how these signals interact.`,
+                persona:  currentPersona,
+                history:  [],
+            }),
+        });
+        const d = await r.json();
+        const reply = d.reply || d.message || 'No response.';
+        // Typewriter effect
+        body.innerHTML = '';
+        const cursor = document.createElement('span');
+        cursor.className = 'typewriter-cursor';
+        body.appendChild(cursor);
+        for (const char of reply) {
+            cursor.insertAdjacentText('beforebegin', char);
+            await new Promise(res => setTimeout(res, 12));
+        }
+        cursor.remove();
+    } catch(e) {
+        body.innerHTML = `<span style="color:var(--danger-text);">Analysis failed: ${escapeHtml(e.message)}</span>`;
+    }
+}
+
+async function loadNews() {
+    const grid = document.getElementById('newsGrid');
+    selectedNewsIds.clear();
+    updateNewsSelectionUI();
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
+        <div style="font-size:24px;margin-bottom:12px;">◉</div>
+        <div>Fetching news feed…</div>
+    </div>`;
+
+    try {
+        const r = await fetch(`${API_BASE}/news`);
+        const d = await r.json();
+        allNewsItems = d.items || d.news || [];
+
+        if (!allNewsItems.length) {
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
+                No news available. Run the pipeline first.
+            </div>`;
+            return;
+        }
+
+        document.getElementById('newsLastFetch').textContent =
+            'Updated ' + new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC · ' + allNewsItems.length + ' articles';
+
+        const levelColor = l => l === 'high' ? 'var(--danger-text)' : l === 'medium' ? 'var(--warning-text)' : 'var(--success-text)';
+        const levelBg    = l => l === 'high' ? 'var(--danger-bg)'   : l === 'medium' ? 'var(--warning-bg)'   : 'var(--success-bg)';
+
+        grid.innerHTML = allNewsItems.map(item => {
+            const id    = String(item.id || item.title);
+            const lvl   = item.risk_level || 'low';
+            const cat   = item.risk_category || '';
+            return `<div class="news-card" style="position:relative;">
+                <!-- + select button -->
+                <button class="news-select-btn"
+                    onclick="toggleNewsSelect('${escapeHtml(id)}', this)"
+                    style="position:absolute;top:10px;right:10px;width:22px;height:22px;
+                           border-radius:50%;border:1px solid var(--border);background:white;
+                           color:var(--text-muted);font-size:14px;font-weight:700;
+                           display:flex;align-items:center;justify-content:center;
+                           cursor:pointer;padding:0;line-height:1;transition:all 0.15s;">+</button>
+
+                <div class="news-card-meta" style="padding-right:28px;">
+                    <span class="news-source">${escapeHtml(item.source || 'ARGUS DB')}</span>
+                    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+                                 background:${levelBg(lvl)};color:${levelColor(lvl)};font-family:var(--font-mono);">
+                        ${lvl}
+                    </span>
+                </div>
+                <div class="news-card-title" style="padding-right:8px;">${escapeHtml(item.title || '')}</div>
+                ${cat ? `<div style="font-size:10px;color:var(--primary);font-family:var(--font-mono);
+                                      margin:4px 0 6px;font-weight:600;">${escapeHtml(cat)}</div>` : ''}
+                ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank"
+                    style="display:inline-block;margin-top:6px;font-size:11px;
+                           color:var(--primary);text-decoration:none;font-family:var(--font-mono);">
+                    Read →</a>` : ''}
+            </div>`;
+        }).join('');
+
+    } catch(e) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
+            Failed to load news: ${escapeHtml(e.message)}
+        </div>`;
+    }
+}
+
+// ── Guardian Chatbot ──────────────────────────
+let chatSessions = JSON.parse(localStorage.getItem('argusChatSessions') || '[]');
+let currentSessionId = null;
+
+function saveSessions() {
+    localStorage.setItem('argusChatSessions', JSON.stringify(chatSessions));
+}
+
+function newChatSession() {
+    const id = 'session_' + Date.now();
+    const session = { id, title: 'New Conversation', createdAt: new Date().toISOString(), messages: [] };
+    chatSessions.unshift(session);
+    saveSessions();
+    loadSession(id);
+    renderChatHistory();
+}
+
+function loadSession(id) {
+    currentSessionId = id;
+    const session = chatSessions.find(s => s.id === id);
+    const container = document.getElementById('chatMessages');
+
+    // Default greeting
+    const greeting = `<div class="chat-message ai">
+        <div class="chat-avatar ai">A</div>
+        <div class="chat-bubble">
+            Hello. I'm the ARGUS Guardian. I have access to your pipeline results, risk data, and market signals.<br><br>
+            Ask me anything — current risk exposure, country analysis, pipeline results, or market conditions.
+        </div>
+    </div>`;
+
+    if (!session || !session.messages.length) {
+        container.innerHTML = greeting;
+        return;
+    }
+
+    container.innerHTML = greeting + session.messages.map(m => `
+        <div class="chat-message ${m.role}">
+            <div class="chat-avatar ${m.role}">${m.role === 'ai' ? 'A' : 'U'}</div>
+            <div class="chat-bubble">${escapeHtml(m.content)}</div>
+        </div>`).join('');
+
+    container.scrollTop = container.scrollHeight;
+    renderChatHistory();
+}
+
+function renderChatHistory() {
+    const list = document.getElementById('chatHistoryList');
+    if (!chatSessions.length) {
+        list.innerHTML = `<div style="padding:16px;text-align:center;font-size:11px;color:var(--text-muted);">
+            No conversations yet.<br>Click + to start.
+        </div>`;
+        return;
+    }
+    list.innerHTML = chatSessions.map(s => `
+        <div class="chat-history-item ${s.id === currentSessionId ? 'active' : ''}"
+             onclick="loadSession('${s.id}')">
+            <div class="chat-history-item-title">${escapeHtml(s.title)}</div>
+            <div class="chat-history-item-meta">${s.createdAt.substr(0,10)}</div>
+        </div>`).join('');
+}
+
+function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+}
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Ensure we have a session
+    if (!currentSessionId) newChatSession();
+
+    input.value = '';
+    autoResize(input);
+
+    // Append user message to UI
+    appendChatBubble('user', text);
+
+    // Save to session
+    const session = chatSessions.find(s => s.id === currentSessionId);
+    if (session) {
+        session.messages.push({ role: 'user', content: text });
+        if (session.title === 'New Conversation') {
+            session.title = text.substring(0, 40) + (text.length > 40 ? '…' : '');
+        }
+        saveSessions();
+        renderChatHistory();
+    }
+
+    // Show typing indicator
+    const typingId = 'typing_' + Date.now();
+    appendChatBubble('ai', '<span class="typewriter-cursor"></span>', typingId);
+
+    try {
+        const r = await fetch(`${API_BASE}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text, persona: currentPersona, session_id: currentSessionId })
+        });
+        const d = await r.json();
+        const reply = d.reply || d.message || 'No response.';
+
+        // Remove typing indicator and show real reply
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        appendChatBubble('ai', reply);
+
+        // Save AI reply
+        if (session) {
+            session.messages.push({ role: 'ai', content: reply });
+            saveSessions();
+        }
+    } catch(e) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        appendChatBubble('ai', 'Connection error — ensure the backend /api/chat endpoint is running.');
+    }
+}
+
+function appendChatBubble(role, content, id = '') {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `chat-message ${role}`;
+    if (id) div.id = id;
+    div.innerHTML = `
+        <div class="chat-avatar ${role}">${role === 'ai' ? 'A' : 'U'}</div>
+        <div class="chat-bubble">${role === 'user' ? escapeHtml(content) : content}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ── Cash Position ────────────────────────────
+let CASH_DATA = [];
+let CASH_HISTORY = [];
+let cashCurrentFilter = 'all';
+let cashHistoryChart = null;
+
+function fmtUSD(n) {
+    if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+    if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+    return '$' + Math.round(n).toLocaleString();
+}
+
+function fmtLocal(n, currency) {
+    if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + 'T ' + currency;
+    if (Math.abs(n) >= 1e9)  return (n / 1e9).toFixed(2)  + 'B ' + currency;
+    if (Math.abs(n) >= 1e6)  return (n / 1e6).toFixed(1)  + 'M ' + currency;
+    return Math.round(n).toLocaleString() + ' ' + currency;
+}
+
+function riskBadgeStyle(level) {
+    if (level === 'High')   return 'background:var(--danger-bg);color:var(--danger-text);';
+    if (level === 'Medium') return 'background:var(--warning-bg);color:var(--warning-text);';
+    return 'background:var(--success-bg);color:var(--success-text);';
+}
+
+function filterCash(filter, btn) {
+    cashCurrentFilter = filter;
+    document.querySelectorAll('.cash-filter').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderCashTable();
+    renderCashBar();
+}
+
+async function renderCashPage() {
+    // Show loading state
+    const kpiRow = document.getElementById('cashKpiRow');
+    if (kpiRow) kpiRow.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">Loading cash positions…</div>`;
+
+    try {
+        // Fetch positions and history in parallel
+        const [posResp, histResp] = await Promise.all([
+            fetch('/api/cash/positions'),
+            fetch('/api/cash/history'),
+        ]);
+        const posData  = await posResp.json();
+        const histData = await histResp.json();
+
+        if (posData.status !== 'success') throw new Error(posData.message || 'Failed to load positions');
+
+        CASH_DATA    = posData.positions || [];
+        CASH_HISTORY = histData.history  || [];
+
+        const asOf = document.getElementById('cashAsOf');
+        if (asOf) asOf.textContent = posData.as_of + ' (simulated)';
+
+        renderCashKPIs(posData);
+        renderCashTable();
+        renderCashBar();
+        renderCashHistoryChart();
+
+    } catch(e) {
+        if (kpiRow) kpiRow.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--danger-text);font-size:12px;">Error loading cash data: ${e.message}</div>`;
+    }
+}
+
+function renderCashKPIs(posData) {
+    const totalUSD   = posData.total_usd || 0;
+    const regions    = posData.regional_totals || {};
+    const highRisk   = posData.high_risk_usd || 0;
+    const entityCount = posData.entity_count || 0;
+
+    const americas = regions['Americas'] || 0;
+    const europe   = regions['Europe']   || 0;
+    const apac     = regions['APAC']     || 0;
+
+    document.getElementById('cashKpiRow').innerHTML = `
+        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;border-left:3px solid var(--primary);">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Total Global Cash</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(totalUSD)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${entityCount} entities</div>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Americas</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(americas)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (americas/totalUSD*100).toFixed(1) : 0}% of total</div>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Europe</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(europe)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (europe/totalUSD*100).toFixed(1) : 0}% of total</div>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Asia Pacific</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(apac)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (apac/totalUSD*100).toFixed(1) : 0}% of total</div>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;border-left:3px solid var(--danger-text);">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">High-Risk Exposure</div>
+            <div style="font-size:20px;font-weight:700;color:var(--danger-text);font-family:var(--font-mono);">${fmtUSD(highRisk)}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (highRisk/totalUSD*100).toFixed(1) : 0}% of total</div>
+        </div>`;
+}
+
+function renderCashTable() {
+    const totalUSD = CASH_DATA.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
+    const filtered = cashCurrentFilter === 'all'
+        ? CASH_DATA
+        : CASH_DATA.filter(r => (r.region || '').toLowerCase() === cashCurrentFilter.toLowerCase());
+
+    const tbody = document.getElementById('cashTableBody');
+    const tfoot = document.getElementById('cashTableFoot');
+    if (!tbody) return;
+
+    tbody.innerHTML = filtered.map(row => {
+        const usd      = row.usd_equivalent || 0;
+        const pct      = totalUSD ? (usd / totalUSD * 100).toFixed(1) : '0.0';
+        const chg      = row.change_30d_pct || 0;
+        const chgColor = chg >= 0 ? 'var(--success-text)' : 'var(--danger-text)';
+        const chgSign  = chg >= 0 ? '+' : '';
+        const barWidth = Math.min(100, totalUSD ? usd / totalUSD * 100 * 5 : 0);
+        const risk     = row.risk_level || 'Low';
+
+        return `<tr>
+            <td>
+                <div style="font-weight:700;font-size:12px;">${escapeHtml(row.country || '')}</div>
+                <div style="font-size:10px;color:var(--text-muted);">${escapeHtml(row.entity || '')}</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-weight:600;">${row.currency || ''}</td>
+            <td style="text-align:right;font-family:var(--font-mono);">${fmtLocal(row.local_balance || 0, row.currency || '')}</td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${fmtUSD(usd)}</td>
+            <td style="text-align:right;">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+                    <div style="width:48px;background:#F1F5F9;border-radius:2px;height:4px;overflow:hidden;">
+                        <div style="width:${barWidth}%;background:var(--primary);height:100%;"></div>
+                    </div>
+                    <span style="font-family:var(--font-mono);font-size:11px;">${pct}%</span>
+                </div>
+            </td>
+            <td style="text-align:right;font-family:var(--font-mono);color:${chgColor};font-weight:600;">
+                ${chgSign}${chg.toFixed(1)}%
+            </td>
+            <td><span class="status-badge" style="${riskBadgeStyle(risk)}">${risk}</span></td>
+            <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${(row.fx_rate || 0).toFixed(4)}</td>
+            <td style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${row.notes || '—'}</td>
+        </tr>`;
+    }).join('');
+
+    const filteredUSD = filtered.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
+    if (tfoot) tfoot.innerHTML = `<tr style="background:#F8FAFC;border-top:2px solid var(--border);">
+        <td colspan="3" style="font-weight:700;font-size:12px;padding:10px 12px;">
+            Subtotal (${filtered.length} entities)
+        </td>
+        <td style="text-align:right;font-family:var(--font-mono);font-weight:700;font-size:13px;padding:10px 12px;">
+            ${fmtUSD(filteredUSD)}
+        </td>
+        <td style="text-align:right;font-family:var(--font-mono);font-size:11px;padding:10px 12px;">
+            ${totalUSD ? (filteredUSD/totalUSD*100).toFixed(1) : 0}%
+        </td>
+        <td colspan="4"></td>
+    </tr>`;
+}
+
+function renderCashBar() {
+    const totalUSD = CASH_DATA.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
+    const sorted   = [...CASH_DATA].sort((a,b) => (b.usd_equivalent||0) - (a.usd_equivalent||0)).slice(0,10);
+    const maxUSD   = sorted[0]?.usd_equivalent || 1;
+    const el       = document.getElementById('cashBarChart');
+    if (!el) return;
+
+    el.innerHTML = sorted.map(row => {
+        const usd      = row.usd_equivalent || 0;
+        const barPct   = (usd / maxUSD * 100).toFixed(1);
+        const barColor = row.risk_level === 'High'   ? '#EF4444' :
+                         row.risk_level === 'Medium' ? '#F59E0B' : '#2563EB';
+        return `<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:8px;align-items:center;">
+            <div style="font-size:11px;font-weight:600;text-align:right;color:var(--text-main);">${escapeHtml(row.country||'')}</div>
+            <div style="background:#F1F5F9;border-radius:2px;height:16px;overflow:hidden;">
+                <div style="width:${barPct}%;background:${barColor};height:100%;border-radius:2px;transition:width 0.6s ease;"></div>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${fmtUSD(usd)}</div>
+        </div>`;
+    }).join('');
+}
+
+function renderCashHistoryChart() {
+    const chartContainer = document.getElementById('cashHistoryChartWrap');
+    if (!chartContainer || !CASH_HISTORY.length) return;
+
+    const selector = document.getElementById('cashHistoryCountry');
+    const selected = selector ? selector.value : 'top5';
+
+    let countries;
+    if (selected === 'top5') {
+        countries = [...CASH_DATA]
+            .sort((a,b) => (b.usd_equivalent||0) - (a.usd_equivalent||0))
+            .slice(0,5)
+            .map(r => r.country);
+    } else {
+        countries = [selected];
+    }
+
+    const dates = [...new Set(CASH_HISTORY.map(h => h.date))].sort();
+
+    const datasets = countries.map((country, i) => {
+        const colors = ['#2563EB','#F59E0B','#10B981','#EF4444','#8B5CF6'];
+        const vals = dates.map(d => {
+            const row = CASH_HISTORY.find(h => h.country === country && h.date === d);
+            return row ? row.usd_equivalent : null;
+        });
+        return {
+            label: country,
+            data: vals,
+            borderColor: colors[i],
+            backgroundColor: colors[i] + '18',
+            borderWidth: 1.5,
+            pointRadius: 3,
+            tension: 0.3,
+            fill: false,
+        };
+    });
+
+    const ctx = document.getElementById('cashHistoryChart');
+    if (!ctx) return;
+    if (cashHistoryChart) cashHistoryChart.destroy();
+
+    cashHistoryChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: dates, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, labels: { font: { size: 10 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${fmtUSD(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font: { size: 10 } }, grid: { color: '#F1F5F9' } },
+                y: {
+                    ticks: {
+                        font: { size: 10 },
+                        callback: v => fmtUSD(v)
+                    },
+                    grid: { color: '#F1F5F9' }
+                }
+            }
+        }
+    });
+}
+
+// ── Home Logs toggle ─────────────────────────
+function toggleHomeLogs() {
+    const inner  = document.getElementById('homeLogsInner');
+    const toggle = document.getElementById('homeLogsToggle');
+    if (!inner) return;
+    const show = inner.style.display === 'none';
+    inner.style.display  = show ? 'block' : 'none';
+    toggle.textContent   = show ? 'Hide ▴' : 'Show ▾';
+}
+
+// ── Risk Category Cards (Home) ───────────────
+async function loadRiskCategories() {
+    const container = document.getElementById('riskCategoryCards');
+    if (!container) return;
+
+    try {
+        const r = await fetch('/api/home/risk-categories');
+        const d = await r.json();
+        if (d.status !== 'success' || !d.categories?.length) {
+            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;
+                color:var(--text-muted);font-size:11px;">No risk categories available. Run Daily Jobs first.</div>`;
+            return;
+        }
+
+        const CATEGORY_ICONS = {
+            'Liquidity Risk':              '💧',
+            'Funding Cost Pressure':       '📈',
+            'Payment & Disbursement Risk': '💳',
+            'Cash Concentration':          '🏦',
+            'Regulatory':                  '⚖️',
+            'Geopolitical':                '🌍',
+            'Macroeconomic':               '📊',
+            'Inflation':                   '🔥',
+            'FX Risk':                     '💱',
+            'Monetary Policy':             '🏛️',
+            'Natural Disaster':            '🌋',
+        };
+
+        container.innerHTML = d.categories.map(cat => {
+            const icon       = CATEGORY_ICONS[cat.risk_category] || '◈';
+            const newsCount  = cat.count      || 0;
+            const dataCount  = cat.data_count || 0;
+            const totalCount = newsCount + dataCount;
+            const src        = cat.source || 'news';
+
+            const borderColor = totalCount >= 5 ? 'var(--danger-text)' :
+                                totalCount >= 2 ? 'var(--warning-text)' :
+                                dataCount  >= 1 ? 'var(--primary)' : 'var(--border)';
+            const countColor  = totalCount >= 5 ? 'var(--danger-text)' :
+                                totalCount >= 2 ? 'var(--warning-text)' : 'var(--text-main)';
+            const topTitle    = (cat.top_title || '—').substring(0, 55) +
+                                ((cat.top_title || '').length > 55 ? '…' : '');
+
+            // Source badges
+            const newsBadge = newsCount > 0
+                ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;
+                               background:#F8FAFC;color:var(--text-muted);
+                               font-family:var(--font-mono);">${newsCount} news</span>` : '';
+            const dataBadge = dataCount > 0
+                ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;
+                               background:#EFF6FF;color:var(--primary);
+                               font-family:var(--font-mono);">${dataCount} data</span>` : '';
+
+            return `<div style="background:white; border:1px solid var(--border);
+                                border-top:3px solid ${borderColor};
+                                border-radius:6px; padding:12px 14px;
+                                cursor:pointer; transition:all 0.15s;"
+                         onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'"
+                         onmouseout="this.style.boxShadow=''"
+                         onclick="showPage('risk', document.querySelector('.nav-item[onclick*=risk]'))">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <div style="font-size:9px; font-weight:700; text-transform:uppercase;
+                                letter-spacing:0.08em; color:var(--primary);
+                                font-family:var(--font-mono);">${escapeHtml(cat.risk_category)}</div>
+                    <span style="font-size:13px;">${icon}</span>
+                </div>
+                <div style="font-size:22px; font-weight:700; color:${countColor};
+                            font-family:var(--font-mono); line-height:1; margin-bottom:6px;">
+                    ${totalCount}
+                    <span style="font-size:11px; font-weight:500; color:var(--text-muted);">signals</span>
+                </div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px;">
+                    ${newsBadge}${dataBadge}
+                </div>
+                <div style="font-size:10px; color:var(--text-muted); line-height:1.4;
+                            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${escapeHtml(topTitle)}
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch(e) {
+        container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;
+            color:var(--text-muted);font-size:11px;">Could not load risk categories.</div>`;
+    }
+}
+
+// ── Data Alerts ──────────────────────────────
+async function loadDataAlerts(fresh = false) {
+    const body = document.getElementById('dataAlertsBody');
+    if (!body) return;
+
+    body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);
+        font-size:11px;font-family:var(--font-mono);">Evaluating thresholds…</div>`;
+
+    try {
+        const url = '/api/data/alerts' + (fresh ? '?fresh=1' : '');
+        const r   = await fetch(url);
+        const d   = await r.json();
+
+        if (d.status !== 'success') throw new Error(d.message || 'Failed');
+
+        const alerts = d.alerts || [];
+        const total  = d.total_triggered || 0;
+        const high   = d.summary?.high || 0;
+
+        // Update badge counts
+        const totalBadge = document.getElementById('dataAlertTotalCount');
+        const highBadge  = document.getElementById('dataAlertHighCount');
+        if (totalBadge) {
+            const genAt = d.generated_at ? ' · ' + d.generated_at : '';
+            totalBadge.textContent = total + ' Triggered' + genAt;
+        }
+        if (highBadge) {
+            if (high > 0) {
+                highBadge.style.display = '';
+                highBadge.textContent   = high + ' High';
+            } else {
+                highBadge.style.display = 'none';
+            }
+        }
+
+        if (!alerts.length) {
+            body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--success-text);
+                font-size:11px;font-family:var(--font-mono);">
+                ✓ No threshold breaches detected
+            </div>`;
+            return;
+        }
+
+        const severityColor = s =>
+            s === 'High'   ? 'var(--danger-text)'  :
+            s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
+        const severityBg = s =>
+            s === 'High'   ? 'var(--danger-bg)'   :
+            s === 'Medium' ? 'var(--warning-bg)'   : 'var(--idle-bg)';
+
+        body.innerHTML = alerts.filter(a => !a._error).map(a => `
+            <div style="padding:10px 16px; border-bottom:1px solid var(--border);
+                        border-left:3px solid ${severityColor(a.severity)};">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-weight:700; font-size:12px;">${escapeHtml(a.name)}</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">
+                            ${escapeHtml(a.triggered_at || '')}
+                        </span>
+                        <span class="status-badge"
+                              style="background:${severityBg(a.severity)};color:${severityColor(a.severity)};">
+                            ${escapeHtml(a.severity)}
+                        </span>
+                    </div>
+                </div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:6px;">
+                    ${escapeHtml(a.description)}
+                </div>
+                <div style="display:flex; gap:10px; font-size:10px; font-family:var(--font-mono);
+                            color:var(--text-muted); flex-wrap:wrap;">
+                    <span>${escapeHtml(a.country)} · ${escapeHtml(a.indicator)}</span>
+                    <span style="color:${severityColor(a.severity)};font-weight:700;">
+                        Actual: ${escapeHtml(a.display_value)}
+                    </span>
+                    <span>Threshold: ${a.operator} ${a.threshold}</span>
+                    <span style="background:var(--bg-color); padding:1px 6px; border-radius:3px;">
+                        ${escapeHtml(a.category)}
+                    </span>
+                </div>
+            </div>`).join('');
+
+    } catch(e) {
+        body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);
+            font-size:11px;">Could not load data alerts: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+// ── Boot ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    startClock();
+    await loadPersonas();
+    // Sync home role name
+    const activeP = availablePersonas.find(p => p.key === currentPersona);
+    if (activeP) {
+        const homeRole = document.getElementById('homeRoleName');
+        if (homeRole) homeRole.textContent = activeP.label;
+    }
+
+    // Init chat with a default session if none exists
+    if (!chatSessions.length) newChatSession();
+    else { currentSessionId = chatSessions[0].id; renderChatHistory(); }
+
+    // Try to load existing results
+    try {
+        await loadResults();
+    } catch(e) { /* no results yet */ }
+
+    // Load risk category cards
+    loadRiskCategories();
+});
+</script>
+
 </body>
 </html>

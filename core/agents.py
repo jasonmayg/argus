@@ -132,7 +132,7 @@ class AnalysisAgent(Agent):
         super().__init__("RiskAnalyzer")
         self.persona = persona
         self.analysis_results: Dict = {}
-        self._api_key = os.getenv("ANTHROPIC_API_KEY")
+        self._api_key = os.getenv("OPENAI_API_KEY")
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -148,6 +148,13 @@ class AnalysisAgent(Agent):
             raw_scored = await self._score_items(classified_news)
             # Validate every item before storing — no NoneType values escape.
             scored_items = [self.validate_output(item) for item in raw_scored]
+
+            # Sort by severity: Extreme > High > Medium > Low
+            _level_order = {"Extreme": 0, "High": 1, "Medium": 2, "Low": 3}
+            scored_items.sort(key=lambda x: (
+                _level_order.get(x.get("matrix_level", "Low"), 9),
+                -(x.get("matrix_score", 0))
+            ))
 
             extreme_items = [n for n in scored_items if n.get("matrix_level") == "Extreme"]
             high_items    = [n for n in scored_items if n.get("matrix_level") == "High"]
@@ -258,9 +265,10 @@ class AnalysisAgent(Agent):
 
         Items beyond ``_LLM_BATCH_LIMIT`` are scored heuristically to cap cost.
         """
-        import anthropic  # imported lazily so the module loads without the SDK
+        import requests  # OpenAI via REST
 
-        client    = anthropic.Anthropic(api_key=self._api_key)
+        openai_url   = "https://api.openai.com/v1/chat/completions"
+        openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
         llm_items = news_items[: self._LLM_BATCH_LIMIT]
 
         items_text = "\n".join(
@@ -298,13 +306,24 @@ Return a JSON array — one object per item, in the same order:
 ]
 Return ONLY the JSON array — no preamble, no markdown fences."""
 
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
+        resp = requests.post(
+            openai_url,
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type":  "application/json",
+            },
+            json={
+                "model":       openai_model,
+                "messages":    [{"role": "user", "content": prompt}],
+                "max_tokens":  4096,
+                "temperature": 0.2,
+            },
+            timeout=60,
         )
+        if not resp.ok:
+            raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:300]}")
 
-        raw = response.content[0].text.strip()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
         if raw.startswith("```"):
             parts = raw.split("```")
             raw = parts[1] if len(parts) > 1 else raw

@@ -20,18 +20,11 @@ class Agent(ABC):
     """Base Agent Class"""
 
     def __init__(self, name: str):
-        """
-        Initialize agent
-
-        Args:
-            name: Agent name
-        """
         self.name = name
         self.status = "idle"
         self.logs = []
 
     def log(self, message: str, level: str = "INFO"):
-        """Log agent activity"""
         timestamp = datetime.now().isoformat()
         log_entry = {
             "timestamp": timestamp,
@@ -44,32 +37,14 @@ class Agent(ABC):
 
     @abstractmethod
     async def execute(self, **kwargs):
-        """Execute agent task"""
         pass
 
     def get_logs(self):
-        """Get agent logs"""
         return self.logs
 
 
 class NewsGathererAgent(Agent):
-    """Multi-source news and events gatherer backed by the unified DataAgent.
-
-    Supported source keys for the `sources` parameter:
-        'federal_reserve'  - Fed Reserve press releases (crawl4ai markdown extraction)
-        'gcs'              - Google Cloud Storage Guardian snapshot (alerts_latest.json)
-        'gdelt'            - GDELT global conflict/macro news
-        'usgs'             - USGS significant earthquake feed
-        'noaa_nws'         - NOAA National Weather Service active alerts
-        'nasa_eonet'       - NASA EONET natural hazard events
-        'reliefweb'        - UN OCHA ReliefWeb humanitarian reports
-        'world_bank'       - World Bank macro/CPI indicators
-        'bank_of_canada'   - Bank of Canada daily FX rates
-        'fiscal_data'      - US Treasury auction data
-        'sec_edgar'        - SEC EDGAR corporate filings
-        'fred'             - FRED economic indicators (requires FRED_API_KEY env var)
-        '<https://...>'    - Any custom URL (auto-detected, crawled via crawl4ai)
-    """
+    """Multi-source news and events gatherer backed by the unified DataAgent."""
 
     SOURCE_FEDERAL_RESERVE = "federal_reserve"
     SOURCE_GCS = "gcs"
@@ -86,16 +61,6 @@ class NewsGathererAgent(Agent):
         sources: Optional[List[str]] = None,
         **kwargs,
     ):
-        """Gather news and events from one or more data sources.
-
-        Delegates to DataAgent which writes each source payload to
-        shared_storage/raw/ so the bridge pipeline can process them.
-
-        Args:
-            url:     Optional URL override for 'federal_reserve' or a custom
-                     https:// crawl target.
-            sources: List of source keys. Defaults to ['federal_reserve'].
-        """
         self.status = "running"
         self.log("Starting multi-source news gathering...")
 
@@ -139,7 +104,6 @@ class RiskClassifierAgent(Agent):
         self.classified_news = []
 
     async def execute(self, news_items: List[Dict], **kwargs):
-        """Classify news items by risk"""
         self.status = "running"
         self.log(f"Starting classification of {len(news_items)} items")
 
@@ -162,7 +126,6 @@ class RiskClassifierAgent(Agent):
             self.log(f"Successfully classified {len(self.classified_news)} items")
             self.status = "success"
 
-            # Count by risk level
             by_level = {}
             for item in self.classified_news:
                 level = item['risk_level']
@@ -184,30 +147,20 @@ class RiskClassifierAgent(Agent):
 
 
 class DatabaseAgent(Agent):
-    """Agent for persisting processed items to shared_storage/analyzed/.
-
-    Replaces the legacy SQLite-backed FedNewsDatabase.  All storage now goes
-    through the shared_storage pipeline so every source uses the same path.
-    """
+    """Agent for persisting processed items to shared_storage/analyzed/."""
 
     def __init__(self):
         super().__init__("DatabaseManager")
         self.records_stored = 0
 
     async def execute(self, action: str, data: Optional[Dict] = None, **kwargs):
-        """Persist or query items via shared_storage.
-
-        Supported actions:
-            insert  — write news_items to shared_storage/raw/ as a timestamped JSON file
-            query   — return a lightweight in-memory count summary (no SQLite)
-        """
         self.status = "running"
         self.log(f"Executing storage action: {action}")
 
         try:
             if action == "insert":
-                from config import RAW_DIR  # noqa: PLC0415
-                from core.data_agent import _write_to_raw  # noqa: PLC0415
+                from config import RAW_DIR
+                from core.data_agent import _write_to_raw
 
                 items = (data or {}).get("news_items", [])
                 if items:
@@ -240,7 +193,6 @@ class ReportingAgent(Agent):
         self.reports = []
 
     async def execute(self, analysis_data: Dict, **kwargs):
-        """Generate report from analysis"""
         self.status = "running"
         self.log("Generating report...")
 
@@ -274,21 +226,20 @@ class ReportingAgent(Agent):
             return {"status": "failed", "error": str(e)}
 
     def _generate_recommendations(self, analysis: Dict) -> List[str]:
-        """Generate recommendations based on 2D matrix analysis."""
         recommendations = []
         by_level = analysis.get("by_risk_level", {})
 
         extreme_count = len(by_level.get("extreme", []))
         if extreme_count > 0:
             recommendations.append(
-                f"URGENT: {extreme_count} Extreme-risk item(s) detected "
-                f"(Frequent/Likely × Hazardous/Catastrophic). Immediate management review required."
+                f"URGENT: {extreme_count} Extreme-risk item(s) detected. "
+                f"Immediate management review required."
             )
 
         high_count = len(by_level.get("high", []))
         if high_count > 3:
             recommendations.append(
-                f"{high_count} High-risk items on the matrix. Escalate to treasury risk committee."
+                f"{high_count} High-risk items. Escalate to treasury risk committee."
             )
 
         for category, count in analysis.get("by_category", {}).items():
@@ -299,8 +250,7 @@ class ReportingAgent(Agent):
         high_impact = [s for s in scored if s.get("impact", 0) >= 4]
         if high_impact:
             recommendations.append(
-                f"{len(high_impact)} item(s) rated Hazardous or Catastrophic impact — "
-                f"review treasury exposure regardless of probability."
+                f"{len(high_impact)} item(s) rated Hazardous or Catastrophic impact."
             )
 
         if not recommendations:
@@ -309,16 +259,101 @@ class ReportingAgent(Agent):
         return recommendations
 
 
+# ── ★ New: AI Classification Agent ──────────────────────
+class AIClassificationAgent(Agent):
+    """
+    Post-pipeline agent: enriches risk_analysis with AI classification
+    and GCS macro data context.
+    """
+
+    def __init__(self):
+        super().__init__("AIClassifier")
+
+    async def execute(self, force: bool = False, **kwargs):
+        self.status = "running"
+        self.log("Starting AI classification with GCS data enrichment...")
+
+        try:
+            from classify_news import classify_all_news
+            result = await classify_all_news(force=force)
+
+            if result.get("status") == "success":
+                self.status = "success"
+                classified = result.get("classified", 0)
+                errors     = result.get("errors", 0)
+                self.log(f"AI classification complete: {classified} classified, {errors} errors")
+            else:
+                self.status = "failed"
+                self.log(f"AI classification failed: {result.get('message', 'unknown error')}", "ERROR")
+
+            return result
+
+        except ImportError:
+            msg = "classify_news.py not found — skipping AI classification"
+            self.log(msg, "WARNING")
+            self.status = "success"   # non-fatal
+            return {"status": "skipped", "message": msg}
+
+        except Exception as e:
+            self.log(f"AI classification error: {str(e)}", "ERROR")
+            self.status = "failed"
+            return {"status": "failed", "error": str(e)}
+
+
+# ── ★ Stage 7: Guardian Agent ────────────────────
+class GuardianAgent(Agent):
+    """Runs guardian_poc/src/daily_job.py to refresh alerts_latest.json."""
+
+    def __init__(self):
+        super().__init__("GuardianRefresh")
+
+    async def execute(self, **kwargs):
+        self.status = "running"
+        self.log("Refreshing Guardian snapshot from GCS...")
+        try:
+            import subprocess, sys
+            from pathlib import Path
+            daily_job = Path("guardian_poc/src/daily_job.py")
+            if not daily_job.exists():
+                msg = f"Guardian daily_job.py not found at {daily_job}"
+                self.log(msg, "WARNING")
+                self.status = "success"
+                return {"status": "skipped", "message": msg}
+            result = subprocess.run(
+                [sys.executable, str(daily_job)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode == 0:
+                self.status = "success"
+                last_line = (result.stdout.strip().split("\n") or [""])[-1]
+                self.log(f"Guardian refresh complete: {last_line}")
+                return {"status": "success", "summary": last_line}
+            else:
+                self.log(f"Guardian failed: {result.stderr[-200:]}", "ERROR")
+                self.status = "failed"
+                return {"status": "failed", "error": result.stderr[-200:]}
+        except subprocess.TimeoutExpired:
+            self.log("Guardian timed out (120s) — using previous snapshot", "WARNING")
+            self.status = "success"
+            return {"status": "timeout"}
+        except Exception as e:
+            self.log(f"Guardian error: {e}", "ERROR")
+            self.status = "failed"
+            return {"status": "failed", "error": str(e)}
+
+
 class AgentOrchestrator:
     """Master orchestrator for coordinating all agents"""
 
     def __init__(self):
-        self.news_gatherer = NewsGathererAgent()
-        self.risk_classifier = RiskClassifierAgent()
-        self.database_manager = DatabaseAgent()
-        self.analyzer = AnalysisAgent()
-        self.reporter = ReportingAgent()
-        self.execution_log = []
+        self.news_gatherer      = NewsGathererAgent()
+        self.risk_classifier    = RiskClassifierAgent()
+        self.database_manager   = DatabaseAgent()
+        self.analyzer           = AnalysisAgent()
+        self.reporter           = ReportingAgent()
+        self.ai_classifier      = AIClassificationAgent()   # ← new
+        self.guardian_agent     = GuardianAgent()              # ← new
+        self.execution_log      = []
 
     async def execute_pipeline(self, **kwargs) -> Dict:
         """Execute complete analysis pipeline"""
@@ -340,7 +375,7 @@ class AgentOrchestrator:
             if news_result['status'] != 'success':
                 return self._finalize_result(result, 'failed')
 
-            # Stage 2: Classify Risks
+            # Stage 2: Classify Risks (keyword-based)
             print("\n[STAGE 2] Risk Classification...")
             classify_result = await self.risk_classifier.execute(
                 news_items=news_result['data']
@@ -373,6 +408,16 @@ class AgentOrchestrator:
             )
             result['stages']['reporting'] = report_result
 
+            # ── Stage 6: AI Classification + GCS Enrichment ──
+            print("\n[STAGE 6] AI Classification & GCS Data Enrichment...")
+            ai_result = await self.ai_classifier.execute()
+            result['stages']['ai_classification'] = ai_result
+
+            # ── Stage 7: Guardian Refresh ────────────────────────
+            print("\n[STAGE 7] Guardian Snapshot Refresh...")
+            guardian_result = await self.guardian_agent.execute()
+            result['stages']['guardian_refresh'] = guardian_result
+
             return self._finalize_result(result, 'success')
 
         except Exception as e:
@@ -380,7 +425,6 @@ class AgentOrchestrator:
             return self._finalize_result(result, 'failed')
 
     def _finalize_result(self, result: Dict, status: str) -> Dict:
-        """Finalize execution result"""
         result['status'] = status
         result['completion_time'] = datetime.now().isoformat()
         print("\n" + "="*70)
@@ -389,7 +433,6 @@ class AgentOrchestrator:
         return result
 
     def get_agent_summary(self) -> Dict:
-        """Get summary of all agents"""
         return {
             "news_gatherer": {
                 "status": self.news_gatherer.status,
@@ -410,18 +453,18 @@ class AgentOrchestrator:
             "reporter": {
                 "status": self.reporter.status,
                 "reports_generated": len(self.reporter.reports)
-            }
+            },
+            "ai_classifier": {                          # ← new
+                "status": self.ai_classifier.status,
+            },
         }
 
 
 async def demo():
     """Demo the multi-agent system"""
     orchestrator = AgentOrchestrator()
-
-    # Execute the pipeline
     result = await orchestrator.execute_pipeline()
 
-    # Print results
     print("\n" + "="*70)
     print("FINAL RESULTS")
     print("="*70)
@@ -431,7 +474,6 @@ async def demo():
     for agent, stats in summary.items():
         print(f"  {agent}: {stats}")
 
-    # Get the final report
     if orchestrator.reporter.reports:
         report = orchestrator.reporter.reports[-1]
         print("\nGenerated Report:")
@@ -441,5 +483,4 @@ async def demo():
 
 
 if __name__ == "__main__":
-    import sys
     asyncio.run(demo())

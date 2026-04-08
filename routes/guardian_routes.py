@@ -58,6 +58,20 @@ def get_guardian_dashboard():
         prev_snapshot_obj = gcs_result.get("previous_snapshot")
         data_source = "gcs"
 
+        # ★ Quality check: if GCS snapshot has no scored alerts, prefer local data
+        if snapshot:
+            gcs_alerts = snapshot.get("alerts") or []
+            gcs_triggered = len([
+                a for a in gcs_alerts
+                if float(a.get("score", 0)) > 0
+            ])
+            if gcs_triggered == 0:
+                # GCS data has no scores — fall back to local alerts_latest.json
+                snapshot = None
+                snapshot_ref = ""
+                prev_snapshot_obj = None
+                data_source = "local"
+
     if snapshot is None:
         snapshot_path = _resolve_guardian_snapshot_path()
         if not snapshot_path.exists():
