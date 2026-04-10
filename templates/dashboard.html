@@ -64,12 +64,6 @@
             <span class="nav-icon">▦</span>
             <span class="nav-text">Data Source</span>
         </a>
-
-        <div class="sidebar-section-label" style="margin-top:16px;">Configuration</div>
-        <a class="nav-item" onclick="openTuneModal()">
-            <span class="nav-icon">⊙</span>
-            <span class="nav-text">Tune Strategy</span>
-        </a>
     </nav>
 
     <!-- Spacer pushes everything below to bottom -->
@@ -116,10 +110,6 @@
         <div class="topbar-title" id="topbarTitle">Home</div>
         <div class="topbar-right">
             <div class="topbar-clock" id="topbarClock">—</div>
-            <button class="tune-trigger-btn" onclick="openTuneModal()" title="Tune risk strategy weights">
-                <span class="tune-trigger-icon">⊙</span>
-                Tune Strategy
-            </button>
             <span class="status-badge status-idle" id="pipelineStatusBadge">Idle</span>
         </div>
     </div>
@@ -136,7 +126,7 @@
         <div class="page active" id="page-home">
 
             <!-- ① Persona bar -->
-            <div style="display:flex; align-items:center;
+            <div style="display:flex; align-items:center; justify-content:space-between;
                         background:white; border:1px solid var(--border); border-radius:6px;
                         padding:9px 16px; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -148,6 +138,12 @@
                          id="homeRoleName">Cash Manager</div>
                     <button class="btn btn-sm btn-ghost" onclick="openPersonaLogin()"
                         style="font-size:10px; padding:2px 8px; color:var(--primary);">Switch</button>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-ghost" onclick="openTuneModal()" 
+                        style="font-size:10px; padding:2px 8px; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
+                        <span style="font-size:12px;">⊙</span> Tune Risk Weights
+                    </button>
                 </div>
             </div>
 
@@ -1452,7 +1448,7 @@
         <!-- ── Header ───────────────────────────── -->
         <div class="tune-header">
             <div class="tune-header-left">
-                <div class="tune-title">Risk Strategy Tuner</div>
+                <div class="tune-title">Risk Weights Tuner</div>
                 <div class="tune-subtitle">Live preview · changes update the background list instantly</div>
             </div>
             <button class="tune-close-btn" onclick="closeTuneModal()" aria-label="Close">✕</button>
@@ -1546,7 +1542,7 @@
             <div style="display:flex; gap:12px; margin-top:8px;">
                 <button type="button" onclick="savePersonaSelection()"
                     style="flex:1; justify-content:center; background:var(--primary); color:white; padding:14px; border:none; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.05em; cursor:pointer; box-shadow:0 4px 12px var(--primary-glow); transition:all 0.15s;">
-                    INITIALIZE ENVIRONMENT
+                    RESET ENVIRONMENT
                 </button>
                 <button type="button" onclick="closePersonaLogin()"
                     style="padding:14px 24px; border:1px solid var(--border); background:white; color:var(--text-secondary); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s;">
