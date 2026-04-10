@@ -66,9 +66,9 @@
         </a>
 
         <div class="sidebar-section-label" style="margin-top:16px;">Configuration</div>
-        <a class="nav-item" onclick="showPage('settings', this)">
+        <a class="nav-item" onclick="openTuneModal()">
             <span class="nav-icon">⊙</span>
-            <span class="nav-text">Persona Settings</span>
+            <span class="nav-text">Tune Strategy</span>
         </a>
     </nav>
 
@@ -116,6 +116,10 @@
         <div class="topbar-title" id="topbarTitle">Home</div>
         <div class="topbar-right">
             <div class="topbar-clock" id="topbarClock">—</div>
+            <button class="tune-trigger-btn" onclick="openTuneModal()" title="Tune risk strategy weights">
+                <span class="tune-trigger-icon">⊙</span>
+                Tune Strategy
+            </button>
             <span class="status-badge status-idle" id="pipelineStatusBadge">Idle</span>
         </div>
     </div>
@@ -590,108 +594,7 @@
         <!-- ─────────────────────────────────────
              PAGE: PERSONA SETTINGS
         ───────────────────────────────────── -->
-        <div class="page" id="page-settings">
-            <div class="ps-shell">
-
-                <!-- Left: persona tabs -->
-                <div class="ps-nav" id="psNav">
-                    <div class="ps-nav-label">ROLE</div>
-                </div>
-
-                <!-- Right: editor -->
-                <div class="ps-editor">
-
-                    <!-- Header -->
-                    <div class="ps-header">
-                        <div>
-                            <div class="ps-title" id="psTitle">Weight Configuration</div>
-                            <div class="ps-subtitle">AI-calibrated defaults &middot; Adjust multipliers per role</div>
-                        </div>
-                        <div class="ps-header-actions">
-                            <button class="ps-reset-link" onclick="resetPersonaWeights()">Reset to AI Defaults</button>
-                        </div>
-                    </div>
-
-                    <!-- Alert threshold -->
-                    <div class="ps-card ps-threshold-row">
-                        <div class="ps-threshold-left">
-                            <span class="ps-threshold-label">ALERT THRESHOLD</span>
-                            <span class="ps-threshold-hint">Minimum score to surface an alert</span>
-                        </div>
-                        <div class="ps-threshold-control">
-                            <input type="range" class="ps-slider" id="psThresholdSlider" min="20" max="80" step="1" value="40">
-                            <div class="ps-track-markers">
-                                <span>20</span><span>40</span><span>60</span><span>80</span>
-                            </div>
-                        </div>
-                        <div class="ps-value-col">
-                            <span class="ps-multiplier" id="psThresholdVal">40</span>
-                            <span class="ps-unit">pts</span>
-                        </div>
-                    </div>
-
-                    <!-- Slider grid -->
-                    <div class="ps-section-heading">
-                        <span class="ps-section-label">RISK WEIGHT MULTIPLIERS</span>
-                        <span class="ps-section-note">Slide to adjust how each risk category amplifies the AI score</span>
-                    </div>
-                    <div class="ps-grid" id="psSliderGrid">
-                        <!-- populated by JS -->
-                    </div>
-
-                    <!-- Save feedback -->
-                    <div class="ps-feedback" id="psFeedback" style="display:none;"></div>
-
-                    <!-- ── Profiles ─────────────────────────────── -->
-                    <div class="ps-section-heading" style="margin-top:28px;">
-                        <span class="ps-section-label">SAVED PROFILES</span>
-                        <span class="ps-section-note">Snapshot any weight configuration and reload it instantly</span>
-                    </div>
-
-                    <div class="ps-card ps-profiles-card">
-
-                        <!-- Save current as profile -->
-                        <div class="ps-profile-row ps-profile-save-row">
-                            <div class="ps-profile-meta">
-                                <span class="ps-threshold-label" style="display:inline-block;margin-bottom:3px;">SAVE CURRENT WEIGHTS</span>
-                            </div>
-                            <div class="ps-profile-controls">
-                                <input id="psProfileNameInput" type="text"
-                                    class="ps-profile-input"
-                                    placeholder="e.g. High Liquidity Focus"
-                                    maxlength="64">
-                                <button class="ps-profile-save-btn" onclick="psSaveCurrentAsProfile()">
-                                    Save Profile
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="ps-profile-divider"></div>
-
-                        <!-- Load a saved profile -->
-                        <div class="ps-profile-row">
-                            <div class="ps-profile-meta">
-                                <span class="ps-threshold-label" style="display:inline-block;margin-bottom:3px;">LOAD PROFILE</span>
-                                <span class="ps-threshold-hint" style="display:block;">Applies weights &amp; re-scores cached news instantly</span>
-                            </div>
-                            <div class="ps-profile-controls">
-                                <select id="psProfileSelect" class="ps-profile-select">
-                                    <option value="">— select a saved profile —</option>
-                                </select>
-                                <button class="ps-profile-load-btn" onclick="psLoadSelectedProfile()">
-                                    Load &amp; Re-score
-                                </button>
-                            </div>
-                        </div>
-
-                    </div><!-- /ps-profiles-card -->
-
-                    <!-- Profile action feedback -->
-                    <div class="ps-feedback" id="psProfileFeedback" style="display:none;"></div>
-
-                </div><!-- /ps-editor -->
-            </div><!-- /ps-shell -->
-        </div><!-- /page-settings -->
+        <!-- page-settings removed: Persona Settings now lives in the Tune Strategy modal -->
 
     </div><!-- /page-content -->
 
@@ -1143,6 +1046,394 @@
 }
 .ps-profile-load-btn:hover  { background: #111827; }
 .ps-profile-load-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════
+   TUNE STRATEGY — topbar button
+═══════════════════════════════════════════ */
+.tune-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', var(--font-sans);
+    letter-spacing: 0.02em;
+    color: var(--text-main);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+.tune-trigger-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
+.tune-trigger-icon { font-size: 13px; line-height: 1; }
+
+/* ═══════════════════════════════════════════
+   TUNE STRATEGY MODAL
+   Font: Inter · grayscale · 1px lines · no heavy shadows
+═══════════════════════════════════════════ */
+
+/* Overlay — semi-transparent blur so background stays visible */
+.tune-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 8000;
+    padding-top: 52px; /* below topbar */
+}
+.tune-overlay.open { display: flex; }
+
+/* Modal card — compact, leaves bottom of page visible */
+.tune-modal {
+    width: min(740px, calc(100vw - 32px));
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: 'Inter', var(--font-sans);
+    overflow: hidden;
+    animation: tuneSlideIn 0.18s ease-out;
+}
+@keyframes tuneSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Header */
+.tune-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #F1F5F9;
+}
+.tune-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F172A;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+}
+.tune-subtitle {
+    font-size: 10px;
+    color: #94A3B8;
+    font-family: 'Inter', sans-serif;
+}
+.tune-close-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94A3B8;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 3px;
+    transition: background 0.1s, color 0.1s;
+    flex-shrink: 0;
+}
+.tune-close-btn:hover { background: #F1F5F9; color: #0F172A; }
+
+/* Persona pills */
+.tune-persona-bar {
+    display: flex;
+    gap: 4px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #F1F5F9;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.tune-persona-bar::-webkit-scrollbar { display: none; }
+.tune-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 12px;
+    border-radius: 13px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    color: #64748B;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.1s;
+}
+.tune-pill:hover { border-color: #94A3B8; color: #0F172A; }
+.tune-pill.active {
+    background: #0F172A;
+    border-color: #0F172A;
+    color: #fff;
+}
+
+/* Two-column slider body */
+.tune-body {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #E2E8F0 transparent;
+}
+.tune-col { padding: 8px 0; }
+.tune-col-divider { background: #F1F5F9; }
+
+/* Category group label */
+.tune-group {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #CBD5E1;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 8px 20px 4px;
+}
+
+/* Slider row */
+.tune-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 20px;
+    transition: background 0.08s;
+}
+.tune-row:hover { background: #FAFAFA; }
+.tune-cat {
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+
+/* Range slider */
+.tune-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #E5E7EB;
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+    display: block;
+}
+.tune-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+    transition: background 0.1s, transform 0.08s;
+}
+.tune-range::-webkit-slider-thumb:hover {
+    background: #374151;
+    transform: scale(1.25);
+}
+.tune-range::-moz-range-thumb {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #6B7280;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+.tune-range.modified::-webkit-slider-thumb { background: #2563EB; box-shadow: 0 0 0 1px #BFDBFE; }
+.tune-range.modified { background: linear-gradient(90deg, #DBEAFE 0%, #E5E7EB 100%); }
+.tune-range.modified::-moz-range-thumb { background: #2563EB; }
+
+/* Value display */
+.tune-val-wrap {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    justify-content: flex-end;
+}
+.tune-val {
+    font-size: 11px;
+    font-weight: 600;
+    color: #0F172A;
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 28px;
+    text-align: right;
+    transition: color 0.15s;
+}
+.tune-val.changed { color: #2563EB; }
+.tune-mod-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #2563EB;
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.12s;
+}
+.tune-mod-dot.on { opacity: 1; }
+
+/* Threshold row */
+.tune-threshold-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-top: 1px solid #F1F5F9;
+    background: #FAFAFA;
+}
+.tune-thresh-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #94A3B8;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+}
+.tune-thresh-track { flex: 1; }
+.tune-thresh-range { width: 100%; }
+.tune-track-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+}
+.tune-track-ticks span {
+    font-size: 8px;
+    color: #D1D5DB;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.tune-thresh-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0F172A;
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 24px;
+    text-align: right;
+}
+.tune-thresh-unit {
+    font-size: 9px;
+    color: #94A3B8;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Footer */
+.tune-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 20px;
+    border-top: 1px solid #F1F5F9;
+    flex-wrap: wrap;
+}
+.tune-footer-left { }
+.tune-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tune-reset-link {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94A3B8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.1s;
+}
+.tune-reset-link:hover { color: #0F172A; }
+.tune-footer-sep {
+    width: 1px;
+    height: 20px;
+    background: #E2E8F0;
+    flex-shrink: 0;
+}
+.tune-select {
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+    max-width: 160px;
+}
+.tune-load-btn {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+}
+.tune-load-btn:hover { background: #F8FAFC; border-color: #9CA3AF; }
+.tune-name-input {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    color: #0F172A;
+    outline: none;
+    width: 148px;
+    transition: border-color 0.1s;
+}
+.tune-name-input:focus { border-color: #9CA3AF; }
+.tune-name-input::placeholder { color: #CBD5E1; }
+.tune-save-btn {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    background: #1F2937;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s;
+}
+.tune-save-btn:hover { background: #111827; }
+.tune-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* Feedback */
+.tune-feedback {
+    padding: 8px 20px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    border-top: 1px solid transparent;
+}
+.tune-feedback-success { background: #F0FDF4; color: #166534; border-top-color: #BBF7D0; }
+.tune-feedback-error   { background: #FEF2F2; color: #991B1B; border-top-color: #FECACA; }
+
+/* Live-preview flash on re-sorted rows */
+@keyframes tuneFlash {
+    0%   { background: #EFF6FF; }
+    100% { background: transparent; }
+}
+.tune-live-flash { animation: tuneFlash 0.6s ease-out; }
 </style>
 
     <div class="app-footer">
@@ -1150,6 +1441,69 @@
     </div>
 
 </div><!-- /app-shell -->
+
+
+<!-- ═══════════════════════════════════════════
+     TUNE STRATEGY MODAL
+═══════════════════════════════════════════ -->
+<div id="tuneOverlay" class="tune-overlay" onclick="handleTuneOverlayClick(event)">
+    <div class="tune-modal" id="tuneModal">
+
+        <!-- ── Header ───────────────────────────── -->
+        <div class="tune-header">
+            <div class="tune-header-left">
+                <div class="tune-title">Risk Strategy Tuner</div>
+                <div class="tune-subtitle">Live preview · changes update the background list instantly</div>
+            </div>
+            <button class="tune-close-btn" onclick="closeTuneModal()" aria-label="Close">✕</button>
+        </div>
+
+        <!-- ── Persona pills ─────────────────────── -->
+        <div class="tune-persona-bar" id="tunePersonaBar"></div>
+
+        <!-- ── Slider grid (2 columns) ───────────── -->
+        <div class="tune-body">
+            <div class="tune-col" id="tuneColLeft"></div>
+            <div class="tune-col-divider"></div>
+            <div class="tune-col" id="tuneColRight"></div>
+        </div>
+
+        <!-- ── Threshold ─────────────────────────── -->
+        <div class="tune-threshold-row">
+            <span class="tune-thresh-label">ALERT THRESHOLD</span>
+            <div class="tune-thresh-track">
+                <input type="range" class="tune-range tune-thresh-range"
+                    id="tuneThresholdSlider" min="20" max="80" step="1" value="40">
+                <div class="tune-track-ticks">
+                    <span>20</span><span>40</span><span>60</span><span>80</span>
+                </div>
+            </div>
+            <span class="tune-thresh-val" id="tuneThresholdVal">40</span>
+            <span class="tune-thresh-unit">pts</span>
+        </div>
+
+        <!-- ── Footer: save / load profile ──────── -->
+        <div class="tune-footer">
+            <div class="tune-footer-left">
+                <button class="tune-reset-link" onclick="tuneReset()">↺ Reset to AI Defaults</button>
+            </div>
+            <div class="tune-footer-right">
+                <select id="tuneProfileSelect" class="tune-select">
+                    <option value="">Load saved profile…</option>
+                </select>
+                <button class="tune-load-btn" onclick="tuneLoadProfile()">Load</button>
+                <div class="tune-footer-sep"></div>
+                <input id="tuneProfileName" type="text" class="tune-name-input"
+                    placeholder="Profile name…" maxlength="64">
+                <button class="tune-save-btn" onclick="tuneSaveProfile()">Save</button>
+            </div>
+        </div>
+
+        <!-- ── Feedback ──────────────────────────── -->
+        <div class="tune-feedback" id="tuneFeedback" style="display:none;"></div>
+
+    </div><!-- /tune-modal -->
+</div><!-- /tuneOverlay -->
 
 
 <!-- ═══════════════════════════════════════════
@@ -1663,16 +2017,19 @@ async function renderRiskMatrix(analysis) {
         'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
     };
 
-    itemsEl.innerHTML = allScored.map(item => {
+    // Store for live-preview re-scoring from Tune Strategy modal
+    window._lastScoredItems = allScored;
+
+    itemsEl.innerHTML = allScored.map((item, idx) => {
         const lvl   = item.matrix_level || 'Low';
         const style = levelStyle[lvl] || levelStyle['Low'];
         const prob  = Number(item.probability) || 1;
         const imp   = Number(item.impact)      || 1;
         return `
-        <div class="card" style="border-left:3px solid ${style.border}; background:${style.bg};">
+        <div class="card" data-item-idx="${idx}" style="border-left:3px solid ${style.border}; background:${style.bg}; transition: border-color 0.25s, background 0.25s;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <span class="status-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;">${lvl}</span>
+                    <span class="status-badge tune-lvl-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;transition:background 0.25s,color 0.25s;">${lvl}</span>
                     ${item.source === 'GCS Data Alert' ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#EFF6FF;color:var(--primary);font-family:var(--font-mono);">DATA</span>` : `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">NEWS</span>`}
                 </div>
                 <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
@@ -1772,27 +2129,8 @@ async function loadGuardianDashboard() {
             newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
             newsCountBadge.style.color = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
         }
-        document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => {
-            const scoreBg    = a.risk_level === 'High'   ? 'var(--danger-bg)'  :
-                               a.risk_level === 'Medium' ? 'var(--warning-bg)' : 'var(--idle-bg)';
-            const scoreColor = a.risk_level === 'High'   ? 'var(--danger-text)'  :
-                               a.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--idle-text)';
-            return `<tr>
-                <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country)}</td>
-                <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
-                <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${a.score ?? 0}</span></td>
-                <td style="font-size:11px;max-width:200px;">
-                    ${a.url
-                        ? `<a href="${escapeHtml(a.url)}" target="_blank"
-                            style="color:var(--text-main);text-decoration:none;display:-webkit-box;
-                            -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                            ${escapeHtml(a.title)}</a>`
-                        : `<span style="display:-webkit-box;-webkit-line-clamp:2;
-                            -webkit-box-orient:vertical;overflow:hidden;">
-                            ${escapeHtml(a.title)}</span>`}
-                </td>
-            </tr>`;
-        }).join('');
+        // Delegate to shared renderer so Tune Strategy modal can call the same function
+        renderGuardianAlerts(guardianTopAlerts);
 
     } catch(e) {
         console.error('loadGuardianDashboard error:', e);
@@ -3067,6 +3405,391 @@ async function psLoadSelectedProfile() {
         btn.disabled    = false;
         btn.textContent = 'Load & Re-score';
     }
+}
+
+// ══════════════════════════════════════════════
+// TUNE STRATEGY MODAL
+// ══════════════════════════════════════════════
+
+// Category layout: [key, label, column (0=left, 1=right)]
+const TUNE_CATS = [
+    // ── Left column ──────────────────────────
+    { key: 'market_risk',      label: 'Market',      col: 0, group: 'Financial'    },
+    { key: 'credit_risk',      label: 'Credit',      col: 0, group: 'Financial'    },
+    { key: 'liquidity_risk',   label: 'Liquidity',   col: 0, group: 'Financial'    },
+    { key: 'systematic_risk',  label: 'Systematic',  col: 0, group: 'Financial'    },
+    { key: 'operational_risk', label: 'Operational', col: 0, group: 'Operational'  },
+    { key: 'process_risk',     label: 'Process',     col: 0, group: 'Operational'  },
+    { key: 'business_risk',    label: 'Business',    col: 0, group: 'Operational'  },
+    // ── Right column ─────────────────────────
+    { key: 'regulatory_risk',  label: 'Regulatory',  col: 1, group: 'Geopolitical' },
+    { key: 'political_risk',   label: 'Political',   col: 1, group: 'Geopolitical' },
+    { key: 'reputation_risk',  label: 'Reputation',  col: 1, group: 'Geopolitical' },
+    { key: 'disaster_risk',    label: 'Disaster',    col: 1, group: 'Environment'  },
+    { key: 'supply_risk',      label: 'Supply',      col: 1, group: 'Environment'  },
+    { key: 'demand_risk',      label: 'Demand',      col: 1, group: 'Environment'  },
+];
+
+// Maps guardian alert .category string → weight key (mirrors persona_loader.py)
+const TUNE_CAT_MAP = {
+    'market risk':      'market_risk',
+    'credit risk':      'credit_risk',
+    'liquidity risk':   'liquidity_risk',
+    'operational risk': 'operational_risk',
+    'political risk':   'political_risk',
+    'regulatory risk':  'regulatory_risk',
+    'reputation risk':  'reputation_risk',
+    'systematic risk':  'systematic_risk',
+    'systemic risk':    'systematic_risk',
+    'disaster risk':    'disaster_risk',
+    'supply risk':      'supply_risk',
+    'demand risk':      'demand_risk',
+    'process risk':     'process_risk',
+    'business risk':    'business_risk',
+};
+
+let tsPersona    = localStorage.getItem('argusPersona') || 'cash_manager';
+let tsDefaults   = {};   // AI baselines per persona key
+let tsDraft      = {};   // in-memory slider edits
+let _tuneRafId   = null; // rAF handle for live preview throttle
+
+// ── Open / Close ──────────────────────────────
+
+async function openTuneModal() {
+    // Switch to Risk Monitor so the live preview is visible behind the modal
+    const riskNavEl = document.querySelector('.nav-item[onclick*="risk"]');
+    showPage('risk', riskNavEl);
+
+    // Ensure persona defaults are loaded
+    if (!Object.keys(tsDefaults).length) await tuneLoadDefaults();
+
+    // Sync active persona with the current role
+    const stored = localStorage.getItem('argusPersona') || 'cash_manager';
+    tsPersona = stored;
+
+    tuneRenderPersonaBar();
+    tuneRenderSliders(tsPersona);
+    await tuneRefreshProfileList();
+
+    document.getElementById('tuneOverlay').classList.add('open');
+}
+
+function closeTuneModal() {
+    document.getElementById('tuneOverlay').classList.remove('open');
+    cancelAnimationFrame(_tuneRafId);
+    // Restore guardian alerts to original scores when modal closes without saving
+    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
+}
+
+function handleTuneOverlayClick(e) {
+    if (e.target === document.getElementById('tuneOverlay')) closeTuneModal();
+}
+
+// ── Load defaults from API ────────────────────
+
+async function tuneLoadDefaults() {
+    try {
+        const r = await fetch(`${API_BASE}/personas`);
+        const d = await r.json();
+        tsDefaults = {};
+        tsDraft    = {};
+        (d.personas || []).forEach(p => {
+            tsDefaults[p.key] = {
+                alert_threshold: p.alert_threshold ?? 40,
+                risk_weights:    p.risk_weights || {},
+            };
+            tsDraft[p.key] = JSON.parse(JSON.stringify(tsDefaults[p.key]));
+        });
+    } catch(e) { console.warn('tuneLoadDefaults error:', e); }
+}
+
+// ── Persona pills ─────────────────────────────
+
+function tuneRenderPersonaBar() {
+    const bar = document.getElementById('tunePersonaBar');
+    bar.innerHTML = '';
+    (availablePersonas || []).forEach(p => {
+        const pill = document.createElement('button');
+        pill.className = 'tune-pill' + (p.key === tsPersona ? ' active' : '');
+        pill.textContent = p.label;
+        pill.onclick = () => {
+            tsPersona = p.key;
+            bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
+            pill.classList.add('active');
+            tuneRenderSliders(p.key);
+        };
+        bar.appendChild(pill);
+    });
+}
+
+// ── Slider rendering ──────────────────────────
+
+function tuneRenderSliders(personaKey) {
+    const cfg = tsDraft[personaKey] || {};
+    const def = tsDefaults[personaKey] || {};
+
+    // Threshold
+    const thresh    = cfg.alert_threshold ?? 40;
+    const defThresh = def.alert_threshold ?? 40;
+    const thSlider  = document.getElementById('tuneThresholdSlider');
+    const thVal     = document.getElementById('tuneThresholdVal');
+    thSlider.value       = thresh;
+    thVal.textContent    = thresh;
+    thSlider.className   = 'tune-range tune-thresh-range' + (thresh !== defThresh ? ' modified' : '');
+    thSlider.oninput = () => {
+        const v = parseInt(thSlider.value, 10);
+        thVal.textContent = v;
+        if (!tsDraft[personaKey]) tsDraft[personaKey] = {};
+        tsDraft[personaKey].alert_threshold = v;
+        thSlider.className = 'tune-range tune-thresh-range' + (v !== defThresh ? ' modified' : '');
+    };
+
+    // Category sliders — two columns
+    const leftEl  = document.getElementById('tuneColLeft');
+    const rightEl = document.getElementById('tuneColRight');
+    leftEl.innerHTML  = '';
+    rightEl.innerHTML = '';
+
+    let lastGroupL = null, lastGroupR = null;
+
+    TUNE_CATS.forEach(cat => {
+        const weights    = cfg.risk_weights      || {};
+        const defWeights = def.risk_weights || {};
+        const val    = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
+        const defVal = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
+        const modified = Math.abs(val - defVal) > 0.005;
+
+        const target = cat.col === 0 ? leftEl : rightEl;
+        let lastGroup = cat.col === 0 ? lastGroupL : lastGroupR;
+
+        if (cat.group !== lastGroup) {
+            const g = document.createElement('div');
+            g.className   = 'tune-group';
+            g.textContent = cat.group;
+            target.appendChild(g);
+            if (cat.col === 0) lastGroupL = cat.group;
+            else               lastGroupR = cat.group;
+        }
+
+        const row = document.createElement('div');
+        row.className = 'tune-row';
+        row.dataset.catKey = cat.key;
+        row.innerHTML = `
+            <span class="tune-cat">${cat.label}</span>
+            <input type="range" class="tune-range${modified ? ' modified' : ''}"
+                id="tr-${cat.key}" min="0.5" max="2.0" step="0.05" value="${val.toFixed(2)}">
+            <div class="tune-val-wrap">
+                <span class="tune-val${modified ? ' changed' : ''}" id="tv-${cat.key}">${val.toFixed(2)}×</span>
+                <span class="tune-mod-dot${modified ? ' on' : ''}" id="td-${cat.key}"></span>
+            </div>`;
+
+        const slider  = row.querySelector('.tune-range');
+        const valEl   = row.querySelector('.tune-val');
+        const dotEl   = row.querySelector('.tune-mod-dot');
+
+        slider.addEventListener('input', () => {
+            const v       = parseFloat(slider.value);
+            const changed = Math.abs(v - defVal) > 0.005;
+
+            valEl.textContent = v.toFixed(2) + '×';
+            valEl.classList.toggle('changed', changed);
+            slider.classList.toggle('modified', changed);
+            dotEl.classList.toggle('on', changed);
+
+            if (!tsDraft[personaKey].risk_weights) tsDraft[personaKey].risk_weights = {};
+            tsDraft[personaKey].risk_weights[cat.key] = v;
+
+            // Live preview — throttled via rAF
+            cancelAnimationFrame(_tuneRafId);
+            _tuneRafId = requestAnimationFrame(tunePreviewLive);
+        });
+
+        target.appendChild(row);
+    });
+}
+
+// ── Live preview — re-score & re-sort the background alert table ──────────
+
+function tunePreviewLive() {
+    const weights = (tsDraft[tsPersona] || {}).risk_weights || {};
+
+    // ① Re-score guardian alerts in the news alerts table
+    if (guardianTopAlerts && guardianTopAlerts.length) {
+        const rescored = guardianTopAlerts.map(a => {
+            const wKey = TUNE_CAT_MAP[(a.category || '').toLowerCase().trim()] || '';
+            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
+            return { ...a, _eff: Math.min(100, parseFloat(a.score || 0) * w) };
+        });
+        rescored.sort((a, b) => b._eff - a._eff);
+        renderGuardianAlerts(rescored, true);
+    }
+
+    // ② Re-score scored intelligence nodes (riskMatrixItems)
+    if (window._lastScoredItems && window._lastScoredItems.length) {
+        const recolored = window._lastScoredItems.map(item => {
+            const wKey = TUNE_CAT_MAP[(item.risk_category || '').toLowerCase().trim()] || '';
+            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
+            const eff  = Math.min(100, parseFloat(item.risk_score || 0) * w);
+            // Remap matrix level based on effective score
+            let lvl = 'Low';
+            if (eff >= 80) lvl = 'Extreme';
+            else if (eff >= 60) lvl = 'High';
+            else if (eff >= 35) lvl = 'Medium';
+            return { ...item, _effScore: eff, _effLevel: lvl };
+        });
+        recolored.sort((a, b) => b._effScore - a._effScore);
+        tuneUpdateMatrixCards(recolored);
+    }
+}
+
+// Render guardian alert rows with optional effective-score override
+function renderGuardianAlerts(alerts, flash = false) {
+    const tbody = document.getElementById('criticalAlertsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = alerts.map((a, idx) => {
+        const score = a._eff !== undefined ? a._eff : parseFloat(a.score || 0);
+        const scoreBg    = score >= 70 ? 'var(--danger-bg)'  : score >= 40 ? 'var(--warning-bg)' : 'var(--idle-bg)';
+        const scoreColor = score >= 70 ? 'var(--danger-text)': score >= 40 ? 'var(--warning-text)': 'var(--idle-text)';
+        const cls = flash && idx < 5 ? ' class="tune-live-flash"' : '';
+        return `<tr${cls}>
+            <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country || '')}</td>
+            <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
+            <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${Math.round(score)}</span></td>
+            <td style="font-size:11px;max-width:200px;">
+                ${a.url
+                    ? `<a href="${escapeHtml(a.url)}" target="_blank"
+                        style="color:var(--text-main);text-decoration:none;display:-webkit-box;
+                        -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        ${escapeHtml(a.title || '')}</a>`
+                    : `<span style="display:-webkit-box;-webkit-line-clamp:2;
+                        -webkit-box-orient:vertical;overflow:hidden;">
+                        ${escapeHtml(a.title || '')}</span>`}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// Update only the level badge / border on matrix node cards (no full re-render)
+function tuneUpdateMatrixCards(items) {
+    const container = document.getElementById('riskMatrixItems');
+    if (!container) return;
+    const levelStyle = {
+        'Extreme': { border: '#EF4444', badge: '#991B1B', badgeBg: '#FEE2E2' },
+        'High':    { border: '#F97316', badge: '#9A3412', badgeBg: '#FFEDD5' },
+        'Medium':  { border: '#EAB308', badge: '#854D0E', badgeBg: '#FEF9C3' },
+        'Low':     { border: '#E2E8F0', badge: '#166534', badgeBg: '#DCFCE7' },
+    };
+    const cards = container.querySelectorAll('[data-item-idx]');
+    items.forEach((item, i) => {
+        const card = container.querySelector(`[data-item-idx="${i}"]`);
+        if (!card) return;
+        const lvl   = item._effLevel || item.matrix_level || 'Low';
+        const style = levelStyle[lvl] || levelStyle['Low'];
+        card.style.borderColor = style.border;
+        const badge = card.querySelector('.tune-lvl-badge');
+        if (badge) {
+            badge.textContent       = lvl;
+            badge.style.background  = style.badgeBg;
+            badge.style.color       = style.badge;
+        }
+    });
+}
+
+// ── Profile save / load / reset ───────────────
+
+async function tuneRefreshProfileList() {
+    try {
+        const r = await fetch(`${API_BASE}/list_profiles`);
+        const d = await r.json();
+        const sel = document.getElementById('tuneProfileSelect');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Load saved profile…</option>' +
+            (d.profiles || []).map(p =>
+                `<option value="${p.filename}">${p.name}${p.saved_at ? '  ·  ' + p.saved_at.slice(0,10) : ''}</option>`
+            ).join('');
+    } catch(e) { console.warn('tuneRefreshProfileList error:', e); }
+}
+
+async function tuneSaveProfile() {
+    const name = (document.getElementById('tuneProfileName').value || '').trim();
+    if (!name) { tuneFeedback('Enter a profile name first.', 'error'); return; }
+    const btn = document.querySelector('.tune-save-btn');
+    btn.disabled = true;
+    try {
+        const r = await fetch(`${API_BASE}/save_profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, persona_key: tsPersona, weights: tsDraft[tsPersona] || {} }),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            document.getElementById('tuneProfileName').value = '';
+            tuneFeedback(`"${name}" saved.`, 'success');
+            await tuneRefreshProfileList();
+        } else { tuneFeedback('Save failed: ' + (d.message || 'error'), 'error'); }
+    } catch(e) { tuneFeedback('Save failed: ' + e.message, 'error'); }
+    finally    { btn.disabled = false; }
+}
+
+async function tuneLoadProfile() {
+    const sel      = document.getElementById('tuneProfileSelect');
+    const filename = sel ? sel.value : '';
+    if (!filename) { tuneFeedback('Select a profile first.', 'error'); return; }
+
+    const btn = document.querySelector('.tune-load-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+        const r = await fetch(`${API_BASE}/load_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ filename }),
+        });
+        const d = await r.json();
+        if (d.status !== 'success') { tuneFeedback('Load failed: ' + (d.message || 'error'), 'error'); return; }
+
+        const profile = d.profile || {};
+        const pKey    = profile.persona_key || tsPersona;
+        const weights = profile.weights     || {};
+
+        // Apply into draft
+        tsPersona = pKey;
+        if (!tsDraft[pKey]) tsDraft[pKey] = {};
+        if (weights.alert_threshold !== undefined) tsDraft[pKey].alert_threshold = weights.alert_threshold;
+        if (weights.risk_weights) {
+            tsDraft[pKey].risk_weights = Object.assign(tsDraft[pKey].risk_weights || {}, weights.risk_weights);
+        }
+
+        // Re-render persona bar + sliders
+        tuneRenderPersonaBar();
+        tuneRenderSliders(pKey);
+
+        if (d.rescored) {
+            renderRiskMatrix(d.rescored);
+            tuneFeedback(`"${profile.name}" loaded · ${d.rescored.total_items} items re-scored.`, 'success');
+        } else {
+            tuneFeedback(`"${profile.name}" loaded · run Daily Jobs to apply to new data.`, 'success');
+        }
+    } catch(e) { tuneFeedback('Load failed: ' + e.message, 'error'); }
+    finally    { if (btn) { btn.disabled = false; btn.textContent = 'Load'; } }
+}
+
+function tuneReset() {
+    const def = tsDefaults[tsPersona];
+    if (def) tsDraft[tsPersona] = JSON.parse(JSON.stringify(def));
+    tuneRenderSliders(tsPersona);
+    // Restore original alert scores in the background
+    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
+    tuneFeedback('Sliders reset to AI defaults.', 'success');
+}
+
+function tuneFeedback(msg, type) {
+    const el = document.getElementById('tuneFeedback');
+    if (!el) return;
+    el.textContent   = msg;
+    el.style.display = 'block';
+    el.className     = `tune-feedback tune-feedback-${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 // ── Boot ─────────────────────────────────────
