@@ -6,7 +6,7 @@
     <title>ARGUS — Treasury Risk Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -15,12 +15,12 @@
 <!-- ═══════════════════════════════════════════
      SIDEBAR
 ═══════════════════════════════════════════ -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
 
     <!-- Logo -->
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">A</div>
-        <div>
+        <div class="sidebar-logo-text-wrapper">
             <div class="sidebar-logo-text">ARGUS</div>
             <div class="sidebar-logo-sub">Risk Intelligence</div>
         </div>
@@ -28,8 +28,11 @@
 
     <!-- Role Switcher -->
     <div class="sidebar-role" onclick="openPersonaLogin()">
-        <div class="sidebar-role-label">Active Role</div>
-        <div class="sidebar-role-name" id="sidebarRoleName">Cash Manager</div>
+        <div class="sidebar-role-icon">👤</div>
+        <div class="sidebar-role-text-wrapper">
+            <div class="sidebar-role-label">Active Role</div>
+            <div class="sidebar-role-name" id="sidebarRoleName">Cash Manager</div>
+        </div>
     </div>
 
     <!-- Main Nav -->
@@ -38,28 +41,28 @@
 
         <a class="nav-item active" onclick="showPage('home', this)">
             <span class="nav-icon">⌂</span>
-            Home
+            <span class="nav-text">Home</span>
         </a>
         <a class="nav-item" onclick="showPage('risk', this)">
             <span class="nav-icon">◈</span>
-            Risk Monitor
+            <span class="nav-text">Risk Monitor</span>
             <span class="nav-badge" id="riskBadge" style="display:none;">!</span>
-        </a>
-        <a class="nav-item" onclick="showPage('chat', this)">
-            <span class="nav-icon">◎</span>
-            Guardian Chat
-        </a>
-        <a class="nav-item" onclick="showPage('cash', this)">
-            <span class="nav-icon">◇</span>
-            Cash Position
         </a>
         <a class="nav-item" onclick="showPage('news', this)">
             <span class="nav-icon">⚖</span>
-            Regulatory
+            <span class="nav-text">Regulatory</span>
+        </a>
+        <a class="nav-item" onclick="showPage('cash', this)">
+            <span class="nav-icon">◇</span>
+            <span class="nav-text">Cash Position</span>
+        </a>
+        <a class="nav-item" onclick="showPage('chat', this)">
+            <span class="nav-icon">◎</span>
+            <span class="nav-text">Guardian Chat</span>
         </a>
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span>
-            Data Source
+            <span class="nav-text">Data Source</span>
         </a>
     </nav>
 
@@ -73,18 +76,24 @@
     </div>
 
     <!-- Daily Jobs Button fixed at bottom -->
-    <div style="padding: 12px 10px 4px;">
+    <div class="sidebar-execute-wrapper" style="padding: 12px 10px 4px;">
         <button class="btn btn-primary" id="executeBtn" onclick="executePipeline()"
             style="width:100%; justify-content:center; padding:10px; font-size:12px; letter-spacing:0.06em; border-radius:4px;">
-            &#9654;&nbsp; Daily Jobs
+            <span class="nav-icon" style="margin:0;">▶</span><span class="nav-text" style="margin-left:8px;">Daily Jobs</span>
         </button>
+    </div>
+
+    <!-- Sidebar Toggle Button -->
+    <div class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
+        <span class="nav-icon" id="sidebarToggleIcon">«</span>
+        <span class="nav-text">Collapse Sidebar</span>
     </div>
 
     <!-- Footer clock -->
     <div class="sidebar-footer">
         <div class="nav-item" style="color: var(--sidebar-section-label); font-size:10px; cursor:default;">
             <span class="nav-icon">◌</span>
-            <span id="sidebarClock">--:--:-- UTC</span>
+            <span id="sidebarClock" class="nav-text">--:--:-- UTC</span>
         </div>
     </div>
 
@@ -116,8 +125,8 @@
         ───────────────────────────────────── -->
         <div class="page active" id="page-home">
 
-            <!-- ① Persona + status bar -->
-            <div style="display:flex; justify-content:space-between; align-items:center;
+            <!-- ① Persona bar -->
+            <div style="display:flex; align-items:center; justify-content:space-between;
                         background:white; border:1px solid var(--border); border-radius:6px;
                         padding:9px 16px; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -130,10 +139,11 @@
                     <button class="btn btn-sm btn-ghost" onclick="openPersonaLogin()"
                         style="font-size:10px; padding:2px 8px; color:var(--primary);">Switch</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:14px;">
-                    <div style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);"
-                         id="homeLastRun">Last run: —</div>
-                    <span class="status-badge status-idle" id="homePipelineBadge">Idle</span>
+                <div>
+                    <button class="btn btn-sm btn-ghost" onclick="openTuneModal()" 
+                        style="font-size:10px; padding:2px 8px; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
+                        <span style="font-size:12px;">⊙</span> Tune Risk Weights
+                    </button>
                 </div>
             </div>
 
@@ -577,7 +587,850 @@
             </div>
         </div><!-- /page-data -->
 
+        <!-- ─────────────────────────────────────
+             PAGE: PERSONA SETTINGS
+        ───────────────────────────────────── -->
+        <!-- page-settings removed: Persona Settings now lives in the Tune Strategy modal -->
+
     </div><!-- /page-content -->
+
+<style>
+/* ═══════════════════════════════════════
+   PERSONA SETTINGS — design system
+   Font: Inter, grayscale palette, thin lines
+═══════════════════════════════════════ */
+
+/* Shell */
+.ps-shell {
+    display: flex;
+    height: calc(100vh - 52px - 36px);
+    font-family: 'Inter', var(--font-sans);
+}
+
+/* ── Left nav ───────────────────────── */
+.ps-nav {
+    width: 192px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: #fff;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+.ps-nav-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    padding: 0 16px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-tab {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px 16px 10px 18px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    gap: 3px;
+    transition: background 0.1s, border-color 0.1s;
+}
+.ps-tab:hover { background: var(--bg-color); }
+.ps-tab.active { background: #F8FAFC; border-left-color: #1F2937; }
+.ps-tab-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.3;
+}
+.ps-tab-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.4;
+}
+.ps-tab.active .ps-tab-name { color: #111827; }
+
+/* ── Editor area ────────────────────── */
+.ps-editor {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px 40px;
+    background: var(--bg-color);
+    min-width: 0;
+}
+
+/* Header */
+.ps-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+.ps-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+.ps-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+}
+.ps-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+.ps-reset-link {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    text-decoration: underline;
+    text-decoration-color: #CBD5E1;
+    text-underline-offset: 2px;
+    transition: color 0.12s, text-decoration-color 0.12s;
+}
+.ps-reset-link:hover { color: var(--text-main); text-decoration-color: #94A3B8; }
+.ps-save-btn {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: #fff;
+    background: #1F2937;
+    border: none;
+    cursor: pointer;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.12s;
+}
+.ps-save-btn:hover { background: #111827; }
+.ps-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* Shared card */
+.ps-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+/* Threshold row */
+.ps-threshold-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+}
+.ps-threshold-left { min-width: 160px; }
+.ps-threshold-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-main);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 3px;
+}
+.ps-threshold-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+}
+.ps-threshold-control { flex: 1; }
+
+/* Section heading */
+.ps-section-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.ps-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-section-note {
+    font-size: 10px;
+    color: #CBD5E1;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Slider grid */
+.ps-grid {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Group label inside grid */
+.ps-group-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 9px 20px 7px;
+    background: #FAFAFA;
+    border-top: 1px solid var(--border);
+}
+.ps-group-label:first-child { border-top: none; }
+
+/* Slider row */
+.ps-row {
+    display: grid;
+    grid-template-columns: 116px 1fr 80px;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 20px;
+    border-top: 1px solid #F1F5F9;
+    transition: background 0.1s;
+}
+.ps-row:hover { background: #FAFBFC; }
+
+.ps-cat-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Slider */
+.ps-slider-wrap { position: relative; }
+.ps-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #E5E7EB;
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+    display: block;
+    margin-bottom: 0;
+}
+.ps-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+    transition: background 0.12s, transform 0.1s;
+}
+.ps-slider::-webkit-slider-thumb:hover {
+    background: #374151;
+    transform: scale(1.2);
+    box-shadow: 0 0 0 1px #9CA3AF;
+}
+.ps-slider::-moz-range-thumb {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+}
+.ps-slider.modified::-webkit-slider-thumb {
+    background: #2563EB;
+    box-shadow: 0 0 0 1px #BFDBFE;
+}
+.ps-slider.modified { background: linear-gradient(to right, #DBEAFE, #E5E7EB); }
+.ps-slider.modified::-moz-range-thumb { background: #2563EB; }
+
+.ps-track-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+}
+.ps-track-markers span {
+    font-size: 8px;
+    color: #D1D5DB;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1;
+}
+
+/* Value column */
+.ps-value-col {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+}
+.ps-multiplier {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 32px;
+    text-align: right;
+}
+.ps-unit {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-mod-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563EB;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.ps-mod-dot.visible { opacity: 1; }
+.ps-mod-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #2563EB;
+    background: #EFF6FF;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    border: 1px solid #BFDBFE;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.ps-mod-badge.visible { opacity: 1; }
+
+/* Tooltip on modified values */
+.ps-def-tip {
+    position: relative;
+}
+.ps-def-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 130%;
+    right: 0;
+    background: #1F2937;
+    color: #fff;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+}
+.ps-def-tip:hover::after { opacity: 1; }
+
+/* Feedback strip */
+.ps-feedback {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid transparent;
+}
+.ps-feedback-success { background: var(--success-bg); color: var(--success-text); border-color: #BBF7D0; }
+.ps-feedback-error   { background: var(--danger-bg);  color: var(--danger-text);  border-color: #FECACA; }
+
+/* ── Profiles card ──────────────────────────── */
+.ps-profiles-card { overflow: hidden; }
+
+.ps-profile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 20px;
+}
+.ps-profile-meta { min-width: 0; }
+.ps-profile-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.ps-profile-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 20px;
+}
+
+/* Text input */
+.ps-profile-input {
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    outline: none;
+    width: 240px;
+    background: #fff;
+    transition: border-color 0.12s;
+}
+.ps-profile-input:focus { border-color: #9CA3AF; }
+.ps-profile-input::placeholder { color: #CBD5E1; }
+
+/* Dropdown */
+.ps-profile-select {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    outline: none;
+    width: 240px;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* Save button */
+.ps-profile-save-btn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, border-color 0.1s;
+}
+.ps-profile-save-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
+
+/* Load button */
+.ps-profile-load-btn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    background: #1F2937;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s;
+}
+.ps-profile-load-btn:hover  { background: #111827; }
+.ps-profile-load-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════
+   TUNE STRATEGY — topbar button
+═══════════════════════════════════════════ */
+.tune-trigger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', var(--font-sans);
+    letter-spacing: 0.02em;
+    color: var(--text-main);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+.tune-trigger-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
+.tune-trigger-icon { font-size: 13px; line-height: 1; }
+
+/* ═══════════════════════════════════════════
+   TUNE STRATEGY MODAL
+   Font: Inter · grayscale · 1px lines · no heavy shadows
+═══════════════════════════════════════════ */
+
+/* Overlay — semi-transparent blur so background stays visible */
+.tune-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 8000;
+    padding-top: 52px; /* below topbar */
+}
+.tune-overlay.open { display: flex; }
+
+/* Modal card — compact, leaves bottom of page visible */
+.tune-modal {
+    width: min(740px, calc(100vw - 32px));
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0,0,0,0.04);
+    font-family: 'Inter', var(--font-sans);
+    overflow: hidden;
+    animation: tuneSlideIn 0.18s ease-out;
+}
+@keyframes tuneSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Header */
+.tune-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #F1F5F9;
+}
+.tune-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F172A;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+}
+.tune-subtitle {
+    font-size: 10px;
+    color: #94A3B8;
+    font-family: 'Inter', sans-serif;
+}
+.tune-close-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94A3B8;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 3px;
+    transition: background 0.1s, color 0.1s;
+    flex-shrink: 0;
+}
+.tune-close-btn:hover { background: #F1F5F9; color: #0F172A; }
+
+/* Persona pills */
+.tune-persona-bar {
+    display: flex;
+    gap: 4px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #F1F5F9;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.tune-persona-bar::-webkit-scrollbar { display: none; }
+.tune-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 12px;
+    border-radius: 13px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    color: #64748B;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.1s;
+}
+.tune-pill:hover { border-color: #94A3B8; color: #0F172A; }
+.tune-pill.active {
+    background: #0F172A;
+    border-color: #0F172A;
+    color: #fff;
+}
+
+/* Two-column slider body */
+.tune-body {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #E2E8F0 transparent;
+}
+.tune-col { padding: 8px 0; }
+.tune-col-divider { background: #F1F5F9; }
+
+/* Category group label */
+.tune-group {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #CBD5E1;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 8px 20px 4px;
+}
+
+/* Slider row */
+.tune-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 20px;
+    transition: background 0.08s;
+}
+.tune-row:hover { background: #FAFAFA; }
+.tune-cat {
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+
+/* Range slider */
+.tune-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #E5E7EB;
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+    display: block;
+}
+.tune-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+    transition: background 0.1s, transform 0.08s;
+}
+.tune-range::-webkit-slider-thumb:hover {
+    background: #374151;
+    transform: scale(1.25);
+}
+.tune-range::-moz-range-thumb {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #6B7280;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+.tune-range.modified::-webkit-slider-thumb { background: #2563EB; box-shadow: 0 0 0 1px #BFDBFE; }
+.tune-range.modified { background: linear-gradient(90deg, #DBEAFE 0%, #E5E7EB 100%); }
+.tune-range.modified::-moz-range-thumb { background: #2563EB; }
+
+/* Value display */
+.tune-val-wrap {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    justify-content: flex-end;
+}
+.tune-val {
+    font-size: 11px;
+    font-weight: 600;
+    color: #0F172A;
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 28px;
+    text-align: right;
+    transition: color 0.15s;
+}
+.tune-val.changed { color: #2563EB; }
+.tune-mod-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #2563EB;
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.12s;
+}
+.tune-mod-dot.on { opacity: 1; }
+
+/* Threshold row */
+.tune-threshold-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-top: 1px solid #F1F5F9;
+    background: #FAFAFA;
+}
+.tune-thresh-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #94A3B8;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+}
+.tune-thresh-track { flex: 1; }
+.tune-thresh-range { width: 100%; }
+.tune-track-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+}
+.tune-track-ticks span {
+    font-size: 8px;
+    color: #D1D5DB;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.tune-thresh-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0F172A;
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 24px;
+    text-align: right;
+}
+.tune-thresh-unit {
+    font-size: 9px;
+    color: #94A3B8;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Footer */
+.tune-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 20px;
+    border-top: 1px solid #F1F5F9;
+    flex-wrap: wrap;
+}
+.tune-footer-left { }
+.tune-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tune-reset-link {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94A3B8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.1s;
+}
+.tune-reset-link:hover { color: #0F172A; }
+.tune-footer-sep {
+    width: 1px;
+    height: 20px;
+    background: #E2E8F0;
+    flex-shrink: 0;
+}
+.tune-select {
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+    max-width: 160px;
+}
+.tune-load-btn {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+}
+.tune-load-btn:hover { background: #F8FAFC; border-color: #9CA3AF; }
+.tune-name-input {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid #E2E8F0;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    color: #0F172A;
+    outline: none;
+    width: 148px;
+    transition: border-color 0.1s;
+}
+.tune-name-input:focus { border-color: #9CA3AF; }
+.tune-name-input::placeholder { color: #CBD5E1; }
+.tune-save-btn {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    background: #1F2937;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s;
+}
+.tune-save-btn:hover { background: #111827; }
+.tune-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* Feedback */
+.tune-feedback {
+    padding: 8px 20px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    border-top: 1px solid transparent;
+}
+.tune-feedback-success { background: #F0FDF4; color: #166534; border-top-color: #BBF7D0; }
+.tune-feedback-error   { background: #FEF2F2; color: #991B1B; border-top-color: #FECACA; }
+
+/* Live-preview flash on re-sorted rows */
+@keyframes tuneFlash {
+    0%   { background: #EFF6FF; }
+    100% { background: transparent; }
+}
+.tune-live-flash { animation: tuneFlash 0.6s ease-out; }
+</style>
 
     <div class="app-footer">
         CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY
@@ -587,36 +1440,115 @@
 
 
 <!-- ═══════════════════════════════════════════
+     TUNE STRATEGY MODAL
+═══════════════════════════════════════════ -->
+<div id="tuneOverlay" class="tune-overlay" onclick="handleTuneOverlayClick(event)">
+    <div class="tune-modal" id="tuneModal">
+
+        <!-- ── Header ───────────────────────────── -->
+        <div class="tune-header">
+            <div class="tune-header-left">
+                <div class="tune-title">Risk Weights Tuner</div>
+                <div class="tune-subtitle">Live preview · changes update the background list instantly</div>
+            </div>
+            <button class="tune-close-btn" onclick="closeTuneModal()" aria-label="Close">✕</button>
+        </div>
+
+        <!-- ── Persona pills ─────────────────────── -->
+        <div class="tune-persona-bar" id="tunePersonaBar"></div>
+
+        <!-- ── Slider grid (2 columns) ───────────── -->
+        <div class="tune-body">
+            <div class="tune-col" id="tuneColLeft"></div>
+            <div class="tune-col-divider"></div>
+            <div class="tune-col" id="tuneColRight"></div>
+        </div>
+
+        <!-- ── Threshold ─────────────────────────── -->
+        <div class="tune-threshold-row">
+            <span class="tune-thresh-label">ALERT THRESHOLD</span>
+            <div class="tune-thresh-track">
+                <input type="range" class="tune-range tune-thresh-range"
+                    id="tuneThresholdSlider" min="20" max="80" step="1" value="40">
+                <div class="tune-track-ticks">
+                    <span>20</span><span>40</span><span>60</span><span>80</span>
+                </div>
+            </div>
+            <span class="tune-thresh-val" id="tuneThresholdVal">40</span>
+            <span class="tune-thresh-unit">pts</span>
+        </div>
+
+        <!-- ── Footer: save / load profile ──────── -->
+        <div class="tune-footer">
+            <div class="tune-footer-left">
+                <button class="tune-reset-link" onclick="tuneReset()">↺ Reset to AI Defaults</button>
+            </div>
+            <div class="tune-footer-right">
+                <select id="tuneProfileSelect" class="tune-select">
+                    <option value="">Load saved profile…</option>
+                </select>
+                <button class="tune-load-btn" onclick="tuneLoadProfile()">Load</button>
+                <div class="tune-footer-sep"></div>
+                <input id="tuneProfileName" type="text" class="tune-name-input"
+                    placeholder="Profile name…" maxlength="64">
+                <button class="tune-save-btn" onclick="tuneSaveProfile()">Save</button>
+            </div>
+        </div>
+
+        <!-- ── Feedback ──────────────────────────── -->
+        <div class="tune-feedback" id="tuneFeedback" style="display:none;"></div>
+
+    </div><!-- /tune-modal -->
+</div><!-- /tuneOverlay -->
+
+
+<!-- ═══════════════════════════════════════════
      PERSONA LOGIN MODAL
 ═══════════════════════════════════════════ -->
 <div class="modal-overlay" id="personaLoginOverlay" onclick="handlePersonaOverlayClick(event)">
-    <div style="background:white; border-radius:6px; padding:40px; width:min(480px,95vw); box-shadow:0 20px 40px rgba(0,0,0,0.15);">
-        <h2 style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:24px; font-family:var(--font-mono);">
-            Select Analytical Role
-        </h2>
-        <div style="display:grid; gap:16px;">
+    <div style="background:white; border-radius:12px; padding:32px; width:min(720px,95vw); box-shadow:0 20px 50px rgba(0,0,0,0.1); border:1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border);">
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Operator Name</label>
+                <h2 style="font-size:16px; font-weight:700; color:var(--text-main); margin:0;">
+                    Analytical Environment Selection
+                </h2>
+                <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0;">Select your primary analytical persona to configure risk weighting and monitoring priorities.</p>
+            </div>
+            <button type="button" onclick="closePersonaLogin()" style="background:transparent; border:none; font-size:20px; color:var(--text-muted); cursor:pointer;">&times;</button>
+        </div>
+
+        <div style="display:grid; gap:20px;">
+            <div>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Operator Name</label>
                 <input id="loginName" type="text" placeholder="e.g. Lead Strategist"
-                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;">
+                    style="width:100%; padding:12px 14px; border-radius:6px; border:1px solid var(--border); font-size:13px; outline:none; transition:all 0.15s; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
             </div>
+
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Analytical Persona</label>
-                <select id="loginPersona"
-                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;"></select>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Analytical Persona</label>
+                <div id="personaCardGrid" class="persona-card-grid">
+                    <!-- Cards injected by JS -->
+                </div>
             </div>
-            <div style="background:#F8FAFC; padding:14px; border-radius:4px; border:1px solid var(--border);">
-                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
-                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.5;">-</div>
+
+            <div id="personaPreviewArea" style="background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border); transition:all 0.2s; min-height:80px;">
+                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:6px; font-size:13px; display:flex; align-items:center; gap:8px;">
+                    <span id="previewIcon" style="font-size:16px;"></span>
+                    <span id="previewLabel">-</span>
+                </div>
+                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.6;">-</div>
             </div>
-            <button type="button" onclick="savePersonaSelection()"
-                style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none; border-radius:4px; font-size:12px; font-weight:700; letter-spacing:0.08em; cursor:pointer;">
-                CONFIRM ROLE
-            </button>
-            <button type="button" onclick="closePersonaLogin()"
-                style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer;">
-                CANCEL
-            </button>
+
+            <div style="display:flex; gap:12px; margin-top:8px;">
+                <button type="button" onclick="savePersonaSelection()"
+                    style="flex:1; justify-content:center; background:var(--primary); color:white; padding:14px; border:none; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.05em; cursor:pointer; box-shadow:0 4px 12px var(--primary-glow); transition:all 0.15s;">
+                    RESET ENVIRONMENT
+                </button>
+                <button type="button" onclick="closePersonaLogin()"
+                    style="padding:14px 24px; border:1px solid var(--border); background:white; color:var(--text-secondary); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+                    CANCEL
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -626,14 +1558,76 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(10,14,26,0.6);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     padding: 20px;
+    transition: all 0.2s;
 }
 .modal-overlay.show { display: flex; }
+
+.persona-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.persona-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.persona-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.persona-card.selected {
+    border-color: var(--primary);
+    border-width: 2px;
+    background: #EFF6FF;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+}
+
+.persona-card-icon {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.persona-card-label {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-main);
+}
+
+.persona-card-summary {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.persona-card.selected .persona-card-label { color: var(--primary); }
+
+#loginName:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
 
 /* ── Regulatory filter chips ────────────────── */
 .reg-filter {
@@ -695,12 +1689,13 @@ function log(msg, type = '') {
 
 // ── Page Navigation ─────────────────────────
 const PAGE_TITLES = {
-    home: 'Home',
-    risk: 'Risk Monitor',
-    chat: 'Guardian Chat',
-    cash: 'Cash Position',
-    news: 'Regulatory',
-    data: 'Data Source',
+    home:     'Home',
+    risk:     'Risk Monitor',
+    chat:     'Guardian Chat',
+    cash:     'Cash Position',
+    news:     'Regulatory',
+    data:     'Data Source',
+    settings: 'Persona Settings',
 };
 
 function showPage(pageId, navEl) {
@@ -725,9 +1720,10 @@ function showPage(pageId, navEl) {
             if (d.status === 'success') renderRiskMatrix(d.stages.analysis?.analysis);
         }).catch(() => {});
     }
-    if (pageId === 'news') loadRegulatory();
-    if (pageId === 'chat') renderChatHistory();
-    if (pageId === 'cash') renderCashPage();
+    if (pageId === 'news')     loadRegulatory();
+    if (pageId === 'chat')     renderChatHistory();
+    if (pageId === 'cash')     renderCashPage();
+    if (pageId === 'settings') loadPersonaSettings();
 }
 
 function toggleSection(id) {
@@ -757,35 +1753,69 @@ function startClock() {
 }
 
 // ── Persona ─────────────────────────────────
+let selectedPersonaKey = localStorage.getItem('argusPersona') || 'cash_manager';
+
 async function loadPersonas() {
     try {
         const r = await fetch(`${API_BASE}/personas`);
         const d = await r.json();
         availablePersonas = d.personas || [];
-        const sel = document.getElementById('loginPersona');
-        sel.innerHTML = availablePersonas.map(p =>
-            `<option value="${p.key}"${p.key===currentPersona?' selected':''}>${p.label}</option>`
-        ).join('');
-        updateLoginPersonaPreview(sel.value);
-        sel.onchange = e => updateLoginPersonaPreview(e.target.value);
+        
+        const grid = document.getElementById('personaCardGrid');
+        if (grid) {
+            grid.innerHTML = availablePersonas.map(p => {
+                const icon = p.icon || '👤';
+                const isSelected = p.key === selectedPersonaKey;
+                return `
+                <div class="persona-card${isSelected ? ' selected' : ''}" 
+                     onclick="selectPersonaCard('${p.key}')" 
+                     data-key="${p.key}">
+                    <div class="persona-card-icon">${icon}</div>
+                    <div class="persona-card-label">${p.label}</div>
+                    <div class="persona-card-summary">${p.summary || ''}</div>
+                </div>`;
+            }).join('');
+        }
+        
+        selectPersonaCard(selectedPersonaKey);
+
         // Update sidebar label
         const active = availablePersonas.find(p => p.key === currentPersona);
-        if (active) document.getElementById('sidebarRoleName').textContent = active.label;
+        if (active) {
+            document.getElementById('sidebarRoleName').textContent = active.label;
+            const homeRole = document.getElementById('homeRoleName');
+            if (homeRole) homeRole.textContent = active.label;
+        }
     } catch(e) {
         console.warn('Could not load personas:', e);
     }
 }
 
-function updateLoginPersonaPreview(val) {
-    const p = availablePersonas.find(x => x.key === val);
+function selectPersonaCard(key) {
+    selectedPersonaKey = key;
+    
+    // Update visual state of cards
+    document.querySelectorAll('.persona-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.key === key);
+    });
+
+    const p = availablePersonas.find(x => x.key === key);
     if (p) {
-        document.getElementById('loginPersonaHeadline').textContent = p.label;
-        document.getElementById('loginPersonaCopy').textContent = p.summary || '';
+        const icon = p.icon || '👤';
+        const label = document.getElementById('previewLabel');
+        const copy = document.getElementById('loginPersonaCopy');
+        const iconEl = document.getElementById('previewIcon');
+        
+        if (label) label.textContent = p.label;
+        if (copy) copy.textContent = p.summary || '';
+        if (iconEl) iconEl.textContent = icon;
     }
 }
 
 function openPersonaLogin() {
     document.getElementById('personaLoginOverlay').classList.add('show');
+    // Ensure the current persona is highlighted
+    selectPersonaCard(currentPersona);
 }
 function closePersonaLogin() {
     document.getElementById('personaLoginOverlay').classList.remove('show');
@@ -794,7 +1824,7 @@ function handlePersonaOverlayClick(e) {
     if (e.target === document.getElementById('personaLoginOverlay')) closePersonaLogin();
 }
 function savePersonaSelection() {
-    currentPersona = document.getElementById('loginPersona').value;
+    currentPersona = selectedPersonaKey;
     localStorage.setItem('argusPersona', currentPersona);
     const active = availablePersonas.find(p => p.key === currentPersona);
     if (active) {
@@ -983,16 +2013,19 @@ async function renderRiskMatrix(analysis) {
         'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
     };
 
-    itemsEl.innerHTML = allScored.map(item => {
+    // Store for live-preview re-scoring from Tune Strategy modal
+    window._lastScoredItems = allScored;
+
+    itemsEl.innerHTML = allScored.map((item, idx) => {
         const lvl   = item.matrix_level || 'Low';
         const style = levelStyle[lvl] || levelStyle['Low'];
         const prob  = Number(item.probability) || 1;
         const imp   = Number(item.impact)      || 1;
         return `
-        <div class="card" style="border-left:3px solid ${style.border}; background:${style.bg};">
+        <div class="card" data-item-idx="${idx}" style="border-left:3px solid ${style.border}; background:${style.bg}; transition: border-color 0.25s, background 0.25s;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <span class="status-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;">${lvl}</span>
+                    <span class="status-badge tune-lvl-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;transition:background 0.25s,color 0.25s;">${lvl}</span>
                     ${item.source === 'GCS Data Alert' ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#EFF6FF;color:var(--primary);font-family:var(--font-mono);">DATA</span>` : `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">NEWS</span>`}
                 </div>
                 <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
@@ -1092,27 +2125,8 @@ async function loadGuardianDashboard() {
             newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
             newsCountBadge.style.color = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
         }
-        document.getElementById('criticalAlertsTableBody').innerHTML = guardianTopAlerts.map(a => {
-            const scoreBg    = a.risk_level === 'High'   ? 'var(--danger-bg)'  :
-                               a.risk_level === 'Medium' ? 'var(--warning-bg)' : 'var(--idle-bg)';
-            const scoreColor = a.risk_level === 'High'   ? 'var(--danger-text)'  :
-                               a.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--idle-text)';
-            return `<tr>
-                <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country)}</td>
-                <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
-                <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${a.score ?? 0}</span></td>
-                <td style="font-size:11px;max-width:200px;">
-                    ${a.url
-                        ? `<a href="${escapeHtml(a.url)}" target="_blank"
-                            style="color:var(--text-main);text-decoration:none;display:-webkit-box;
-                            -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                            ${escapeHtml(a.title)}</a>`
-                        : `<span style="display:-webkit-box;-webkit-line-clamp:2;
-                            -webkit-box-orient:vertical;overflow:hidden;">
-                            ${escapeHtml(a.title)}</span>`}
-                </td>
-            </tr>`;
-        }).join('');
+        // Delegate to shared renderer so Tune Strategy modal can call the same function
+        renderGuardianAlerts(guardianTopAlerts);
 
     } catch(e) {
         console.error('loadGuardianDashboard error:', e);
@@ -2064,8 +3078,719 @@ async function loadDataAlerts(fresh = false) {
     }
 }
 
+// ── Sidebar Toggle ───────────────────────────
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('argusSidebarCollapsed', isCollapsed);
+    const icon = document.getElementById('sidebarToggleIcon');
+    if (icon) icon.textContent = isCollapsed ? '»' : '«';
+}
+
+function initSidebar() {
+    const isCollapsed = localStorage.getItem('argusSidebarCollapsed') === 'true';
+    const sidebar = document.getElementById('sidebar');
+    const icon = document.getElementById('sidebarToggleIcon');
+    if (isCollapsed && sidebar) {
+        sidebar.classList.add('collapsed');
+        if (icon) icon.textContent = '»';
+    }
+}
+
+// ══════════════════════════════════════════════
+// PERSONA SETTINGS
+// ══════════════════════════════════════════════
+
+// Risk categories in display order with group labels
+const PS_CATEGORIES = [
+    { key: 'market_risk',      label: 'Market',      group: 'Financial' },
+    { key: 'credit_risk',      label: 'Credit',      group: 'Financial' },
+    { key: 'liquidity_risk',   label: 'Liquidity',   group: 'Financial' },
+    { key: 'systematic_risk',  label: 'Systematic',  group: 'Financial' },
+    { key: 'operational_risk', label: 'Operational', group: 'Operational' },
+    { key: 'process_risk',     label: 'Process',     group: 'Operational' },
+    { key: 'business_risk',    label: 'Business',    group: 'Operational' },
+    { key: 'regulatory_risk',  label: 'Regulatory',  group: 'Geopolitical' },
+    { key: 'political_risk',   label: 'Political',   group: 'Geopolitical' },
+    { key: 'reputation_risk',  label: 'Reputation',  group: 'Geopolitical' },
+    { key: 'disaster_risk',    label: 'Disaster',    group: 'Environment' },
+    { key: 'supply_risk',      label: 'Supply',      group: 'Environment' },
+    { key: 'demand_risk',      label: 'Demand',      group: 'Environment' },
+];
+
+let psActivePersona  = localStorage.getItem('argusPersona') || 'cash_manager';
+let psDefaults       = {};   // merged defaults from API (ai baseline + any saved custom)
+let psDraft          = {};   // in-memory edits before user hits Save
+
+async function loadPersonaSettings() {
+    try {
+        const r = await fetch(`${API_BASE}/personas`);
+        const d = await r.json();
+        const personas = d.personas || [];
+
+        // Build a keyed snapshot of the current merged state
+        psDefaults = {};
+        personas.forEach(p => {
+            psDefaults[p.key] = {
+                alert_threshold: p.alert_threshold ?? 40,
+                risk_weights:    p.risk_weights    || {},
+            };
+        });
+
+        // Deep-copy defaults into draft so edits are isolated
+        psDraft = JSON.parse(JSON.stringify(psDefaults));
+
+        psRenderTabs(personas);
+        psRenderSliders(psActivePersona);
+        psRefreshProfileList();
+    } catch(e) {
+        console.warn('Persona settings load error:', e);
+    }
+}
+
+function psRenderTabs(personas) {
+    const nav = document.getElementById('psNav');
+    nav.innerHTML = '<div class="ps-nav-label">ROLE</div>';
+    personas.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'ps-tab' + (p.key === psActivePersona ? ' active' : '');
+        btn.innerHTML = `<span class="ps-tab-name">${p.label}</span><span class="ps-tab-desc">${p.summary || ''}</span>`;
+        btn.onclick = () => {
+            psActivePersona = p.key;
+            nav.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            psRenderSliders(p.key);
+        };
+        nav.appendChild(btn);
+    });
+}
+
+function psRenderSliders(personaKey) {
+    const cfg      = psDraft[personaKey]    || {};
+    const defaults = psDefaults[personaKey] || {};
+
+    // Update header title
+    const meta = (availablePersonas || []).find(p => p.key === personaKey);
+    if (meta) document.getElementById('psTitle').textContent = meta.label + ' — Weight Configuration';
+
+    // ── Threshold slider ──────────────────────
+    const threshold    = cfg.alert_threshold ?? 40;
+    const defThreshold = defaults.alert_threshold ?? 40;
+    const thSlider     = document.getElementById('psThresholdSlider');
+    const thVal        = document.getElementById('psThresholdVal');
+
+    thSlider.value        = threshold;
+    thVal.textContent     = threshold;
+    thSlider.className    = 'ps-slider' + (threshold !== defThreshold ? ' modified' : '');
+    thSlider.oninput      = () => {
+        const v = parseInt(thSlider.value, 10);
+        thVal.textContent = v;
+        if (!psDraft[personaKey]) psDraft[personaKey] = {};
+        psDraft[personaKey].alert_threshold = v;
+        thSlider.className = 'ps-slider' + (v !== defThreshold ? ' modified' : '');
+    };
+
+    // ── Category sliders ──────────────────────
+    const grid = document.getElementById('psSliderGrid');
+    grid.innerHTML = '';
+
+    let lastGroup = null;
+    PS_CATEGORIES.forEach(cat => {
+        const weights    = cfg.risk_weights      || {};
+        const defWeights = defaults.risk_weights || {};
+        const val        = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
+        const defVal     = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
+        const modified   = Math.abs(val - defVal) > 0.005;
+
+        // Group header
+        if (cat.group !== lastGroup) {
+            const g = document.createElement('div');
+            g.className   = 'ps-group-label';
+            g.textContent = cat.group;
+            grid.appendChild(g);
+            lastGroup = cat.group;
+        }
+
+        // Row
+        const row = document.createElement('div');
+        row.className = 'ps-row';
+
+        // Fill the track gradient to show "filled" portion
+        const pct = ((val - 0.5) / (2.0 - 0.5)) * 100;
+
+        row.innerHTML = `
+            <span class="ps-cat-label">${cat.label}</span>
+            <div class="ps-slider-wrap">
+                <input
+                    type="range"
+                    class="ps-slider${modified ? ' modified' : ''}"
+                    id="ps-${cat.key}"
+                    min="0.5" max="2.0" step="0.05"
+                    value="${val.toFixed(2)}"
+                    style="--pct:${pct.toFixed(1)}%">
+                <div class="ps-track-markers">
+                    <span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span>
+                </div>
+            </div>
+            <div class="ps-value-col ps-def-tip" data-tip="AI default: ${defVal.toFixed(2)}×">
+                <span class="ps-multiplier" id="ps-val-${cat.key}">${val.toFixed(2)}×</span>
+                <span class="ps-mod-badge${modified ? ' visible' : ''}" id="ps-mod-${cat.key}">MOD</span>
+            </div>`;
+
+        const slider  = row.querySelector('.ps-slider');
+        const valEl   = row.querySelector('.ps-multiplier');
+        const modBadge = row.querySelector('.ps-mod-badge');
+
+        slider.addEventListener('input', () => {
+            const v   = parseFloat(slider.value);
+            const pct = ((v - 0.5) / (2.0 - 0.5)) * 100;
+            slider.style.setProperty('--pct', pct.toFixed(1) + '%');
+
+            valEl.textContent = v.toFixed(2) + '×';
+
+            const changed = Math.abs(v - defVal) > 0.005;
+            slider.classList.toggle('modified', changed);
+            modBadge.classList.toggle('visible', changed);
+
+            if (!psDraft[personaKey].risk_weights) psDraft[personaKey].risk_weights = {};
+            psDraft[personaKey].risk_weights[cat.key] = v;
+        });
+
+        grid.appendChild(row);
+    });
+}
+
+function resetPersonaWeights() {
+    // Discard all in-memory slider edits for the active persona by
+    // re-syncing psDraft from the AI defaults, then re-rendering.
+    const defaults = psDefaults[psActivePersona];
+    if (defaults) psDraft[psActivePersona] = JSON.parse(JSON.stringify(defaults));
+    psRenderSliders(psActivePersona);
+    psShowFeedback('Sliders reset to AI defaults. Use "Save Profile" to persist a named configuration.', 'success');
+}
+
+function psShowFeedback(msg, type) {
+    const el = document.getElementById('psFeedback');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.className = `ps-feedback ps-feedback-${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── Profile helpers ───────────────────────────
+
+function psProfileFeedback(msg, type) {
+    const el = document.getElementById('psProfileFeedback');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.className = `ps-feedback ps-feedback-${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+async function psRefreshProfileList() {
+    try {
+        const r = await fetch(`${API_BASE}/list_profiles`);
+        const d = await r.json();
+        const sel = document.getElementById('psProfileSelect');
+        const profiles = d.profiles || [];
+        sel.innerHTML = '<option value="">— select a saved profile —</option>' +
+            profiles.map(p => {
+                const label = p.name + (p.saved_at ? '  ·  ' + p.saved_at.slice(0, 10) : '');
+                return `<option value="${p.filename}">${label}</option>`;
+            }).join('');
+    } catch(e) { console.warn('Could not load profiles:', e); }
+}
+
+async function psSaveCurrentAsProfile() {
+    const name = (document.getElementById('psProfileNameInput').value || '').trim();
+    if (!name) {
+        psProfileFeedback('Enter a profile name first.', 'error');
+        return;
+    }
+    // Collect current draft for the active persona
+    const cfg = psDraft[psActivePersona] || {};
+    try {
+        const r = await fetch(`${API_BASE}/save_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                name,
+                persona_key: psActivePersona,
+                weights: cfg,
+            }),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            document.getElementById('psProfileNameInput').value = '';
+            psProfileFeedback(`Profile "${name}" saved.`, 'success');
+            await psRefreshProfileList();
+        } else {
+            psProfileFeedback('Save failed: ' + (d.message || 'unknown'), 'error');
+        }
+    } catch(e) {
+        psProfileFeedback('Save failed: ' + e.message, 'error');
+    }
+}
+
+async function psLoadSelectedProfile() {
+    const sel = document.getElementById('psProfileSelect');
+    const filename = sel.value;
+    if (!filename) { psProfileFeedback('Select a profile first.', 'error'); return; }
+
+    const btn = document.querySelector('.ps-profile-load-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Loading…';
+
+    try {
+        const r = await fetch(`${API_BASE}/load_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ filename }),
+        });
+        const d = await r.json();
+        if (d.status !== 'success') {
+            psProfileFeedback('Load failed: ' + (d.message || 'unknown'), 'error');
+            return;
+        }
+
+        const profile = d.profile || {};
+        const weights = profile.weights || {};
+
+        // Switch to the profile's persona tab
+        const pKey = profile.persona_key || psActivePersona;
+        psActivePersona = pKey;
+        document.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
+        const matchingTab = [...document.querySelectorAll('.ps-tab')]
+            .find(t => t.textContent.trim().startsWith(
+                (availablePersonas.find(p => p.key === pKey) || {}).label || ''
+            ));
+        if (matchingTab) matchingTab.classList.add('active');
+
+        // Merge loaded weights into draft
+        if (!psDraft[pKey]) psDraft[pKey] = {};
+        if (weights.alert_threshold !== undefined)
+            psDraft[pKey].alert_threshold = weights.alert_threshold;
+        if (weights.risk_weights) {
+            psDraft[pKey].risk_weights = Object.assign(
+                psDraft[pKey].risk_weights || {}, weights.risk_weights
+            );
+        }
+
+        // Re-render sliders to show loaded values
+        psRenderSliders(pKey);
+
+        // If re-analysis ran, refresh the risk matrix on the Risk Monitor page
+        if (d.rescored) {
+            // Store in execution_state so Risk Monitor page picks it up
+            renderRiskMatrix(d.rescored);
+            psProfileFeedback(
+                `Profile "${profile.name}" loaded. Risk matrix re-scored with ${d.rescored.total_items} items.`,
+                'success'
+            );
+        } else {
+            psProfileFeedback(
+                `Profile "${profile.name}" loaded. Run the Daily Jobs pipeline to apply weights to new data.`,
+                'success'
+            );
+        }
+    } catch(e) {
+        psProfileFeedback('Load failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Load & Re-score';
+    }
+}
+
+// ══════════════════════════════════════════════
+// TUNE STRATEGY MODAL
+// ══════════════════════════════════════════════
+
+// Category layout: [key, label, column (0=left, 1=right)]
+const TUNE_CATS = [
+    // ── Left column ──────────────────────────
+    { key: 'market_risk',      label: 'Market',      col: 0, group: 'Financial'    },
+    { key: 'credit_risk',      label: 'Credit',      col: 0, group: 'Financial'    },
+    { key: 'liquidity_risk',   label: 'Liquidity',   col: 0, group: 'Financial'    },
+    { key: 'systematic_risk',  label: 'Systematic',  col: 0, group: 'Financial'    },
+    { key: 'operational_risk', label: 'Operational', col: 0, group: 'Operational'  },
+    { key: 'process_risk',     label: 'Process',     col: 0, group: 'Operational'  },
+    { key: 'business_risk',    label: 'Business',    col: 0, group: 'Operational'  },
+    // ── Right column ─────────────────────────
+    { key: 'regulatory_risk',  label: 'Regulatory',  col: 1, group: 'Geopolitical' },
+    { key: 'political_risk',   label: 'Political',   col: 1, group: 'Geopolitical' },
+    { key: 'reputation_risk',  label: 'Reputation',  col: 1, group: 'Geopolitical' },
+    { key: 'disaster_risk',    label: 'Disaster',    col: 1, group: 'Environment'  },
+    { key: 'supply_risk',      label: 'Supply',      col: 1, group: 'Environment'  },
+    { key: 'demand_risk',      label: 'Demand',      col: 1, group: 'Environment'  },
+];
+
+// Maps guardian alert .category string → weight key (mirrors persona_loader.py)
+const TUNE_CAT_MAP = {
+    'market risk':      'market_risk',
+    'credit risk':      'credit_risk',
+    'liquidity risk':   'liquidity_risk',
+    'operational risk': 'operational_risk',
+    'political risk':   'political_risk',
+    'regulatory risk':  'regulatory_risk',
+    'reputation risk':  'reputation_risk',
+    'systematic risk':  'systematic_risk',
+    'systemic risk':    'systematic_risk',
+    'disaster risk':    'disaster_risk',
+    'supply risk':      'supply_risk',
+    'demand risk':      'demand_risk',
+    'process risk':     'process_risk',
+    'business risk':    'business_risk',
+};
+
+let tsPersona    = localStorage.getItem('argusPersona') || 'cash_manager';
+let tsDefaults   = {};   // AI baselines per persona key
+let tsDraft      = {};   // in-memory slider edits
+let _tuneRafId   = null; // rAF handle for live preview throttle
+
+// ── Open / Close ──────────────────────────────
+
+async function openTuneModal() {
+    // Switch to Risk Monitor so the live preview is visible behind the modal
+    const riskNavEl = document.querySelector('.nav-item[onclick*="risk"]');
+    showPage('risk', riskNavEl);
+
+    // Ensure persona defaults are loaded
+    if (!Object.keys(tsDefaults).length) await tuneLoadDefaults();
+
+    // Sync active persona with the current role
+    const stored = localStorage.getItem('argusPersona') || 'cash_manager';
+    tsPersona = stored;
+
+    tuneRenderPersonaBar();
+    tuneRenderSliders(tsPersona);
+    await tuneRefreshProfileList();
+
+    document.getElementById('tuneOverlay').classList.add('open');
+}
+
+function closeTuneModal() {
+    document.getElementById('tuneOverlay').classList.remove('open');
+    cancelAnimationFrame(_tuneRafId);
+    // Restore guardian alerts to original scores when modal closes without saving
+    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
+}
+
+function handleTuneOverlayClick(e) {
+    if (e.target === document.getElementById('tuneOverlay')) closeTuneModal();
+}
+
+// ── Load defaults from API ────────────────────
+
+async function tuneLoadDefaults() {
+    try {
+        const r = await fetch(`${API_BASE}/personas`);
+        const d = await r.json();
+        tsDefaults = {};
+        tsDraft    = {};
+        (d.personas || []).forEach(p => {
+            tsDefaults[p.key] = {
+                alert_threshold: p.alert_threshold ?? 40,
+                risk_weights:    p.risk_weights || {},
+            };
+            tsDraft[p.key] = JSON.parse(JSON.stringify(tsDefaults[p.key]));
+        });
+    } catch(e) { console.warn('tuneLoadDefaults error:', e); }
+}
+
+// ── Persona pills ─────────────────────────────
+
+function tuneRenderPersonaBar() {
+    const bar = document.getElementById('tunePersonaBar');
+    bar.innerHTML = '';
+    (availablePersonas || []).forEach(p => {
+        const pill = document.createElement('button');
+        pill.className = 'tune-pill' + (p.key === tsPersona ? ' active' : '');
+        pill.textContent = p.label;
+        pill.onclick = () => {
+            tsPersona = p.key;
+            bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
+            pill.classList.add('active');
+            tuneRenderSliders(p.key);
+        };
+        bar.appendChild(pill);
+    });
+}
+
+// ── Slider rendering ──────────────────────────
+
+function tuneRenderSliders(personaKey) {
+    const cfg = tsDraft[personaKey] || {};
+    const def = tsDefaults[personaKey] || {};
+
+    // Threshold
+    const thresh    = cfg.alert_threshold ?? 40;
+    const defThresh = def.alert_threshold ?? 40;
+    const thSlider  = document.getElementById('tuneThresholdSlider');
+    const thVal     = document.getElementById('tuneThresholdVal');
+    thSlider.value       = thresh;
+    thVal.textContent    = thresh;
+    thSlider.className   = 'tune-range tune-thresh-range' + (thresh !== defThresh ? ' modified' : '');
+    thSlider.oninput = () => {
+        const v = parseInt(thSlider.value, 10);
+        thVal.textContent = v;
+        if (!tsDraft[personaKey]) tsDraft[personaKey] = {};
+        tsDraft[personaKey].alert_threshold = v;
+        thSlider.className = 'tune-range tune-thresh-range' + (v !== defThresh ? ' modified' : '');
+    };
+
+    // Category sliders — two columns
+    const leftEl  = document.getElementById('tuneColLeft');
+    const rightEl = document.getElementById('tuneColRight');
+    leftEl.innerHTML  = '';
+    rightEl.innerHTML = '';
+
+    let lastGroupL = null, lastGroupR = null;
+
+    TUNE_CATS.forEach(cat => {
+        const weights    = cfg.risk_weights      || {};
+        const defWeights = def.risk_weights || {};
+        const val    = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
+        const defVal = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
+        const modified = Math.abs(val - defVal) > 0.005;
+
+        const target = cat.col === 0 ? leftEl : rightEl;
+        let lastGroup = cat.col === 0 ? lastGroupL : lastGroupR;
+
+        if (cat.group !== lastGroup) {
+            const g = document.createElement('div');
+            g.className   = 'tune-group';
+            g.textContent = cat.group;
+            target.appendChild(g);
+            if (cat.col === 0) lastGroupL = cat.group;
+            else               lastGroupR = cat.group;
+        }
+
+        const row = document.createElement('div');
+        row.className = 'tune-row';
+        row.dataset.catKey = cat.key;
+        row.innerHTML = `
+            <span class="tune-cat">${cat.label}</span>
+            <input type="range" class="tune-range${modified ? ' modified' : ''}"
+                id="tr-${cat.key}" min="0.5" max="2.0" step="0.05" value="${val.toFixed(2)}">
+            <div class="tune-val-wrap">
+                <span class="tune-val${modified ? ' changed' : ''}" id="tv-${cat.key}">${val.toFixed(2)}×</span>
+                <span class="tune-mod-dot${modified ? ' on' : ''}" id="td-${cat.key}"></span>
+            </div>`;
+
+        const slider  = row.querySelector('.tune-range');
+        const valEl   = row.querySelector('.tune-val');
+        const dotEl   = row.querySelector('.tune-mod-dot');
+
+        slider.addEventListener('input', () => {
+            const v       = parseFloat(slider.value);
+            const changed = Math.abs(v - defVal) > 0.005;
+
+            valEl.textContent = v.toFixed(2) + '×';
+            valEl.classList.toggle('changed', changed);
+            slider.classList.toggle('modified', changed);
+            dotEl.classList.toggle('on', changed);
+
+            if (!tsDraft[personaKey].risk_weights) tsDraft[personaKey].risk_weights = {};
+            tsDraft[personaKey].risk_weights[cat.key] = v;
+
+            // Live preview — throttled via rAF
+            cancelAnimationFrame(_tuneRafId);
+            _tuneRafId = requestAnimationFrame(tunePreviewLive);
+        });
+
+        target.appendChild(row);
+    });
+}
+
+// ── Live preview — re-score & re-sort the background alert table ──────────
+
+function tunePreviewLive() {
+    const weights = (tsDraft[tsPersona] || {}).risk_weights || {};
+
+    // ① Re-score guardian alerts in the news alerts table
+    if (guardianTopAlerts && guardianTopAlerts.length) {
+        const rescored = guardianTopAlerts.map(a => {
+            const wKey = TUNE_CAT_MAP[(a.category || '').toLowerCase().trim()] || '';
+            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
+            return { ...a, _eff: Math.min(100, parseFloat(a.score || 0) * w) };
+        });
+        rescored.sort((a, b) => b._eff - a._eff);
+        renderGuardianAlerts(rescored, true);
+    }
+
+    // ② Re-score scored intelligence nodes (riskMatrixItems)
+    if (window._lastScoredItems && window._lastScoredItems.length) {
+        const recolored = window._lastScoredItems.map(item => {
+            const wKey = TUNE_CAT_MAP[(item.risk_category || '').toLowerCase().trim()] || '';
+            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
+            const eff  = Math.min(100, parseFloat(item.risk_score || 0) * w);
+            // Remap matrix level based on effective score
+            let lvl = 'Low';
+            if (eff >= 80) lvl = 'Extreme';
+            else if (eff >= 60) lvl = 'High';
+            else if (eff >= 35) lvl = 'Medium';
+            return { ...item, _effScore: eff, _effLevel: lvl };
+        });
+        recolored.sort((a, b) => b._effScore - a._effScore);
+        tuneUpdateMatrixCards(recolored);
+    }
+}
+
+// Render guardian alert rows with optional effective-score override
+function renderGuardianAlerts(alerts, flash = false) {
+    const tbody = document.getElementById('criticalAlertsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = alerts.map((a, idx) => {
+        const score = a._eff !== undefined ? a._eff : parseFloat(a.score || 0);
+        const scoreBg    = score >= 70 ? 'var(--danger-bg)'  : score >= 40 ? 'var(--warning-bg)' : 'var(--idle-bg)';
+        const scoreColor = score >= 70 ? 'var(--danger-text)': score >= 40 ? 'var(--warning-text)': 'var(--idle-text)';
+        const cls = flash && idx < 5 ? ' class="tune-live-flash"' : '';
+        return `<tr${cls}>
+            <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country || '')}</td>
+            <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
+            <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${Math.round(score)}</span></td>
+            <td style="font-size:11px;max-width:200px;">
+                ${a.url
+                    ? `<a href="${escapeHtml(a.url)}" target="_blank"
+                        style="color:var(--text-main);text-decoration:none;display:-webkit-box;
+                        -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        ${escapeHtml(a.title || '')}</a>`
+                    : `<span style="display:-webkit-box;-webkit-line-clamp:2;
+                        -webkit-box-orient:vertical;overflow:hidden;">
+                        ${escapeHtml(a.title || '')}</span>`}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// Update only the level badge / border on matrix node cards (no full re-render)
+function tuneUpdateMatrixCards(items) {
+    const container = document.getElementById('riskMatrixItems');
+    if (!container) return;
+    const levelStyle = {
+        'Extreme': { border: '#EF4444', badge: '#991B1B', badgeBg: '#FEE2E2' },
+        'High':    { border: '#F97316', badge: '#9A3412', badgeBg: '#FFEDD5' },
+        'Medium':  { border: '#EAB308', badge: '#854D0E', badgeBg: '#FEF9C3' },
+        'Low':     { border: '#E2E8F0', badge: '#166534', badgeBg: '#DCFCE7' },
+    };
+    const cards = container.querySelectorAll('[data-item-idx]');
+    items.forEach((item, i) => {
+        const card = container.querySelector(`[data-item-idx="${i}"]`);
+        if (!card) return;
+        const lvl   = item._effLevel || item.matrix_level || 'Low';
+        const style = levelStyle[lvl] || levelStyle['Low'];
+        card.style.borderColor = style.border;
+        const badge = card.querySelector('.tune-lvl-badge');
+        if (badge) {
+            badge.textContent       = lvl;
+            badge.style.background  = style.badgeBg;
+            badge.style.color       = style.badge;
+        }
+    });
+}
+
+// ── Profile save / load / reset ───────────────
+
+async function tuneRefreshProfileList() {
+    try {
+        const r = await fetch(`${API_BASE}/list_profiles`);
+        const d = await r.json();
+        const sel = document.getElementById('tuneProfileSelect');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Load saved profile…</option>' +
+            (d.profiles || []).map(p =>
+                `<option value="${p.filename}">${p.name}${p.saved_at ? '  ·  ' + p.saved_at.slice(0,10) : ''}</option>`
+            ).join('');
+    } catch(e) { console.warn('tuneRefreshProfileList error:', e); }
+}
+
+async function tuneSaveProfile() {
+    const name = (document.getElementById('tuneProfileName').value || '').trim();
+    if (!name) { tuneFeedback('Enter a profile name first.', 'error'); return; }
+    const btn = document.querySelector('.tune-save-btn');
+    btn.disabled = true;
+    try {
+        const r = await fetch(`${API_BASE}/save_profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, persona_key: tsPersona, weights: tsDraft[tsPersona] || {} }),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            document.getElementById('tuneProfileName').value = '';
+            tuneFeedback(`"${name}" saved.`, 'success');
+            await tuneRefreshProfileList();
+        } else { tuneFeedback('Save failed: ' + (d.message || 'error'), 'error'); }
+    } catch(e) { tuneFeedback('Save failed: ' + e.message, 'error'); }
+    finally    { btn.disabled = false; }
+}
+
+async function tuneLoadProfile() {
+    const sel      = document.getElementById('tuneProfileSelect');
+    const filename = sel ? sel.value : '';
+    if (!filename) { tuneFeedback('Select a profile first.', 'error'); return; }
+
+    const btn = document.querySelector('.tune-load-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+        const r = await fetch(`${API_BASE}/load_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ filename }),
+        });
+        const d = await r.json();
+        if (d.status !== 'success') { tuneFeedback('Load failed: ' + (d.message || 'error'), 'error'); return; }
+
+        const profile = d.profile || {};
+        const pKey    = profile.persona_key || tsPersona;
+        const weights = profile.weights     || {};
+
+        // Apply into draft
+        tsPersona = pKey;
+        if (!tsDraft[pKey]) tsDraft[pKey] = {};
+        if (weights.alert_threshold !== undefined) tsDraft[pKey].alert_threshold = weights.alert_threshold;
+        if (weights.risk_weights) {
+            tsDraft[pKey].risk_weights = Object.assign(tsDraft[pKey].risk_weights || {}, weights.risk_weights);
+        }
+
+        // Re-render persona bar + sliders
+        tuneRenderPersonaBar();
+        tuneRenderSliders(pKey);
+
+        if (d.rescored) {
+            renderRiskMatrix(d.rescored);
+            tuneFeedback(`"${profile.name}" loaded · ${d.rescored.total_items} items re-scored.`, 'success');
+        } else {
+            tuneFeedback(`"${profile.name}" loaded · run Daily Jobs to apply to new data.`, 'success');
+        }
+    } catch(e) { tuneFeedback('Load failed: ' + e.message, 'error'); }
+    finally    { if (btn) { btn.disabled = false; btn.textContent = 'Load'; } }
+}
+
+function tuneReset() {
+    const def = tsDefaults[tsPersona];
+    if (def) tsDraft[tsPersona] = JSON.parse(JSON.stringify(def));
+    tuneRenderSliders(tsPersona);
+    // Restore original alert scores in the background
+    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
+    tuneFeedback('Sliders reset to AI defaults.', 'success');
+}
+
+function tuneFeedback(msg, type) {
+    const el = document.getElementById('tuneFeedback');
+    if (!el) return;
+    el.textContent   = msg;
+    el.style.display = 'block';
+    el.className     = `tune-feedback tune-feedback-${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
 // ── Boot ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    initSidebar(); // Initialize sidebar state
     startClock();
     await loadPersonas();
     // Sync home role name
@@ -2074,6 +3799,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const homeRole = document.getElementById('homeRoleName');
         if (homeRole) homeRole.textContent = activeP.label;
     }
+
+    // Keyboard shortcut for sidebar: Ctrl+B
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            toggleSidebar();
+        }
+    });
 
     // Init chat with a default session if none exists
     if (!chatSessions.length) newChatSession();

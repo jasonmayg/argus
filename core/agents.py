@@ -128,11 +128,25 @@ class AnalysisAgent(Agent):
         ),
     }
 
-    def __init__(self, persona: str = "cash_manager") -> None:
+    def __init__(
+        self,
+        persona: str = "cash_manager",
+        weights: Optional[Dict] = None,
+    ) -> None:
         super().__init__("RiskAnalyzer")
         self.persona = persona
         self.analysis_results: Dict = {}
         self._api_key = os.getenv("OPENAI_API_KEY")
+        # Use explicitly supplied weights (e.g. from a loaded profile) or fall
+        # back to the AI-baseline defaults from personas/defaults.yaml.
+        if weights is not None:
+            self._persona_cfg = weights
+        else:
+            try:
+                from personas.persona_loader import load_defaults
+                self._persona_cfg = load_defaults(persona)
+            except Exception:
+                self._persona_cfg = {}
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -278,6 +292,17 @@ class AnalysisAgent(Agent):
         )
 
         persona_ctx = self._PERSONA_CONTEXT.get(self.persona, "")
+        # Append active weight profile so the LLM calibrates scores accordingly
+        weights = (self._persona_cfg or {}).get("risk_weights") or {}
+        if weights:
+            weight_lines = "  " + "\n  ".join(
+                f"{k.replace('_', ' ').title()}: ×{v:.2f}"
+                for k, v in weights.items()
+            )
+            persona_ctx = (
+                f"{persona_ctx}\n\nActive persona risk-weight multipliers "
+                f"(higher = elevate that risk dimension):\n{weight_lines}"
+            )
         prompt = f"""You are a senior treasury risk analyst. {persona_ctx}
 
 For each news item below, assess two independent dimensions:
@@ -364,7 +389,14 @@ Return ONLY the JSON array — no preamble, no markdown fences."""
         return [self._apply_heuristic(dict(item)) for item in news_items]
 
     def _apply_heuristic(self, item: Dict) -> Dict:
-        rs  = float(item.get("risk_score") or 0)
+        rs = float(item.get("risk_score") or 0)
+        # Apply persona weight for this item's risk category
+        try:
+            from personas.persona_loader import get_category_weight
+            weight = get_category_weight(self._persona_cfg, item.get("risk_category", ""))
+            rs = min(100.0, rs * weight)
+        except Exception:
+            pass
         p   = score_to_probability(rs)
         imp = score_to_impact(rs)
         mx  = calculate_risk_level(p, imp)

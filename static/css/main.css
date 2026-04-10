@@ -80,6 +80,10 @@ body {
    SIDEBAR
    ============================================================ */
 
+:root {
+    --sidebar-collapsed-width: 68px;
+}
+
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
@@ -94,6 +98,83 @@ body {
     z-index: 100;
     overflow-y: auto;
     overflow-x: hidden;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+
+.sidebar.collapsed .sidebar-logo-text-wrapper,
+.sidebar.collapsed .sidebar-role-text-wrapper,
+.sidebar.collapsed .sidebar-section-label,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-badge,
+.sidebar.collapsed #systemStatusText,
+.sidebar.collapsed .sidebar-footer .nav-item span:not(.nav-icon) {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-logo {
+    padding: 20px 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-role {
+    padding: 10px 0;
+    margin: 12px 10px;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 10px 0;
+    border-left-width: 3px;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin: 0;
+    font-size: 16px;
+}
+
+.sidebar.collapsed .sidebar-status {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+.sidebar.collapsed .sidebar-execute-wrapper {
+    padding: 12px 10px;
+}
+
+.sidebar.collapsed #executeBtn {
+    padding: 10px 0 !important;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-btn {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    border-top: 1px solid var(--sidebar-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+    user-select: none;
+    margin-top: 4px;
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(255,255,255,0.03);
+    color: var(--sidebar-text-hover);
+}
+
+.sidebar.collapsed .sidebar-toggle-btn {
+    justify-content: center;
+    padding: 12px 0;
 }
 
 /* Nav takes all available space */
@@ -153,10 +234,32 @@ body {
     border-radius: 6px;
     cursor: pointer;
     transition: border-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-role-icon {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.sidebar-role-text-wrapper {
+    flex: 1;
+    min-width: 0;
 }
 
 .sidebar-role:hover {
     border-color: #2D3F5E;
+}
+
+.sidebar.collapsed .sidebar-role-text-wrapper {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-role {
+    justify-content: center;
+    padding: 10px 0;
 }
 
 .sidebar-role-label {
@@ -289,6 +392,11 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sidebar.collapsed ~ .app-shell {
+    margin-left: var(--sidebar-collapsed-width);
 }
 
 /* Top bar inside content area */
