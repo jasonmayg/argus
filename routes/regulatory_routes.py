@@ -23,7 +23,7 @@ regulatory_bp = Blueprint("regulatory_routes", __name__)
 DB_PATH = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
 
 # Minimum confidence to show as "regulatory"
-MIN_CONFIDENCE = 0.5
+MIN_CONFIDENCE = 0.3
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -80,7 +80,6 @@ def api_regulatory():
 
     show_all = request.args.get("all") == "1"
     if not show_all:
-        conditions.append("is_regulatory = 1")
         conditions.append(f"confidence >= {MIN_CONFIDENCE}")
 
     country  = (request.args.get("country")  or "").strip()

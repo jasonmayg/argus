@@ -292,7 +292,7 @@
                         <span class="status-badge" id="newsAlertCount"
                               style="background:var(--idle-bg); color:var(--idle-text);">—</span>
                     </div>
-                    <div style="overflow-y:auto; max-height:360px;">
+                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;">
                         <table class="data-table" style="font-size:11px;">
                             <thead>
                                 <tr>
@@ -325,7 +325,7 @@
                                 style="font-size:10px; padding:2px 6px;">↻</button>
                         </div>
                     </div>
-                    <div style="overflow-y:auto; max-height:360px;" id="dataAlertsBody">
+                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;" id="dataAlertsBody">
                         <div style="text-align:center; padding:32px; color:var(--text-muted);
                                     font-size:11px; font-family:var(--font-mono);">
                             Loading data alerts…
@@ -699,7 +699,7 @@ const PAGE_TITLES = {
     risk: 'Risk Monitor',
     chat: 'Guardian Chat',
     cash: 'Cash Position',
-    news: 'News',
+    news: 'Regulatory',
     data: 'Data Source',
 };
 
@@ -717,6 +717,7 @@ function showPage(pageId, navEl) {
 
     // Lazy-load page data
     if (pageId === 'risk') {
+        // Load Guardian first so guardianTopAlerts is populated before Data Alerts merges GCS entries
         loadGuardianDashboard();
         loadDataAlerts();
         // Reload matrix with merged GCS data if pipeline results exist
@@ -1069,12 +1070,16 @@ async function loadGuardianDashboard() {
             </div>`;
         }).join('');
 
-        // critical_alerts_top5
-        // fields: country, category, score, risk_level, severity, title, url, source, published_at
-        // Deduplicate alerts by title
+        // Use all alerts — filter out GCS data updates (shown in Data Alerts), dedup by title
         const seen_titles = new Set();
-        guardianTopAlerts = (d.critical_alerts_top5 || []).filter(a => {
-            const key = (a.title || '').trim().toLowerCase();
+        guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
+            const src   = (a.source || '').toLowerCase();
+            const title = (a.title  || '').trim();
+            // Exclude raw GCS data entries — they go to Data Alerts panel
+            if (src === 'gcs_raw' || src === 'gcs_data') return false;
+            if (/^US .* update:/i.test(title)) return false;
+            // Dedup by title
+            const key = title.toLowerCase();
             if (seen_titles.has(key)) return false;
             seen_titles.add(key);
             return true;
@@ -1956,7 +1961,38 @@ async function loadDataAlerts(fresh = false) {
 
         if (d.status !== 'success') throw new Error(d.message || 'Failed');
 
-        const alerts = d.alerts || [];
+        const thresholdAlerts = d.alerts || [];
+
+        // Fetch Guardian alerts directly to get GCS data update entries
+        let gcsDataAlerts = [];
+        try {
+            const gr = await fetch(`${API_BASE}/guardian/dashboard`);
+            const gd = await gr.json();
+            if (gd.status === 'success') {
+                gcsDataAlerts = (gd.alerts || [])
+                    .filter(a => {
+                        const src   = (a.source || '').toLowerCase();
+                        const title = (a.title  || '').trim();
+                        return src === 'gcs_raw' || src === 'gcs_data' ||
+                               /^US .* update:/i.test(title);
+                    })
+                    .map(a => ({
+                        name:          a.title || 'GCS Data Update',
+                        country:       a.country || 'USA',
+                        indicator:     (a.category || 'gcs_data').toLowerCase().replace(' risk',''),
+                        category:      a.category || 'Market Data',
+                        severity:      a.score >= 70 ? 'High' : a.score >= 40 ? 'Medium' : 'Low',
+                        description:   a.recommendation || a.rationale || a.title || '',
+                        display_value: `Score: ${(a.score ?? 0).toFixed(2)}`,
+                        triggered_at:  a.published_at || a.raw_dt || '',
+                        source:        'Guardian GCS',
+                        operator:      '≥',
+                        threshold:     40,
+                    }));
+            }
+        } catch(e) { /* Guardian unavailable, skip */ }
+
+        const alerts = [...thresholdAlerts, ...gcsDataAlerts];
         const total  = d.total_triggered || 0;
         const high   = d.summary?.high || 0;
 

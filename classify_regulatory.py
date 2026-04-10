@@ -192,10 +192,10 @@ def _get_unprocessed_fed_news(conn: sqlite3.Connection, force: bool) -> List[Dic
     """Get Fed news items not yet in regulatory_changes."""
     cur = conn.cursor()
     if force:
-        cur.execute("SELECT id, title, url, date, content FROM news ORDER BY date DESC")
+        cur.execute("SELECT id, title, date, content FROM news ORDER BY date DESC")
     else:
         cur.execute("""
-            SELECT n.id, n.title, n.url, n.date, n.content
+            SELECT n.id, n.title, n.date, n.content
             FROM news n
             LEFT JOIN regulatory_changes rc
                 ON rc.source_type = 'fed_news' AND rc.source_id = CAST(n.id AS TEXT)
@@ -203,8 +203,8 @@ def _get_unprocessed_fed_news(conn: sqlite3.Connection, force: bool) -> List[Dic
             ORDER BY n.date DESC
         """)
     return [
-        {"id": str(r[0]), "title": r[1] or "", "url": r[2] or "",
-         "published_at": r[3] or "", "summary": r[4] or ""}
+        {"id": str(r[0]), "title": r[1] or "", "url": "",
+         "published_at": r[2] or "", "summary": r[3] or ""}
         for r in cur.fetchall()
     ]
 
