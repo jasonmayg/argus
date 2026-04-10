@@ -6,7 +6,7 @@
     <title>ARGUS — Treasury Risk Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -63,6 +63,12 @@
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span>
             <span class="nav-text">Data Source</span>
+        </a>
+
+        <div class="sidebar-section-label" style="margin-top:16px;">Configuration</div>
+        <a class="nav-item" onclick="showPage('settings', this)">
+            <span class="nav-icon">⊙</span>
+            <span class="nav-text">Persona Settings</span>
         </a>
     </nav>
 
@@ -581,7 +587,427 @@
             </div>
         </div><!-- /page-data -->
 
+        <!-- ─────────────────────────────────────
+             PAGE: PERSONA SETTINGS
+        ───────────────────────────────────── -->
+        <div class="page" id="page-settings">
+            <div class="ps-shell">
+
+                <!-- Left: persona tabs -->
+                <div class="ps-nav" id="psNav">
+                    <div class="ps-nav-label">ROLE</div>
+                </div>
+
+                <!-- Right: editor -->
+                <div class="ps-editor">
+
+                    <!-- Header -->
+                    <div class="ps-header">
+                        <div>
+                            <div class="ps-title" id="psTitle">Weight Configuration</div>
+                            <div class="ps-subtitle">AI-calibrated defaults &middot; Adjust multipliers per role</div>
+                        </div>
+                        <div class="ps-header-actions">
+                            <button class="ps-reset-link" onclick="resetPersonaWeights()">Reset to AI Defaults</button>
+                            <button class="ps-save-btn" id="psSaveBtn" onclick="savePersonaWeights()">Save Changes</button>
+                        </div>
+                    </div>
+
+                    <!-- Alert threshold -->
+                    <div class="ps-card ps-threshold-row">
+                        <div class="ps-threshold-left">
+                            <span class="ps-threshold-label">ALERT THRESHOLD</span>
+                            <span class="ps-threshold-hint">Minimum score to surface an alert</span>
+                        </div>
+                        <div class="ps-threshold-control">
+                            <input type="range" class="ps-slider" id="psThresholdSlider" min="20" max="80" step="1" value="40">
+                            <div class="ps-track-markers">
+                                <span>20</span><span>40</span><span>60</span><span>80</span>
+                            </div>
+                        </div>
+                        <div class="ps-value-col">
+                            <span class="ps-multiplier" id="psThresholdVal">40</span>
+                            <span class="ps-unit">pts</span>
+                        </div>
+                    </div>
+
+                    <!-- Slider grid -->
+                    <div class="ps-section-heading">
+                        <span class="ps-section-label">RISK WEIGHT MULTIPLIERS</span>
+                        <span class="ps-section-note">Slide to adjust how each risk category amplifies the AI score</span>
+                    </div>
+                    <div class="ps-grid" id="psSliderGrid">
+                        <!-- populated by JS -->
+                    </div>
+
+                    <!-- Save feedback -->
+                    <div class="ps-feedback" id="psFeedback" style="display:none;"></div>
+
+                </div><!-- /ps-editor -->
+            </div><!-- /ps-shell -->
+        </div><!-- /page-settings -->
+
     </div><!-- /page-content -->
+
+<style>
+/* ═══════════════════════════════════════
+   PERSONA SETTINGS — design system
+   Font: Inter, grayscale palette, thin lines
+═══════════════════════════════════════ */
+
+/* Shell */
+.ps-shell {
+    display: flex;
+    height: calc(100vh - 52px - 36px);
+    font-family: 'Inter', var(--font-sans);
+}
+
+/* ── Left nav ───────────────────────── */
+.ps-nav {
+    width: 192px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: #fff;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+.ps-nav-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    padding: 0 16px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-tab {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px 16px 10px 18px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    gap: 3px;
+    transition: background 0.1s, border-color 0.1s;
+}
+.ps-tab:hover { background: var(--bg-color); }
+.ps-tab.active { background: #F8FAFC; border-left-color: #1F2937; }
+.ps-tab-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.3;
+}
+.ps-tab-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.4;
+}
+.ps-tab.active .ps-tab-name { color: #111827; }
+
+/* ── Editor area ────────────────────── */
+.ps-editor {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px 40px;
+    background: var(--bg-color);
+    min-width: 0;
+}
+
+/* Header */
+.ps-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+.ps-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+.ps-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+}
+.ps-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+.ps-reset-link {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    text-decoration: underline;
+    text-decoration-color: #CBD5E1;
+    text-underline-offset: 2px;
+    transition: color 0.12s, text-decoration-color 0.12s;
+}
+.ps-reset-link:hover { color: var(--text-main); text-decoration-color: #94A3B8; }
+.ps-save-btn {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: #fff;
+    background: #1F2937;
+    border: none;
+    cursor: pointer;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.12s;
+}
+.ps-save-btn:hover { background: #111827; }
+.ps-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+
+/* Shared card */
+.ps-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+/* Threshold row */
+.ps-threshold-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+}
+.ps-threshold-left { min-width: 160px; }
+.ps-threshold-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-main);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 3px;
+}
+.ps-threshold-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+}
+.ps-threshold-control { flex: 1; }
+
+/* Section heading */
+.ps-section-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.ps-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-section-note {
+    font-size: 10px;
+    color: #CBD5E1;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Slider grid */
+.ps-grid {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Group label inside grid */
+.ps-group-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 9px 20px 7px;
+    background: #FAFAFA;
+    border-top: 1px solid var(--border);
+}
+.ps-group-label:first-child { border-top: none; }
+
+/* Slider row */
+.ps-row {
+    display: grid;
+    grid-template-columns: 116px 1fr 80px;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 20px;
+    border-top: 1px solid #F1F5F9;
+    transition: background 0.1s;
+}
+.ps-row:hover { background: #FAFBFC; }
+
+.ps-cat-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Slider */
+.ps-slider-wrap { position: relative; }
+.ps-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #E5E7EB;
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+    display: block;
+    margin-bottom: 0;
+}
+.ps-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+    transition: background 0.12s, transform 0.1s;
+}
+.ps-slider::-webkit-slider-thumb:hover {
+    background: #374151;
+    transform: scale(1.2);
+    box-shadow: 0 0 0 1px #9CA3AF;
+}
+.ps-slider::-moz-range-thumb {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #6B7280;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+}
+.ps-slider.modified::-webkit-slider-thumb {
+    background: #2563EB;
+    box-shadow: 0 0 0 1px #BFDBFE;
+}
+.ps-slider.modified { background: linear-gradient(to right, #DBEAFE, #E5E7EB); }
+.ps-slider.modified::-moz-range-thumb { background: #2563EB; }
+
+.ps-track-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+}
+.ps-track-markers span {
+    font-size: 8px;
+    color: #D1D5DB;
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1;
+}
+
+/* Value column */
+.ps-value-col {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+}
+.ps-multiplier {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-family: 'IBM Plex Mono', monospace;
+    min-width: 32px;
+    text-align: right;
+}
+.ps-unit {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.ps-mod-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563EB;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.ps-mod-dot.visible { opacity: 1; }
+.ps-mod-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #2563EB;
+    background: #EFF6FF;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    border: 1px solid #BFDBFE;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.ps-mod-badge.visible { opacity: 1; }
+
+/* Tooltip on modified values */
+.ps-def-tip {
+    position: relative;
+}
+.ps-def-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 130%;
+    right: 0;
+    background: #1F2937;
+    color: #fff;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+}
+.ps-def-tip:hover::after { opacity: 1; }
+
+/* Feedback strip */
+.ps-feedback {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid transparent;
+}
+.ps-feedback-success { background: var(--success-bg); color: var(--success-text); border-color: #BBF7D0; }
+.ps-feedback-error   { background: var(--danger-bg);  color: var(--danger-text);  border-color: #FECACA; }
+</style>
 
     <div class="app-footer">
         CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY
@@ -594,33 +1020,49 @@
      PERSONA LOGIN MODAL
 ═══════════════════════════════════════════ -->
 <div class="modal-overlay" id="personaLoginOverlay" onclick="handlePersonaOverlayClick(event)">
-    <div style="background:white; border-radius:6px; padding:40px; width:min(480px,95vw); box-shadow:0 20px 40px rgba(0,0,0,0.15);">
-        <h2 style="font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:24px; font-family:var(--font-mono);">
-            Select Analytical Role
-        </h2>
-        <div style="display:grid; gap:16px;">
+    <div style="background:white; border-radius:12px; padding:32px; width:min(720px,95vw); box-shadow:0 20px 50px rgba(0,0,0,0.1); border:1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border);">
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Operator Name</label>
+                <h2 style="font-size:16px; font-weight:700; color:var(--text-main); margin:0;">
+                    Analytical Environment Selection
+                </h2>
+                <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0;">Select your primary analytical persona to configure risk weighting and monitoring priorities.</p>
+            </div>
+            <button type="button" onclick="closePersonaLogin()" style="background:transparent; border:none; font-size:20px; color:var(--text-muted); cursor:pointer;">&times;</button>
+        </div>
+
+        <div style="display:grid; gap:20px;">
+            <div>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Operator Name</label>
                 <input id="loginName" type="text" placeholder="e.g. Lead Strategist"
-                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;">
+                    style="width:100%; padding:12px 14px; border-radius:6px; border:1px solid var(--border); font-size:13px; outline:none; transition:all 0.15s; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
             </div>
+
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; font-family:var(--font-mono);">Analytical Persona</label>
-                <select id="loginPersona"
-                    style="width:100%; padding:10px 12px; border-radius:4px; border:1px solid var(--border); font-size:13px; font-family:var(--font-sans); outline:none;"></select>
+                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Analytical Persona</label>
+                <div id="personaCardGrid" class="persona-card-grid">
+                    <!-- Cards injected by JS -->
+                </div>
             </div>
-            <div style="background:#F8FAFC; padding:14px; border-radius:4px; border:1px solid var(--border);">
-                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:4px; font-size:13px;">-</div>
-                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.5;">-</div>
+
+            <div id="personaPreviewArea" style="background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border); transition:all 0.2s; min-height:80px;">
+                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:6px; font-size:13px; display:flex; align-items:center; gap:8px;">
+                    <span id="previewIcon" style="font-size:16px;"></span>
+                    <span id="previewLabel">-</span>
+                </div>
+                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.6;">-</div>
             </div>
-            <button type="button" onclick="savePersonaSelection()"
-                style="width:100%; justify-content:center; background:var(--primary); color:white; padding:12px; border:none; border-radius:4px; font-size:12px; font-weight:700; letter-spacing:0.08em; cursor:pointer;">
-                CONFIRM ROLE
-            </button>
-            <button type="button" onclick="closePersonaLogin()"
-                style="width:100%; border:none; background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer;">
-                CANCEL
-            </button>
+
+            <div style="display:flex; gap:12px; margin-top:8px;">
+                <button type="button" onclick="savePersonaSelection()"
+                    style="flex:1; justify-content:center; background:var(--primary); color:white; padding:14px; border:none; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.05em; cursor:pointer; box-shadow:0 4px 12px var(--primary-glow); transition:all 0.15s;">
+                    INITIALIZE ENVIRONMENT
+                </button>
+                <button type="button" onclick="closePersonaLogin()"
+                    style="padding:14px 24px; border:1px solid var(--border); background:white; color:var(--text-secondary); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+                    CANCEL
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -630,14 +1072,76 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(10,14,26,0.6);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     padding: 20px;
+    transition: all 0.2s;
 }
 .modal-overlay.show { display: flex; }
+
+.persona-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.persona-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.persona-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.persona-card.selected {
+    border-color: var(--primary);
+    border-width: 2px;
+    background: #EFF6FF;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+}
+
+.persona-card-icon {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.persona-card-label {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-main);
+}
+
+.persona-card-summary {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.persona-card.selected .persona-card-label { color: var(--primary); }
+
+#loginName:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
 
 /* ── Regulatory filter chips ────────────────── */
 .reg-filter {
@@ -699,12 +1203,13 @@ function log(msg, type = '') {
 
 // ── Page Navigation ─────────────────────────
 const PAGE_TITLES = {
-    home: 'Home',
-    risk: 'Risk Monitor',
-    chat: 'Guardian Chat',
-    cash: 'Cash Position',
-    news: 'Regulatory',
-    data: 'Data Source',
+    home:     'Home',
+    risk:     'Risk Monitor',
+    chat:     'Guardian Chat',
+    cash:     'Cash Position',
+    news:     'Regulatory',
+    data:     'Data Source',
+    settings: 'Persona Settings',
 };
 
 function showPage(pageId, navEl) {
@@ -729,9 +1234,10 @@ function showPage(pageId, navEl) {
             if (d.status === 'success') renderRiskMatrix(d.stages.analysis?.analysis);
         }).catch(() => {});
     }
-    if (pageId === 'news') loadRegulatory();
-    if (pageId === 'chat') renderChatHistory();
-    if (pageId === 'cash') renderCashPage();
+    if (pageId === 'news')     loadRegulatory();
+    if (pageId === 'chat')     renderChatHistory();
+    if (pageId === 'cash')     renderCashPage();
+    if (pageId === 'settings') loadPersonaSettings();
 }
 
 function toggleSection(id) {
@@ -761,35 +1267,69 @@ function startClock() {
 }
 
 // ── Persona ─────────────────────────────────
+let selectedPersonaKey = localStorage.getItem('argusPersona') || 'cash_manager';
+
 async function loadPersonas() {
     try {
         const r = await fetch(`${API_BASE}/personas`);
         const d = await r.json();
         availablePersonas = d.personas || [];
-        const sel = document.getElementById('loginPersona');
-        sel.innerHTML = availablePersonas.map(p =>
-            `<option value="${p.key}"${p.key===currentPersona?' selected':''}>${p.label}</option>`
-        ).join('');
-        updateLoginPersonaPreview(sel.value);
-        sel.onchange = e => updateLoginPersonaPreview(e.target.value);
+        
+        const grid = document.getElementById('personaCardGrid');
+        if (grid) {
+            grid.innerHTML = availablePersonas.map(p => {
+                const icon = p.icon || '👤';
+                const isSelected = p.key === selectedPersonaKey;
+                return `
+                <div class="persona-card${isSelected ? ' selected' : ''}" 
+                     onclick="selectPersonaCard('${p.key}')" 
+                     data-key="${p.key}">
+                    <div class="persona-card-icon">${icon}</div>
+                    <div class="persona-card-label">${p.label}</div>
+                    <div class="persona-card-summary">${p.summary || ''}</div>
+                </div>`;
+            }).join('');
+        }
+        
+        selectPersonaCard(selectedPersonaKey);
+
         // Update sidebar label
         const active = availablePersonas.find(p => p.key === currentPersona);
-        if (active) document.getElementById('sidebarRoleName').textContent = active.label;
+        if (active) {
+            document.getElementById('sidebarRoleName').textContent = active.label;
+            const homeRole = document.getElementById('homeRoleName');
+            if (homeRole) homeRole.textContent = active.label;
+        }
     } catch(e) {
         console.warn('Could not load personas:', e);
     }
 }
 
-function updateLoginPersonaPreview(val) {
-    const p = availablePersonas.find(x => x.key === val);
+function selectPersonaCard(key) {
+    selectedPersonaKey = key;
+    
+    // Update visual state of cards
+    document.querySelectorAll('.persona-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.key === key);
+    });
+
+    const p = availablePersonas.find(x => x.key === key);
     if (p) {
-        document.getElementById('loginPersonaHeadline').textContent = p.label;
-        document.getElementById('loginPersonaCopy').textContent = p.summary || '';
+        const icon = p.icon || '👤';
+        const label = document.getElementById('previewLabel');
+        const copy = document.getElementById('loginPersonaCopy');
+        const iconEl = document.getElementById('previewIcon');
+        
+        if (label) label.textContent = p.label;
+        if (copy) copy.textContent = p.summary || '';
+        if (iconEl) iconEl.textContent = icon;
     }
 }
 
 function openPersonaLogin() {
     document.getElementById('personaLoginOverlay').classList.add('show');
+    // Ensure the current persona is highlighted
+    selectPersonaCard(currentPersona);
 }
 function closePersonaLogin() {
     document.getElementById('personaLoginOverlay').classList.remove('show');
@@ -798,7 +1338,7 @@ function handlePersonaOverlayClick(e) {
     if (e.target === document.getElementById('personaLoginOverlay')) closePersonaLogin();
 }
 function savePersonaSelection() {
-    currentPersona = document.getElementById('loginPersona').value;
+    currentPersona = selectedPersonaKey;
     localStorage.setItem('argusPersona', currentPersona);
     const active = availablePersonas.find(p => p.key === currentPersona);
     if (active) {
@@ -2085,6 +2625,222 @@ function initSidebar() {
         sidebar.classList.add('collapsed');
         if (icon) icon.textContent = '»';
     }
+}
+
+// ══════════════════════════════════════════════
+// PERSONA SETTINGS
+// ══════════════════════════════════════════════
+
+// Risk categories in display order with group labels
+const PS_CATEGORIES = [
+    { key: 'market_risk',      label: 'Market',      group: 'Financial' },
+    { key: 'credit_risk',      label: 'Credit',      group: 'Financial' },
+    { key: 'liquidity_risk',   label: 'Liquidity',   group: 'Financial' },
+    { key: 'systematic_risk',  label: 'Systematic',  group: 'Financial' },
+    { key: 'operational_risk', label: 'Operational', group: 'Operational' },
+    { key: 'process_risk',     label: 'Process',     group: 'Operational' },
+    { key: 'business_risk',    label: 'Business',    group: 'Operational' },
+    { key: 'regulatory_risk',  label: 'Regulatory',  group: 'Geopolitical' },
+    { key: 'political_risk',   label: 'Political',   group: 'Geopolitical' },
+    { key: 'reputation_risk',  label: 'Reputation',  group: 'Geopolitical' },
+    { key: 'disaster_risk',    label: 'Disaster',    group: 'Environment' },
+    { key: 'supply_risk',      label: 'Supply',      group: 'Environment' },
+    { key: 'demand_risk',      label: 'Demand',      group: 'Environment' },
+];
+
+let psActivePersona  = localStorage.getItem('argusPersona') || 'cash_manager';
+let psDefaults       = {};   // merged defaults from API (ai baseline + any saved custom)
+let psDraft          = {};   // in-memory edits before user hits Save
+
+async function loadPersonaSettings() {
+    try {
+        const r = await fetch(`${API_BASE}/personas`);
+        const d = await r.json();
+        const personas = d.personas || [];
+
+        // Build a keyed snapshot of the current merged state
+        psDefaults = {};
+        personas.forEach(p => {
+            psDefaults[p.key] = {
+                alert_threshold: p.alert_threshold ?? 40,
+                risk_weights:    p.risk_weights    || {},
+            };
+        });
+
+        // Deep-copy defaults into draft so edits are isolated
+        psDraft = JSON.parse(JSON.stringify(psDefaults));
+
+        psRenderTabs(personas);
+        psRenderSliders(psActivePersona);
+    } catch(e) {
+        console.warn('Persona settings load error:', e);
+    }
+}
+
+function psRenderTabs(personas) {
+    const nav = document.getElementById('psNav');
+    nav.innerHTML = '<div class="ps-nav-label">ROLE</div>';
+    personas.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'ps-tab' + (p.key === psActivePersona ? ' active' : '');
+        btn.innerHTML = `<span class="ps-tab-name">${p.label}</span><span class="ps-tab-desc">${p.summary || ''}</span>`;
+        btn.onclick = () => {
+            psActivePersona = p.key;
+            nav.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            psRenderSliders(p.key);
+        };
+        nav.appendChild(btn);
+    });
+}
+
+function psRenderSliders(personaKey) {
+    const cfg      = psDraft[personaKey]    || {};
+    const defaults = psDefaults[personaKey] || {};
+
+    // Update header title
+    const meta = (availablePersonas || []).find(p => p.key === personaKey);
+    if (meta) document.getElementById('psTitle').textContent = meta.label + ' — Weight Configuration';
+
+    // ── Threshold slider ──────────────────────
+    const threshold    = cfg.alert_threshold ?? 40;
+    const defThreshold = defaults.alert_threshold ?? 40;
+    const thSlider     = document.getElementById('psThresholdSlider');
+    const thVal        = document.getElementById('psThresholdVal');
+
+    thSlider.value        = threshold;
+    thVal.textContent     = threshold;
+    thSlider.className    = 'ps-slider' + (threshold !== defThreshold ? ' modified' : '');
+    thSlider.oninput      = () => {
+        const v = parseInt(thSlider.value, 10);
+        thVal.textContent = v;
+        if (!psDraft[personaKey]) psDraft[personaKey] = {};
+        psDraft[personaKey].alert_threshold = v;
+        thSlider.className = 'ps-slider' + (v !== defThreshold ? ' modified' : '');
+    };
+
+    // ── Category sliders ──────────────────────
+    const grid = document.getElementById('psSliderGrid');
+    grid.innerHTML = '';
+
+    let lastGroup = null;
+    PS_CATEGORIES.forEach(cat => {
+        const weights    = cfg.risk_weights      || {};
+        const defWeights = defaults.risk_weights || {};
+        const val        = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
+        const defVal     = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
+        const modified   = Math.abs(val - defVal) > 0.005;
+
+        // Group header
+        if (cat.group !== lastGroup) {
+            const g = document.createElement('div');
+            g.className   = 'ps-group-label';
+            g.textContent = cat.group;
+            grid.appendChild(g);
+            lastGroup = cat.group;
+        }
+
+        // Row
+        const row = document.createElement('div');
+        row.className = 'ps-row';
+
+        // Fill the track gradient to show "filled" portion
+        const pct = ((val - 0.5) / (2.0 - 0.5)) * 100;
+
+        row.innerHTML = `
+            <span class="ps-cat-label">${cat.label}</span>
+            <div class="ps-slider-wrap">
+                <input
+                    type="range"
+                    class="ps-slider${modified ? ' modified' : ''}"
+                    id="ps-${cat.key}"
+                    min="0.5" max="2.0" step="0.05"
+                    value="${val.toFixed(2)}"
+                    style="--pct:${pct.toFixed(1)}%">
+                <div class="ps-track-markers">
+                    <span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span>
+                </div>
+            </div>
+            <div class="ps-value-col ps-def-tip" data-tip="AI default: ${defVal.toFixed(2)}×">
+                <span class="ps-multiplier" id="ps-val-${cat.key}">${val.toFixed(2)}×</span>
+                <span class="ps-mod-badge${modified ? ' visible' : ''}" id="ps-mod-${cat.key}">MOD</span>
+            </div>`;
+
+        const slider  = row.querySelector('.ps-slider');
+        const valEl   = row.querySelector('.ps-multiplier');
+        const modBadge = row.querySelector('.ps-mod-badge');
+
+        slider.addEventListener('input', () => {
+            const v   = parseFloat(slider.value);
+            const pct = ((v - 0.5) / (2.0 - 0.5)) * 100;
+            slider.style.setProperty('--pct', pct.toFixed(1) + '%');
+
+            valEl.textContent = v.toFixed(2) + '×';
+
+            const changed = Math.abs(v - defVal) > 0.005;
+            slider.classList.toggle('modified', changed);
+            modBadge.classList.toggle('visible', changed);
+
+            if (!psDraft[personaKey].risk_weights) psDraft[personaKey].risk_weights = {};
+            psDraft[personaKey].risk_weights[cat.key] = v;
+        });
+
+        grid.appendChild(row);
+    });
+}
+
+async function savePersonaWeights() {
+    const btn = document.getElementById('psSaveBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+    try {
+        const r = await fetch(`${API_BASE}/update_persona`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ personas: psDraft }),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            psShowFeedback('Weights saved. AnalysisAgent will use the updated profile on the next pipeline run.', 'success');
+            await loadPersonaSettings();
+        } else {
+            psShowFeedback('Save failed: ' + (d.message || 'unknown error'), 'error');
+        }
+    } catch(e) {
+        psShowFeedback('Save failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Save Changes';
+    }
+}
+
+async function resetPersonaWeights() {
+    if (!confirm('Clear all custom weights and restore AI defaults for every role?')) return;
+    try {
+        const r = await fetch(`${API_BASE}/update_persona`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({}),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            psShowFeedback('All weights reset to AI defaults.', 'success');
+            await loadPersonaSettings();
+        } else {
+            psShowFeedback('Reset failed: ' + (d.message || 'unknown error'), 'error');
+        }
+    } catch(e) {
+        psShowFeedback('Reset failed: ' + e.message, 'error');
+    }
+}
+
+function psShowFeedback(msg, type) {
+    const el = document.getElementById('psFeedback');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.className = `ps-feedback ps-feedback-${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 // ── Boot ─────────────────────────────────────
