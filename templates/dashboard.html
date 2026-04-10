@@ -13,7 +13,7 @@
 <body>
 
 <!-- ═══════════════════════════════════════════
-     SIDEBAR (can be changed...)
+     SIDEBAR
 ═══════════════════════════════════════════ -->
 <aside class="sidebar">
 
@@ -54,8 +54,8 @@
             Cash Position
         </a>
         <a class="nav-item" onclick="showPage('news', this)">
-            <span class="nav-icon">◉</span>
-            News
+            <span class="nav-icon">⚖</span>
+            Regulatory
         </a>
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span>
@@ -292,7 +292,7 @@
                         <span class="status-badge" id="newsAlertCount"
                               style="background:var(--idle-bg); color:var(--idle-text);">—</span>
                     </div>
-                    <div style="overflow-y:auto; max-height:360px;">
+                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;">
                         <table class="data-table" style="font-size:11px;">
                             <thead>
                                 <tr>
@@ -325,7 +325,7 @@
                                 style="font-size:10px; padding:2px 6px;">↻</button>
                         </div>
                     </div>
-                    <div style="overflow-y:auto; max-height:360px;" id="dataAlertsBody">
+                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;" id="dataAlertsBody">
                         <div style="text-align:center; padding:32px; color:var(--text-muted);
                                     font-size:11px; font-family:var(--font-mono);">
                             Loading data alerts…
@@ -498,45 +498,68 @@
 
 
         <!-- ─────────────────────────────────────
-             PAGE: NEWS
+             PAGE: REGULATORY CHANGES
         ───────────────────────────────────── -->
         <div class="page" id="page-news">
+
             <!-- Header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);" id="newsLastFetch">—</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div>
+                    <div style="font-size:16px; font-weight:700; color:var(--text-main);">
+                        ⚖ Regulatory Changes Tracker
+                    </div>
+                    <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);
+                                margin-top:2px;" id="regLastFetch">—</div>
+                </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <span id="newsSelectedCount" style="display:none; font-size:11px;
-                          font-family:var(--font-mono); color:var(--primary);">0 selected</span>
-                    <button class="btn btn-sm" id="analyzeSelectedBtn" style="display:none;
-                            background:var(--primary);color:white;border:none;"
-                            onclick="analyzeSelectedNews()">
-                        ✦ Analyze Selected
-                    </button>
-                    <button class="btn btn-sm" onclick="loadNews()">↻ Refresh</button>
+                    <span id="regTotalBadge" style="font-size:11px; font-family:var(--font-mono);
+                          color:var(--text-muted);">—</span>
+                    <button class="btn btn-sm" onclick="loadRegulatory()">↻ Refresh</button>
+                    <button class="btn btn-sm btn-ghost" onclick="refreshRegulatoryAI()"
+                        style="font-size:10px;">✦ Re-analyse</button>
                 </div>
             </div>
 
-            <!-- News grid -->
-            <div class="news-grid" id="newsGrid">
-                <div style="grid-column:1/-1; text-align:center; padding:48px; color:var(--text-muted);">
-                    <div style="font-size:24px; margin-bottom:12px;">◉</div>
-                    <div>Loading news feed…</div>
+            <!-- Filter chips row -->
+            <div style="margin-bottom:12px;">
+                <!-- Country filters -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
+                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Country</span>
+                    <button class="reg-filter active" data-filter-type="country" data-filter-val=""
+                            onclick="setRegFilter('country','',this)">All</button>
+                    <div id="regCountryFilters" style="display:contents;"></div>
+                </div>
+                <!-- Category filters -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
+                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Type</span>
+                    <button class="reg-filter active" data-filter-type="category" data-filter-val=""
+                            onclick="setRegFilter('category','',this)">All</button>
+                    <div id="regCategoryFilters" style="display:contents;"></div>
+                </div>
+                <!-- Severity filters -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
+                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Severity</span>
+                    <button class="reg-filter active" data-filter-type="severity" data-filter-val=""
+                            onclick="setRegFilter('severity','',this)">All</button>
+                    <button class="reg-filter" data-filter-type="severity" data-filter-val="High"
+                            onclick="setRegFilter('severity','High',this)"
+                            style="border-color:var(--danger-text);color:var(--danger-text);">High</button>
+                    <button class="reg-filter" data-filter-type="severity" data-filter-val="Medium"
+                            onclick="setRegFilter('severity','Medium',this)"
+                            style="border-color:var(--warning-text);color:var(--warning-text);">Medium</button>
+                    <button class="reg-filter" data-filter-type="severity" data-filter-val="Low"
+                            onclick="setRegFilter('severity','Low',this)">Low</button>
                 </div>
             </div>
 
-            <!-- Analysis result panel (hidden by default) -->
-            <div id="newsAnalysisPanel" style="display:none; margin-top:16px;">
-                <div class="card" style="border-left:3px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div style="font-size:11px; font-weight:700; text-transform:uppercase;
-                                    letter-spacing:0.08em; color:var(--primary); font-family:var(--font-mono);">
-                            ✦ Personalised Analysis
-                        </div>
-                        <button class="btn btn-sm btn-ghost" onclick="closeNewsAnalysis()">✕ Close</button>
-                    </div>
-                    <div id="newsAnalysisBody" style="font-size:13px; line-height:1.7; color:var(--text-secondary);">
-                        Analysing…
-                    </div>
+            <!-- Regulatory changes list -->
+            <div id="regList">
+                <div style="text-align:center; padding:48px; color:var(--text-muted);">
+                    <div style="font-size:24px; margin-bottom:12px;">⚖</div>
+                    <div>Loading regulatory changes…</div>
                 </div>
             </div>
 
@@ -611,7 +634,19 @@
     padding: 20px;
 }
 .modal-overlay.show { display: flex; }
-</style>
+
+/* ── Regulatory filter chips ────────────────── */
+.reg-filter {
+    font-size: 10px; padding: 3px 10px;
+    border-radius: 12px; border: 1px solid var(--border);
+    background: white; color: var(--text-secondary);
+    cursor: pointer; font-family: var(--font-mono);
+    font-weight: 600; transition: all 0.15s; white-space: nowrap;
+}
+.reg-filter:hover { background: var(--bg-color); }
+.reg-filter.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    </style>
 
 
 <!-- ═══════════════════════════════════════════
@@ -664,7 +699,7 @@ const PAGE_TITLES = {
     risk: 'Risk Monitor',
     chat: 'Guardian Chat',
     cash: 'Cash Position',
-    news: 'News',
+    news: 'Regulatory',
     data: 'Data Source',
 };
 
@@ -682,6 +717,7 @@ function showPage(pageId, navEl) {
 
     // Lazy-load page data
     if (pageId === 'risk') {
+        // Load Guardian first so guardianTopAlerts is populated before Data Alerts merges GCS entries
         loadGuardianDashboard();
         loadDataAlerts();
         // Reload matrix with merged GCS data if pipeline results exist
@@ -689,7 +725,7 @@ function showPage(pageId, navEl) {
             if (d.status === 'success') renderRiskMatrix(d.stages.analysis?.analysis);
         }).catch(() => {});
     }
-    if (pageId === 'news') loadNews();
+    if (pageId === 'news') loadRegulatory();
     if (pageId === 'chat') renderChatHistory();
     if (pageId === 'cash') renderCashPage();
 }
@@ -1034,12 +1070,16 @@ async function loadGuardianDashboard() {
             </div>`;
         }).join('');
 
-        // critical_alerts_top5
-        // fields: country, category, score, risk_level, severity, title, url, source, published_at
-        // Deduplicate alerts by title
+        // Use all alerts — filter out GCS data updates (shown in Data Alerts), dedup by title
         const seen_titles = new Set();
-        guardianTopAlerts = (d.critical_alerts_top5 || []).filter(a => {
-            const key = (a.title || '').trim().toLowerCase();
+        guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
+            const src   = (a.source || '').toLowerCase();
+            const title = (a.title  || '').trim();
+            // Exclude raw GCS data entries — they go to Data Alerts panel
+            if (src === 'gcs_raw' || src === 'gcs_data') return false;
+            if (/^US .* update:/i.test(title)) return false;
+            // Dedup by title
+            const key = title.toLowerCase();
             if (seen_titles.has(key)) return false;
             seen_titles.add(key);
             return true;
@@ -1675,6 +1715,140 @@ function renderCashHistoryChart() {
     });
 }
 
+// ── Regulatory Changes Tracker ───────────────────────
+let regFilters = { country: '', category: '', severity: '' };
+
+function setRegFilter(type, val, btn) {
+    regFilters[type] = val;
+    document.querySelectorAll(`.reg-filter[data-filter-type="${type}"]`).forEach(b => {
+        b.classList.toggle('active', b.dataset.filterVal === val);
+    });
+    loadRegulatory();
+}
+
+async function loadRegulatory() {
+    const list = document.getElementById('regList');
+    if (!list) return;
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">Loading…</div>`;
+    const params = new URLSearchParams();
+    if (regFilters.country)  params.set('country',  regFilters.country);
+    if (regFilters.category) params.set('category', regFilters.category);
+    if (regFilters.severity) params.set('severity', regFilters.severity);
+    params.set('limit', '100');
+    try {
+        const [sr, r] = await Promise.all([
+            fetch('/api/regulatory/summary'),
+            fetch(`/api/regulatory?${params}`),
+        ]);
+        const [sd, d] = await Promise.all([sr.json(), r.json()]);
+        if (sd.status === 'success') _renderRegFilters(sd);
+        const now = new Date().toISOString().replace('T',' ').substr(0,16);
+        const fetchEl = document.getElementById('regLastFetch');
+        const badgeEl = document.getElementById('regTotalBadge');
+        if (fetchEl) fetchEl.textContent = 'Updated ' + now + ' UTC';
+        if (badgeEl) badgeEl.textContent = (d.total || 0) + ' regulatory changes';
+        if (!d.items?.length) {
+            list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted);">
+                <div style="font-size:24px;margin-bottom:12px;">⚖</div>
+                <div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
+                <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>
+            </div>`;
+            return;
+        }
+        const sevColor  = s => s==='High' ? 'var(--danger-text)'  : s==='Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
+        const sevBg     = s => s==='High' ? 'var(--danger-bg)'    : s==='Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
+        const sevBorder = s => s==='High' ? 'var(--danger-text)'  : s==='Medium' ? 'var(--warning-text)'  : 'var(--border)';
+        list.innerHTML = d.items.map(item => {
+            const hasBefore = item.change_before?.trim();
+            const hasAfter  = item.change_after?.trim();
+            const hasAction = item.action_required?.trim();
+            const pubDate   = item.published_at ? item.published_at.substring(0,10) : '';
+            const effDate   = item.effective_date ? ` · Effective: ${item.effective_date}` : '';
+            return `<div style="background:white;border:1px solid var(--border);
+                        border-left:4px solid ${sevBorder(item.severity)};
+                        border-radius:6px;padding:14px 16px;margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div style="flex:1;margin-right:12px;">
+                        <div style="font-weight:700;font-size:13px;line-height:1.4;margin-bottom:4px;">
+                            ${escapeHtml(item.title)}</div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+                                background:${sevBg(item.severity)};color:${sevColor(item.severity)};">${escapeHtml(item.severity)}</span>
+                            <span style="font-size:10px;padding:2px 8px;border-radius:10px;
+                                background:#EFF6FF;color:var(--primary);font-weight:600;">${escapeHtml(item.country)}</span>
+                            <span style="font-size:10px;padding:2px 8px;border-radius:10px;
+                                background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(item.category)}</span>
+                            ${pubDate ? `<span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">${pubDate}${effDate}</span>` : ''}
+                        </div>
+                    </div>
+                    ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank"
+                        style="font-size:10px;color:var(--primary);text-decoration:none;
+                        font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;">Source →</a>` : ''}
+                </div>
+                ${(hasBefore || hasAfter) ? `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                    ${hasBefore ? `<div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 10px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#92400E;margin-bottom:4px;font-family:var(--font-mono);">Before</div>
+                        <div style="font-size:11px;color:#78350F;line-height:1.4;">${escapeHtml(item.change_before)}</div>
+                    </div>` : '<div></div>'}
+                    ${hasAfter ? `<div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:4px;padding:8px 10px;">
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;font-family:var(--font-mono);">After</div>
+                        <div style="font-size:11px;color:#14532D;line-height:1.4;">${escapeHtml(item.change_after)}</div>
+                    </div>` : '<div></div>'}
+                </div>` : ''}
+                ${item.treasury_impact ? `
+                <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;">
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);">Impact: </span>
+                    ${escapeHtml(item.treasury_impact)}</div>` : ''}
+                ${hasAction ? `
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:4px;padding:8px 10px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--primary);margin-bottom:3px;font-family:var(--font-mono);">▶ Action Required</div>
+                    <div style="font-size:11px;color:var(--primary);line-height:1.4;">${escapeHtml(item.action_required)}</div>
+                </div>` : ''}
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">
+            Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function _renderRegFilters(summary) {
+    const countryEl  = document.getElementById('regCountryFilters');
+    const categoryEl = document.getElementById('regCategoryFilters');
+    if (countryEl) countryEl.innerHTML = (summary.countries || []).map(c =>
+        `<button class="reg-filter${regFilters.country===c.country?' active':''}"
+            data-filter-type="country" data-filter-val="${escapeHtml(c.country)}"
+            onclick="setRegFilter('country','${escapeHtml(c.country)}',this)">
+            ${escapeHtml(c.country)} <span style="opacity:0.7">(${c.count})</span>
+        </button>`).join('');
+    if (categoryEl) categoryEl.innerHTML = (summary.categories || []).map(c =>
+        `<button class="reg-filter${regFilters.category===c.category?' active':''}"
+            data-filter-type="category" data-filter-val="${escapeHtml(c.category)}"
+            onclick="setRegFilter('category','${escapeHtml(c.category)}',this)">
+            ${escapeHtml(c.category)} <span style="opacity:0.7">(${c.count})</span>
+        </button>`).join('');
+}
+
+async function refreshRegulatoryAI() {
+    const btn = event.currentTarget;
+    btn.textContent = '⟳ Analysing…';
+    btn.disabled = true;
+    try {
+        const r = await fetch('/api/regulatory/refresh', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({force: false}),
+        });
+        const d = await r.json();
+        btn.textContent = '✦ Re-analyse';
+        btn.disabled = false;
+        if (d.status === 'success') {
+            loadRegulatory();
+            showAlert(`Analysis complete: ${d.result?.regulatory||0} regulatory changes found`);
+        }
+    } catch(e) { btn.textContent = '✦ Re-analyse'; btn.disabled = false; }
+}
+
 // ── Home Logs toggle ─────────────────────────
 function toggleHomeLogs() {
     const inner  = document.getElementById('homeLogsInner');
@@ -1787,7 +1961,38 @@ async function loadDataAlerts(fresh = false) {
 
         if (d.status !== 'success') throw new Error(d.message || 'Failed');
 
-        const alerts = d.alerts || [];
+        const thresholdAlerts = d.alerts || [];
+
+        // Fetch Guardian alerts directly to get GCS data update entries
+        let gcsDataAlerts = [];
+        try {
+            const gr = await fetch(`${API_BASE}/guardian/dashboard`);
+            const gd = await gr.json();
+            if (gd.status === 'success') {
+                gcsDataAlerts = (gd.alerts || [])
+                    .filter(a => {
+                        const src   = (a.source || '').toLowerCase();
+                        const title = (a.title  || '').trim();
+                        return src === 'gcs_raw' || src === 'gcs_data' ||
+                               /^US .* update:/i.test(title);
+                    })
+                    .map(a => ({
+                        name:          a.title || 'GCS Data Update',
+                        country:       a.country || 'USA',
+                        indicator:     (a.category || 'gcs_data').toLowerCase().replace(' risk',''),
+                        category:      a.category || 'Market Data',
+                        severity:      a.score >= 70 ? 'High' : a.score >= 40 ? 'Medium' : 'Low',
+                        description:   a.recommendation || a.rationale || a.title || '',
+                        display_value: `Score: ${(a.score ?? 0).toFixed(2)}`,
+                        triggered_at:  a.published_at || a.raw_dt || '',
+                        source:        'Guardian GCS',
+                        operator:      '≥',
+                        threshold:     40,
+                    }));
+            }
+        } catch(e) { /* Guardian unavailable, skip */ }
+
+        const alerts = [...thresholdAlerts, ...gcsDataAlerts];
         const total  = d.total_triggered || 0;
         const high   = d.summary?.high || 0;
 

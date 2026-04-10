@@ -342,6 +342,37 @@ class GuardianAgent(Agent):
             return {"status": "failed", "error": str(e)}
 
 
+# ── ★ Stage 8: Regulatory Classification Agent ──
+class RegulatoryClassificationAgent(Agent):
+    """Extracts regulatory changes from Fed news + Google Radar."""
+
+    def __init__(self):
+        super().__init__("RegulatoryClassifier")
+
+    async def execute(self, **kwargs):
+        self.status = "running"
+        self.log("Classifying regulatory changes...")
+        try:
+            from classify_regulatory import classify_regulatory
+            result = await classify_regulatory(force=False, limit=100)
+            if result.get("status") == "success":
+                self.status = "success"
+                self.log(f"Regulatory classification done: {result.get('regulatory',0)} changes found")
+            else:
+                self.status = "failed"
+                self.log(f"Regulatory classification failed: {result.get('message','')}", "ERROR")
+            return result
+        except ImportError:
+            msg = "classify_regulatory.py not found — skipping"
+            self.log(msg, "WARNING")
+            self.status = "success"
+            return {"status": "skipped", "message": msg}
+        except Exception as e:
+            self.log(f"Regulatory classification error: {e}", "ERROR")
+            self.status = "failed"
+            return {"status": "failed", "error": str(e)}
+
+
 class AgentOrchestrator:
     """Master orchestrator for coordinating all agents"""
 
@@ -353,6 +384,7 @@ class AgentOrchestrator:
         self.reporter           = ReportingAgent()
         self.ai_classifier      = AIClassificationAgent()   # ← new
         self.guardian_agent     = GuardianAgent()              # ← new
+        self.regulatory_agent   = RegulatoryClassificationAgent() # ← new
         self.execution_log      = []
 
     async def execute_pipeline(self, **kwargs) -> Dict:
@@ -417,6 +449,11 @@ class AgentOrchestrator:
             print("\n[STAGE 7] Guardian Snapshot Refresh...")
             guardian_result = await self.guardian_agent.execute()
             result['stages']['guardian_refresh'] = guardian_result
+
+            # ── Stage 8: Regulatory Classification ───────────────
+            print("\n[STAGE 8] Regulatory Changes Classification...")
+            reg_result = await self.regulatory_agent.execute()
+            result['stages']['regulatory_classification'] = reg_result
 
             return self._finalize_result(result, 'success')
 
