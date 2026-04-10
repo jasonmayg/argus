@@ -15,12 +15,12 @@
 <!-- ═══════════════════════════════════════════
      SIDEBAR
 ═══════════════════════════════════════════ -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
 
     <!-- Logo -->
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">A</div>
-        <div>
+        <div class="sidebar-logo-text-wrapper">
             <div class="sidebar-logo-text">ARGUS</div>
             <div class="sidebar-logo-sub">Risk Intelligence</div>
         </div>
@@ -28,8 +28,11 @@
 
     <!-- Role Switcher -->
     <div class="sidebar-role" onclick="openPersonaLogin()">
-        <div class="sidebar-role-label">Active Role</div>
-        <div class="sidebar-role-name" id="sidebarRoleName">Cash Manager</div>
+        <div class="sidebar-role-icon">👤</div>
+        <div class="sidebar-role-text-wrapper">
+            <div class="sidebar-role-label">Active Role</div>
+            <div class="sidebar-role-name" id="sidebarRoleName">Cash Manager</div>
+        </div>
     </div>
 
     <!-- Main Nav -->
@@ -38,28 +41,28 @@
 
         <a class="nav-item active" onclick="showPage('home', this)">
             <span class="nav-icon">⌂</span>
-            Home
+            <span class="nav-text">Home</span>
         </a>
         <a class="nav-item" onclick="showPage('risk', this)">
             <span class="nav-icon">◈</span>
-            Risk Monitor
+            <span class="nav-text">Risk Monitor</span>
             <span class="nav-badge" id="riskBadge" style="display:none;">!</span>
         </a>
         <a class="nav-item" onclick="showPage('chat', this)">
             <span class="nav-icon">◎</span>
-            Guardian Chat
+            <span class="nav-text">Guardian Chat</span>
         </a>
         <a class="nav-item" onclick="showPage('cash', this)">
             <span class="nav-icon">◇</span>
-            Cash Position
+            <span class="nav-text">Cash Position</span>
         </a>
         <a class="nav-item" onclick="showPage('news', this)">
             <span class="nav-icon">⚖</span>
-            Regulatory
+            <span class="nav-text">Regulatory</span>
         </a>
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span>
-            Data Source
+            <span class="nav-text">Data Source</span>
         </a>
     </nav>
 
@@ -73,18 +76,24 @@
     </div>
 
     <!-- Daily Jobs Button fixed at bottom -->
-    <div style="padding: 12px 10px 4px;">
+    <div class="sidebar-execute-wrapper" style="padding: 12px 10px 4px;">
         <button class="btn btn-primary" id="executeBtn" onclick="executePipeline()"
             style="width:100%; justify-content:center; padding:10px; font-size:12px; letter-spacing:0.06em; border-radius:4px;">
-            &#9654;&nbsp; Daily Jobs
+            <span class="nav-icon" style="margin:0;">▶</span><span class="nav-text" style="margin-left:8px;">Daily Jobs</span>
         </button>
+    </div>
+
+    <!-- Sidebar Toggle Button -->
+    <div class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
+        <span class="nav-icon" id="sidebarToggleIcon">«</span>
+        <span class="nav-text">Collapse Sidebar</span>
     </div>
 
     <!-- Footer clock -->
     <div class="sidebar-footer">
         <div class="nav-item" style="color: var(--sidebar-section-label); font-size:10px; cursor:default;">
             <span class="nav-icon">◌</span>
-            <span id="sidebarClock">--:--:-- UTC</span>
+            <span id="sidebarClock" class="nav-text">--:--:-- UTC</span>
         </div>
     </div>
 
@@ -2064,8 +2073,28 @@ async function loadDataAlerts(fresh = false) {
     }
 }
 
+// ── Sidebar Toggle ───────────────────────────
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('argusSidebarCollapsed', isCollapsed);
+    const icon = document.getElementById('sidebarToggleIcon');
+    if (icon) icon.textContent = isCollapsed ? '»' : '«';
+}
+
+function initSidebar() {
+    const isCollapsed = localStorage.getItem('argusSidebarCollapsed') === 'true';
+    const sidebar = document.getElementById('sidebar');
+    const icon = document.getElementById('sidebarToggleIcon');
+    if (isCollapsed && sidebar) {
+        sidebar.classList.add('collapsed');
+        if (icon) icon.textContent = '»';
+    }
+}
+
 // ── Boot ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    initSidebar(); // Initialize sidebar state
     startClock();
     await loadPersonas();
     // Sync home role name
@@ -2074,6 +2103,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const homeRole = document.getElementById('homeRoleName');
         if (homeRole) homeRole.textContent = activeP.label;
     }
+
+    // Keyboard shortcut for sidebar: Ctrl+B
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            toggleSidebar();
+        }
+    });
 
     // Init chat with a default session if none exists
     if (!chatSessions.length) newChatSession();
