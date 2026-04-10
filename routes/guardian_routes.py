@@ -244,14 +244,51 @@ def get_guardian_dashboard():
 @guardian_bp.route("/api/personas")
 def get_personas():
     """Return available persona options for the role-based dashboard."""
+    from settings.persona_loader import load_all_merged_personas
+    merged = load_all_merged_personas()
+    personas_out = []
+    for key, cfg in PERSONA_REGISTRY.items():
+        entry = {"key": key, "label": cfg["label"], "summary": cfg["summary"]}
+        if key in merged:
+            entry["alert_threshold"] = merged[key].get("alert_threshold")
+            entry["risk_weights"] = merged[key].get("risk_weights", {})
+        personas_out.append(entry)
     return jsonify({
         "status": "success",
-        "personas": [
-            {"key": key, "label": cfg["label"], "summary": cfg["summary"]}
-            for key, cfg in PERSONA_REGISTRY.items()
-        ],
+        "personas": personas_out,
         "default_persona": "cash_manager",
     })
+
+
+@guardian_bp.route("/api/update_persona", methods=["POST"])
+def update_persona():
+    """Save custom persona weight overrides to settings/custom.json.
+
+    Accepts a JSON body with the same shape as defaults.yaml, e.g.::
+
+        {
+          "personas": {
+            "cash_manager": {
+              "alert_threshold": 35,
+              "risk_weights": {"liquidity_risk": 1.8}
+            }
+          }
+        }
+
+    Only the supplied keys are stored; unspecified keys continue to use
+    the AI-generated defaults.  Returns the fully merged profile so the
+    frontend can immediately reflect the new effective weights.
+    """
+    from settings.persona_loader import save_custom, load_all_merged_personas
+    payload = request.get_json(force=True, silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"status": "error", "message": "Expected a JSON object"}), 400
+    try:
+        save_custom(payload)
+        merged = load_all_merged_personas()
+        return jsonify({"status": "success", "merged_personas": merged})
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
 
 
 @guardian_bp.route("/api/persona/dashboard")
