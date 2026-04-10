@@ -1,0 +1,15 @@
+{
+  "name": "Fx_test",
+  "persona_key": "fx_manager",
+  "saved_at": "2026-04-09T23:27:24",
+  "weights": {
+    "alert_threshold": 40,
+    "risk_weights": {
+      "credit_risk": 1.5,
+      "liquidity_risk": 1.5,
+      "operational_risk": 1.55,
+      "political_risk": 1.5,
+      "disaster_risk": 1.5
+    }
+  }
+}

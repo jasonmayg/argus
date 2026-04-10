@@ -128,17 +128,25 @@ class AnalysisAgent(Agent):
         ),
     }
 
-    def __init__(self, persona: str = "cash_manager") -> None:
+    def __init__(
+        self,
+        persona: str = "cash_manager",
+        weights: Optional[Dict] = None,
+    ) -> None:
         super().__init__("RiskAnalyzer")
         self.persona = persona
         self.analysis_results: Dict = {}
         self._api_key = os.getenv("OPENAI_API_KEY")
-        # Load merged persona config (defaults + any user overrides from custom.json)
-        try:
-            from settings.persona_loader import load_merged_persona
-            self._persona_cfg = load_merged_persona(persona)
-        except Exception:
-            self._persona_cfg = {}
+        # Use explicitly supplied weights (e.g. from a loaded profile) or fall
+        # back to the AI-baseline defaults from personas/defaults.yaml.
+        if weights is not None:
+            self._persona_cfg = weights
+        else:
+            try:
+                from personas.persona_loader import load_defaults
+                self._persona_cfg = load_defaults(persona)
+            except Exception:
+                self._persona_cfg = {}
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -384,7 +392,7 @@ Return ONLY the JSON array — no preamble, no markdown fences."""
         rs = float(item.get("risk_score") or 0)
         # Apply persona weight for this item's risk category
         try:
-            from settings.persona_loader import get_category_weight
+            from personas.persona_loader import get_category_weight
             weight = get_category_weight(self._persona_cfg, item.get("risk_category", ""))
             rs = min(100.0, rs * weight)
         except Exception:

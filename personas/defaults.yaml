@@ -1,6 +1,7 @@
-# Default persona weights — AI-generated baseline.
-# To customise, POST your overrides to /api/update_persona.
-# Values in settings/custom.json take precedence over everything here.
+# AI-generated baseline persona weights.
+# To override, save a named profile via /api/save_profile.
+# Profiles live in personas/profiles/ and are merged over these defaults
+# in-memory when loaded — no floating config file is written.
 
 personas:
   cash_manager:

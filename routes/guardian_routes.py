@@ -4,13 +4,25 @@ Handles:
   GET  /api/guardian/dashboard
   GET  /api/personas
   GET  /api/persona/dashboard
+  POST /api/save_profile
+  GET  /api/list_profiles
+  POST /api/load_profile
 """
 
+import asyncio
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
+
+# Persona defaults & profile helpers
+from personas.persona_loader import (
+    load_all_defaults,
+    load_defaults,
+    merge_weights,
+)
 
 from core.agents import (
     PERSONA_REGISTRY,
@@ -243,15 +255,14 @@ def get_guardian_dashboard():
 
 @guardian_bp.route("/api/personas")
 def get_personas():
-    """Return available persona options for the role-based dashboard."""
-    from settings.persona_loader import load_all_merged_personas
-    merged = load_all_merged_personas()
+    """Return AI-baseline persona configs (defaults.yaml, no custom overlay)."""
+    defaults = load_all_defaults()
     personas_out = []
     for key, cfg in PERSONA_REGISTRY.items():
         entry = {"key": key, "label": cfg["label"], "summary": cfg["summary"]}
-        if key in merged:
-            entry["alert_threshold"] = merged[key].get("alert_threshold")
-            entry["risk_weights"] = merged[key].get("risk_weights", {})
+        d = defaults.get(key, {})
+        entry["alert_threshold"] = d.get("alert_threshold")
+        entry["risk_weights"]    = d.get("risk_weights", {})
         personas_out.append(entry)
     return jsonify({
         "status": "success",
@@ -259,36 +270,6 @@ def get_personas():
         "default_persona": "cash_manager",
     })
 
-
-@guardian_bp.route("/api/update_persona", methods=["POST"])
-def update_persona():
-    """Save custom persona weight overrides to settings/custom.json.
-
-    Accepts a JSON body with the same shape as defaults.yaml, e.g.::
-
-        {
-          "personas": {
-            "cash_manager": {
-              "alert_threshold": 35,
-              "risk_weights": {"liquidity_risk": 1.8}
-            }
-          }
-        }
-
-    Only the supplied keys are stored; unspecified keys continue to use
-    the AI-generated defaults.  Returns the fully merged profile so the
-    frontend can immediately reflect the new effective weights.
-    """
-    from settings.persona_loader import save_custom, load_all_merged_personas
-    payload = request.get_json(force=True, silent=True) or {}
-    if not isinstance(payload, dict):
-        return jsonify({"status": "error", "message": "Expected a JSON object"}), 400
-    try:
-        save_custom(payload)
-        merged = load_all_merged_personas()
-        return jsonify({"status": "success", "merged_personas": merged})
-    except Exception as exc:
-        return jsonify({"status": "error", "message": str(exc)}), 500
 
 
 @guardian_bp.route("/api/persona/dashboard")
@@ -314,3 +295,134 @@ def get_persona_dashboard():
     payload["status"] = "success"
     payload["snapshot_path"] = snapshot_ref
     return jsonify(sanitize_for_json(payload))
+
+
+# ── Profiles ──────────────────────────────────────────────────────────────────
+
+_PROFILES_DIR = Path("personas/profiles")
+_RESULTS_PATH = Path("shared_storage/latest_results.json")
+
+# Characters allowed in profile filenames (everything else → _)
+_SAFE_RE = re.compile(r"[^a-zA-Z0-9_\-]")
+
+
+@guardian_bp.route("/api/save_profile", methods=["POST"])
+def save_profile():
+    """Save a named weight profile to personas/profiles/<safe_name>.json.
+
+    Body::
+
+        {
+          "name":        "High Liquidity Focus",
+          "persona_key": "cash_manager",
+          "weights": {
+            "alert_threshold": 35,
+            "risk_weights": {"liquidity_risk": 1.8, ...}
+          }
+        }
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return jsonify({"status": "error", "message": "Profile name is required"}), 400
+
+    safe = _SAFE_RE.sub("_", name)[:64] or "profile"
+    _PROFILES_DIR.mkdir(exist_ok=True)
+
+    profile = {
+        "name":        name,
+        "persona_key": str(body.get("persona_key") or "cash_manager"),
+        "saved_at":    datetime.now().isoformat(timespec="seconds"),
+        "weights":     body.get("weights") or {},
+    }
+
+    dest = _PROFILES_DIR / f"{safe}.json"
+    dest.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    return jsonify({"status": "success", "filename": dest.name, "profile": profile})
+
+
+@guardian_bp.route("/api/list_profiles")
+def list_profiles():
+    """Return metadata for every saved profile, newest first."""
+    _PROFILES_DIR.mkdir(exist_ok=True)
+    profiles = []
+    for f in sorted(_PROFILES_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        profiles.append({
+            "filename":    f.name,
+            "name":        data.get("name", f.stem),
+            "persona_key": data.get("persona_key", ""),
+            "saved_at":    data.get("saved_at", ""),
+        })
+    return jsonify({"status": "success", "profiles": profiles})
+
+
+@guardian_bp.route("/api/load_profile", methods=["POST"])
+def load_profile():
+    """Load a saved profile, apply its weights as the active custom config,
+    then re-run AnalysisAgent on the cached classified news.
+
+    Body::
+
+        { "filename": "High_Liquidity_Focus.json" }
+
+    Returns the full profile **and** fresh ``rescored`` analysis so the
+    frontend can immediately update the risk matrix without waiting for a
+    full pipeline run.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    filename = str(body.get("filename") or "").strip()
+
+    # Guard against path traversal
+    if not filename or "/" in filename or "\\" in filename or not filename.endswith(".json"):
+        return jsonify({"status": "error", "message": "Invalid filename"}), 400
+
+    path = _PROFILES_DIR / filename
+    if not path.exists():
+        return jsonify({"status": "error", "message": "Profile not found"}), 404
+
+    try:
+        profile = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return jsonify({"status": "error", "message": f"Could not read profile: {exc}"}), 500
+
+    persona_key    = str(profile.get("persona_key") or "cash_manager")
+    profile_weights = profile.get("weights") or {}
+
+    # Merge profile weights over AI defaults entirely in memory — no file written.
+    merged_cfg = merge_weights(load_defaults(persona_key), profile_weights)
+
+    # Re-run AnalysisAgent on cached classified news using the merged config.
+    rescored = None
+    if _RESULTS_PATH.exists():
+        try:
+            results    = json.loads(_RESULTS_PATH.read_text(encoding="utf-8"))
+            classified = (
+                results.get("stages", {})
+                       .get("risk_classification", {})
+                       .get("data") or []
+            )
+            if classified:
+                from core.agents import AnalysisAgent
+                analyzer = AnalysisAgent(persona=persona_key, weights=merged_cfg)
+                loop     = asyncio.new_event_loop()
+                try:
+                    result = loop.run_until_complete(
+                        analyzer.execute(classified_news=classified)
+                    )
+                finally:
+                    loop.close()
+                if result.get("status") == "success":
+                    rescored = result["analysis"]
+        except Exception as exc:
+            print(f"[load_profile] Re-score warning: {exc}")
+
+    return jsonify(sanitize_for_json({
+        "status":   "success",
+        "profile":  profile,
+        "rescored": rescored,
+    }))

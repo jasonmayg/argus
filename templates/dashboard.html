@@ -609,7 +609,6 @@
                         </div>
                         <div class="ps-header-actions">
                             <button class="ps-reset-link" onclick="resetPersonaWeights()">Reset to AI Defaults</button>
-                            <button class="ps-save-btn" id="psSaveBtn" onclick="savePersonaWeights()">Save Changes</button>
                         </div>
                     </div>
 
@@ -642,6 +641,53 @@
 
                     <!-- Save feedback -->
                     <div class="ps-feedback" id="psFeedback" style="display:none;"></div>
+
+                    <!-- ── Profiles ─────────────────────────────── -->
+                    <div class="ps-section-heading" style="margin-top:28px;">
+                        <span class="ps-section-label">SAVED PROFILES</span>
+                        <span class="ps-section-note">Snapshot any weight configuration and reload it instantly</span>
+                    </div>
+
+                    <div class="ps-card ps-profiles-card">
+
+                        <!-- Save current as profile -->
+                        <div class="ps-profile-row ps-profile-save-row">
+                            <div class="ps-profile-meta">
+                                <span class="ps-threshold-label" style="display:inline-block;margin-bottom:3px;">SAVE CURRENT WEIGHTS</span>
+                            </div>
+                            <div class="ps-profile-controls">
+                                <input id="psProfileNameInput" type="text"
+                                    class="ps-profile-input"
+                                    placeholder="e.g. High Liquidity Focus"
+                                    maxlength="64">
+                                <button class="ps-profile-save-btn" onclick="psSaveCurrentAsProfile()">
+                                    Save Profile
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ps-profile-divider"></div>
+
+                        <!-- Load a saved profile -->
+                        <div class="ps-profile-row">
+                            <div class="ps-profile-meta">
+                                <span class="ps-threshold-label" style="display:inline-block;margin-bottom:3px;">LOAD PROFILE</span>
+                                <span class="ps-threshold-hint" style="display:block;">Applies weights &amp; re-scores cached news instantly</span>
+                            </div>
+                            <div class="ps-profile-controls">
+                                <select id="psProfileSelect" class="ps-profile-select">
+                                    <option value="">— select a saved profile —</option>
+                                </select>
+                                <button class="ps-profile-load-btn" onclick="psLoadSelectedProfile()">
+                                    Load &amp; Re-score
+                                </button>
+                            </div>
+                        </div>
+
+                    </div><!-- /ps-profiles-card -->
+
+                    <!-- Profile action feedback -->
+                    <div class="ps-feedback" id="psProfileFeedback" style="display:none;"></div>
 
                 </div><!-- /ps-editor -->
             </div><!-- /ps-shell -->
@@ -1007,6 +1053,96 @@
 }
 .ps-feedback-success { background: var(--success-bg); color: var(--success-text); border-color: #BBF7D0; }
 .ps-feedback-error   { background: var(--danger-bg);  color: var(--danger-text);  border-color: #FECACA; }
+
+/* ── Profiles card ──────────────────────────── */
+.ps-profiles-card { overflow: hidden; }
+
+.ps-profile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 20px;
+}
+.ps-profile-meta { min-width: 0; }
+.ps-profile-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.ps-profile-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 20px;
+}
+
+/* Text input */
+.ps-profile-input {
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    outline: none;
+    width: 240px;
+    background: #fff;
+    transition: border-color 0.12s;
+}
+.ps-profile-input:focus { border-color: #9CA3AF; }
+.ps-profile-input::placeholder { color: #CBD5E1; }
+
+/* Dropdown */
+.ps-profile-select {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    outline: none;
+    width: 240px;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* Save button */
+.ps-profile-save-btn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, border-color 0.1s;
+}
+.ps-profile-save-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
+
+/* Load button */
+.ps-profile-load-btn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    background: #1F2937;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s;
+}
+.ps-profile-load-btn:hover  { background: #111827; }
+.ps-profile-load-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
 </style>
 
     <div class="app-footer">
@@ -2672,6 +2808,7 @@ async function loadPersonaSettings() {
 
         psRenderTabs(personas);
         psRenderSliders(psActivePersona);
+        psRefreshProfileList();
     } catch(e) {
         console.warn('Persona settings load error:', e);
     }
@@ -2789,49 +2926,13 @@ function psRenderSliders(personaKey) {
     });
 }
 
-async function savePersonaWeights() {
-    const btn = document.getElementById('psSaveBtn');
-    btn.disabled    = true;
-    btn.textContent = 'Saving…';
-    try {
-        const r = await fetch(`${API_BASE}/update_persona`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ personas: psDraft }),
-        });
-        const d = await r.json();
-        if (d.status === 'success') {
-            psShowFeedback('Weights saved. AnalysisAgent will use the updated profile on the next pipeline run.', 'success');
-            await loadPersonaSettings();
-        } else {
-            psShowFeedback('Save failed: ' + (d.message || 'unknown error'), 'error');
-        }
-    } catch(e) {
-        psShowFeedback('Save failed: ' + e.message, 'error');
-    } finally {
-        btn.disabled    = false;
-        btn.textContent = 'Save Changes';
-    }
-}
-
-async function resetPersonaWeights() {
-    if (!confirm('Clear all custom weights and restore AI defaults for every role?')) return;
-    try {
-        const r = await fetch(`${API_BASE}/update_persona`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({}),
-        });
-        const d = await r.json();
-        if (d.status === 'success') {
-            psShowFeedback('All weights reset to AI defaults.', 'success');
-            await loadPersonaSettings();
-        } else {
-            psShowFeedback('Reset failed: ' + (d.message || 'unknown error'), 'error');
-        }
-    } catch(e) {
-        psShowFeedback('Reset failed: ' + e.message, 'error');
-    }
+function resetPersonaWeights() {
+    // Discard all in-memory slider edits for the active persona by
+    // re-syncing psDraft from the AI defaults, then re-rendering.
+    const defaults = psDefaults[psActivePersona];
+    if (defaults) psDraft[psActivePersona] = JSON.parse(JSON.stringify(defaults));
+    psRenderSliders(psActivePersona);
+    psShowFeedback('Sliders reset to AI defaults. Use "Save Profile" to persist a named configuration.', 'success');
 }
 
 function psShowFeedback(msg, type) {
@@ -2841,6 +2942,131 @@ function psShowFeedback(msg, type) {
     el.className = `ps-feedback ps-feedback-${type}`;
     clearTimeout(el._timer);
     el._timer = setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── Profile helpers ───────────────────────────
+
+function psProfileFeedback(msg, type) {
+    const el = document.getElementById('psProfileFeedback');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.className = `ps-feedback ps-feedback-${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+async function psRefreshProfileList() {
+    try {
+        const r = await fetch(`${API_BASE}/list_profiles`);
+        const d = await r.json();
+        const sel = document.getElementById('psProfileSelect');
+        const profiles = d.profiles || [];
+        sel.innerHTML = '<option value="">— select a saved profile —</option>' +
+            profiles.map(p => {
+                const label = p.name + (p.saved_at ? '  ·  ' + p.saved_at.slice(0, 10) : '');
+                return `<option value="${p.filename}">${label}</option>`;
+            }).join('');
+    } catch(e) { console.warn('Could not load profiles:', e); }
+}
+
+async function psSaveCurrentAsProfile() {
+    const name = (document.getElementById('psProfileNameInput').value || '').trim();
+    if (!name) {
+        psProfileFeedback('Enter a profile name first.', 'error');
+        return;
+    }
+    // Collect current draft for the active persona
+    const cfg = psDraft[psActivePersona] || {};
+    try {
+        const r = await fetch(`${API_BASE}/save_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                name,
+                persona_key: psActivePersona,
+                weights: cfg,
+            }),
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            document.getElementById('psProfileNameInput').value = '';
+            psProfileFeedback(`Profile "${name}" saved.`, 'success');
+            await psRefreshProfileList();
+        } else {
+            psProfileFeedback('Save failed: ' + (d.message || 'unknown'), 'error');
+        }
+    } catch(e) {
+        psProfileFeedback('Save failed: ' + e.message, 'error');
+    }
+}
+
+async function psLoadSelectedProfile() {
+    const sel = document.getElementById('psProfileSelect');
+    const filename = sel.value;
+    if (!filename) { psProfileFeedback('Select a profile first.', 'error'); return; }
+
+    const btn = document.querySelector('.ps-profile-load-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Loading…';
+
+    try {
+        const r = await fetch(`${API_BASE}/load_profile`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ filename }),
+        });
+        const d = await r.json();
+        if (d.status !== 'success') {
+            psProfileFeedback('Load failed: ' + (d.message || 'unknown'), 'error');
+            return;
+        }
+
+        const profile = d.profile || {};
+        const weights = profile.weights || {};
+
+        // Switch to the profile's persona tab
+        const pKey = profile.persona_key || psActivePersona;
+        psActivePersona = pKey;
+        document.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
+        const matchingTab = [...document.querySelectorAll('.ps-tab')]
+            .find(t => t.textContent.trim().startsWith(
+                (availablePersonas.find(p => p.key === pKey) || {}).label || ''
+            ));
+        if (matchingTab) matchingTab.classList.add('active');
+
+        // Merge loaded weights into draft
+        if (!psDraft[pKey]) psDraft[pKey] = {};
+        if (weights.alert_threshold !== undefined)
+            psDraft[pKey].alert_threshold = weights.alert_threshold;
+        if (weights.risk_weights) {
+            psDraft[pKey].risk_weights = Object.assign(
+                psDraft[pKey].risk_weights || {}, weights.risk_weights
+            );
+        }
+
+        // Re-render sliders to show loaded values
+        psRenderSliders(pKey);
+
+        // If re-analysis ran, refresh the risk matrix on the Risk Monitor page
+        if (d.rescored) {
+            // Store in execution_state so Risk Monitor page picks it up
+            renderRiskMatrix(d.rescored);
+            psProfileFeedback(
+                `Profile "${profile.name}" loaded. Risk matrix re-scored with ${d.rescored.total_items} items.`,
+                'success'
+            );
+        } else {
+            psProfileFeedback(
+                `Profile "${profile.name}" loaded. Run the Daily Jobs pipeline to apply weights to new data.`,
+                'success'
+            );
+        }
+    } catch(e) {
+        psProfileFeedback('Load failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Load & Re-score';
+    }
 }
 
 // ── Boot ─────────────────────────────────────
