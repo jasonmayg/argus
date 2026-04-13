@@ -21,6 +21,7 @@ from flask import Blueprint, jsonify, request
 from personas.persona_loader import (
     load_all_defaults,
     load_defaults,
+    load_all_region_defaults,
     merge_weights,
 )
 
@@ -255,7 +256,13 @@ def get_guardian_dashboard():
 
 @guardian_bp.route("/api/personas")
 def get_personas():
-    """Return AI-baseline persona configs (defaults.yaml, no custom overlay)."""
+    """Return AI-baseline persona configs with per-region defaults.
+
+    Each persona entry includes:
+      alert_threshold  – global baseline
+      risk_weights     – global baseline weights
+      region_defaults  – {region_key: {alert_threshold, risk_weights}} for all regions
+    """
     defaults = load_all_defaults()
     personas_out = []
     for key, cfg in PERSONA_REGISTRY.items():
@@ -263,6 +270,7 @@ def get_personas():
         d = defaults.get(key, {})
         entry["alert_threshold"] = d.get("alert_threshold")
         entry["risk_weights"]    = d.get("risk_weights", {})
+        entry["region_defaults"] = load_all_region_defaults(key)
         personas_out.append(entry)
     return jsonify({
         "status": "success",

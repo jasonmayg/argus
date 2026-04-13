@@ -15,10 +15,12 @@ frontend (psDraft) and is never written to disk.
 
 Public API
 ----------
-    load_defaults(persona_key)             -> dict  single persona AI baseline
-    load_all_defaults()                    -> dict  all personas
-    merge_weights(base, override)          -> dict  deep-merge helper
-    get_category_weight(cfg, category)     -> float weight for one risk category
+    load_defaults(persona_key)                       -> dict  single persona global baseline
+    load_defaults_for_region(persona_key, region)    -> dict  region-merged baseline
+    load_all_defaults()                              -> dict  all personas (global only)
+    load_all_region_defaults(persona_key)            -> dict  {region: merged_cfg} for all regions
+    merge_weights(base, override)                    -> dict  deep-merge helper
+    get_category_weight(cfg, category)               -> float weight for one risk category
 """
 
 from pathlib import Path
@@ -53,6 +55,10 @@ _CATEGORY_TO_WEIGHT_KEY: Dict[str, str] = {
 }
 
 
+# Known region keys — must match TUNE_REGIONS in tune-modal.js
+_KNOWN_REGIONS = ("global", "us", "canada", "mexico", "china", "japan", "uk", "korea", "india")
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def load_defaults(persona_key: str) -> Dict[str, Any]:
@@ -63,9 +69,48 @@ def load_defaults(persona_key: str) -> Dict[str, Any]:
     return _load_yaml().get("personas", {}).get(persona_key, {})
 
 
+def load_defaults_for_region(persona_key: str, region_key: str) -> Dict[str, Any]:
+    """Return the merged config for *persona_key* + *region_key*.
+
+    Applies the persona's ``region_overrides.<region_key>`` shallow diff on top
+    of the global ``risk_weights``.  ``alert_threshold`` is always taken from
+    the global baseline (region does not change the threshold).
+
+    Returns the global baseline when *region_key* is ``"global"`` or unknown.
+    """
+    base = load_defaults(persona_key)
+    if not base:
+        return {}
+    if region_key == "global" or region_key not in _KNOWN_REGIONS:
+        return base
+
+    overrides = base.get("region_overrides", {}).get(region_key, {})
+    if not overrides:
+        return base
+
+    merged_weights = dict(base.get("risk_weights", {}))
+    merged_weights.update(overrides)
+    return {
+        "alert_threshold": base.get("alert_threshold", 40),
+        "risk_weights": merged_weights,
+    }
+
+
 def load_all_defaults() -> Dict[str, Any]:
-    """Return all persona configs from defaults.yaml."""
+    """Return all persona configs from defaults.yaml (global baseline only)."""
     return _load_yaml().get("personas", {})
+
+
+def load_all_region_defaults(persona_key: str) -> Dict[str, Dict[str, Any]]:
+    """Return a mapping of region_key → merged config for every known region.
+
+    Useful for embedding all region variants in a single API response so the
+    frontend can switch regions without re-fetching.
+    """
+    return {
+        region: load_defaults_for_region(persona_key, region)
+        for region in _KNOWN_REGIONS
+    }
 
 
 def merge_weights(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:

@@ -8,16 +8,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/modals.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════
+
+<!-- ═══════════════════════════════════════════════════════════
      SIDEBAR
-═══════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════ -->
 <aside class="sidebar" id="sidebar">
 
-    <!-- Logo -->
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">A</div>
         <div class="sidebar-logo-text-wrapper">
@@ -26,7 +27,6 @@
         </div>
     </div>
 
-    <!-- Role Switcher -->
     <div class="sidebar-role" onclick="openPersonaLogin()">
         <div class="sidebar-role-icon">👤</div>
         <div class="sidebar-role-text-wrapper">
@@ -35,63 +35,55 @@
         </div>
     </div>
 
-    <!-- Main Nav -->
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Workspace</div>
-
         <a class="nav-item active" onclick="showPage('home', this)">
-            <span class="nav-icon">⌂</span>
-            <span class="nav-text">Home</span>
+            <span class="nav-icon">⌂</span><span class="nav-text">Home</span>
         </a>
         <a class="nav-item" onclick="showPage('risk', this)">
-            <span class="nav-icon">◈</span>
-            <span class="nav-text">Risk Monitor</span>
+            <span class="nav-icon">◈</span><span class="nav-text">Risk Monitor</span>
             <span class="nav-badge" id="riskBadge" style="display:none;">!</span>
         </a>
         <a class="nav-item" onclick="showPage('news', this)">
-            <span class="nav-icon">⚖</span>
-            <span class="nav-text">Regulatory</span>
+            <span class="nav-icon">⚖</span><span class="nav-text">Regulatory</span>
         </a>
         <a class="nav-item" onclick="showPage('cash', this)">
-            <span class="nav-icon">◇</span>
-            <span class="nav-text">Cash Position</span>
+            <span class="nav-icon">◇</span><span class="nav-text">Cash Position</span>
         </a>
         <a class="nav-item" onclick="showPage('chat', this)">
-            <span class="nav-icon">◎</span>
-            <span class="nav-text">Guardian Chat</span>
+            <span class="nav-icon">◎</span><span class="nav-text">Guardian Chat</span>
         </a>
         <a class="nav-item" onclick="showPage('data', this)">
-            <span class="nav-icon">▦</span>
-            <span class="nav-text">Data Source</span>
+            <span class="nav-icon">▦</span><span class="nav-text">Data Source</span>
+        </a>
+        <div class="sidebar-section-label" style="margin-top:16px;">Tools</div>
+        <a class="nav-item" onclick="openTuneModal()">
+            <span class="nav-icon">⊙</span><span class="nav-text">Weights Tuner</span>
         </a>
     </nav>
 
-    <!-- Spacer pushes everything below to bottom -->
     <div style="flex:1;"></div>
 
-    <!-- System Status -->
     <div class="sidebar-status">
         <div class="status-dot" id="systemDot"></div>
         <span id="systemStatusText">SYSTEM NOMINAL</span>
     </div>
 
-    <!-- Daily Jobs Button fixed at bottom -->
-    <div class="sidebar-execute-wrapper" style="padding: 12px 10px 4px;">
+    <div class="sidebar-execute-wrapper" style="padding:12px 10px 4px;">
         <button class="btn btn-primary" id="executeBtn" onclick="executePipeline()"
-            style="width:100%; justify-content:center; padding:10px; font-size:12px; letter-spacing:0.06em; border-radius:4px;">
-            <span class="nav-icon" style="margin:0;">▶</span><span class="nav-text" style="margin-left:8px;">Daily Jobs</span>
+            style="width:100%;justify-content:center;padding:10px;font-size:12px;letter-spacing:0.06em;border-radius:4px;">
+            <span class="nav-icon" style="margin:0;">▶</span>
+            <span class="nav-text" style="margin-left:8px;">Daily Jobs</span>
         </button>
     </div>
 
-    <!-- Sidebar Toggle Button -->
     <div class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar (Ctrl+B)">
         <span class="nav-icon" id="sidebarToggleIcon">«</span>
         <span class="nav-text">Collapse Sidebar</span>
     </div>
 
-    <!-- Footer clock -->
     <div class="sidebar-footer">
-        <div class="nav-item" style="color: var(--sidebar-section-label); font-size:10px; cursor:default;">
+        <div class="nav-item" style="color:var(--sidebar-section-label);font-size:10px;cursor:default;">
             <span class="nav-icon">◌</span>
             <span id="sidebarClock" class="nav-text">--:--:-- UTC</span>
         </div>
@@ -100,9 +92,9 @@
 </aside>
 
 
-<!-- ═══════════════════════════════════════════
-     MAIN SHELL
-═══════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════════════════════════ -->
 <div class="app-shell">
 
     <!-- Top Bar -->
@@ -117,44 +109,38 @@
     <!-- Page Content -->
     <div class="page-content">
 
-        <!-- Alert Banner -->
         <div class="alert-banner" id="alertBanner"></div>
 
-        <!-- ─────────────────────────────────────
+
+        <!-- ─────────────────────────────────────────────────
              PAGE: HOME
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page active" id="page-home">
 
-            <!-- ① Persona bar -->
-            <div style="display:flex; align-items:center; justify-content:space-between;
-                        background:white; border:1px solid var(--border); border-radius:6px;
-                        padding:9px 16px; margin-bottom:10px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="font-size:9px; font-weight:700; text-transform:uppercase;
-                                letter-spacing:0.1em; color:var(--text-muted); font-family:var(--font-mono);">
-                        Active Role
-                    </div>
-                    <div style="font-size:12px; font-weight:600; color:var(--text-main);"
-                         id="homeRoleName">Cash Manager</div>
+            <!-- Persona bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;
+                        background:white;border:1px solid var(--border);border-radius:6px;
+                        padding:9px 16px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;
+                                letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);">Active Role</div>
+                    <div style="font-size:12px;font-weight:600;color:var(--text-main);" id="homeRoleName">Cash Manager</div>
                     <button class="btn btn-sm btn-ghost" onclick="openPersonaLogin()"
-                        style="font-size:10px; padding:2px 8px; color:var(--primary);">Switch</button>
+                        style="font-size:10px;padding:2px 8px;color:var(--primary);">Switch</button>
                 </div>
-                <div>
-                    <button class="btn btn-sm btn-ghost" onclick="openTuneModal()" 
-                        style="font-size:10px; padding:2px 8px; color:var(--text-secondary); display:flex; align-items:center; gap:4px;">
-                        <span style="font-size:12px;">⊙</span> Tune Risk Weights
-                    </button>
-                </div>
+                <button class="btn btn-sm btn-ghost" onclick="openTuneModal()"
+                    style="font-size:10px;padding:2px 8px;color:var(--text-secondary);display:flex;align-items:center;gap:4px;">
+                    <span style="font-size:12px;">⊙</span> Tune Risk Weights
+                </button>
             </div>
 
-            <!-- ② Top row: Brief (left) + KPIs (right) -->
-            <div style="display:grid; grid-template-columns:1.6fr 1fr; gap:10px; margin-bottom:10px;">
+            <!-- Brief + KPIs -->
+            <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:10px;">
 
-                <!-- Intelligence Brief -->
                 <div class="brief-card" style="margin-bottom:0;">
                     <div class="brief-header">
                         <div class="brief-title">⬡ Intelligence Brief</div>
-                        <div style="display:flex; gap:8px; align-items:center;">
+                        <div style="display:flex;gap:8px;align-items:center;">
                             <div class="brief-meta" id="briefMeta">—</div>
                             <button class="btn btn-sm" onclick="generateBrief()" id="briefBtn">Generate</button>
                         </div>
@@ -165,45 +151,36 @@
                     <div class="brief-signals" id="briefSignals"></div>
                 </div>
 
-                <!-- KPI column -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                     <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Risk Level</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
-                             id="kpiRisk">—</div>
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Risk Level</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiRisk">—</div>
                         <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Overall</div>
                     </div>
                     <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Countries</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
-                             id="kpiCountries">—</div>
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Countries</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiCountries">—</div>
                         <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Monitored</div>
                     </div>
                     <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Signals</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
-                             id="kpiSignals">—</div>
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Signals</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiSignals">—</div>
                         <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Last run</div>
                     </div>
                     <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
-                                    color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Trend</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);"
-                             id="kpiTrend">—</div>
+                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Trend</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiTrend">—</div>
                         <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Direction</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ③ Pipeline progress — compact, only when running -->
-            <div id="pipelineCard" style="display:none; margin-bottom:10px;">
-                <div style="background:white; border:1px solid var(--primary); border-radius:6px;
-                            padding:10px 16px; display:flex; align-items:center; gap:12px;">
+            <!-- Pipeline progress (shown only while running) -->
+            <div id="pipelineCard" style="display:none;margin-bottom:10px;">
+                <div style="background:white;border:1px solid var(--primary);border-radius:6px;
+                            padding:10px 16px;display:flex;align-items:center;gap:12px;">
                     <span class="status-badge status-running">Running</span>
-                    <div style="flex:1; display:grid; grid-template-columns:repeat(5,1fr); gap:6px;">
+                    <div style="flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
                         <div class="stage" id="stage1"><p>Ingestion</p></div>
                         <div class="stage" id="stage2"><p>Classification</p></div>
                         <div class="stage" id="stage3"><p>Persistence</p></div>
@@ -213,35 +190,34 @@
                 </div>
             </div>
 
-            <!-- ④ Risk category cards (from news DB) -->
+            <!-- Risk category signal cards -->
             <div style="margin-bottom:10px;">
-                <div style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-                            color:var(--text-muted); font-family:var(--font-mono); margin-bottom:8px;">
-                    Risk Signal Categories
-                </div>
-                <div id="riskCategoryCards" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px;">
-                    <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;
-                                grid-column:1/-1;">Loading risk categories…</div>
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                            color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">Risk Signal Categories</div>
+                <div id="riskCategoryCards"
+                     style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+                    <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;grid-column:1/-1;">
+                        Loading risk categories…
+                    </div>
                 </div>
             </div>
 
-            <!-- ⑤ Operational Logs — slim, hidden by default -->
+            <!-- Operational logs (collapsible) -->
             <div class="card" style="padding:10px 14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;
-                            cursor:pointer;" onclick="toggleHomeLogs()">
-                    <div style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-                                color:var(--text-muted); font-family:var(--font-mono);">
-                        Operational Logs
-                    </div>
-                    <span style="font-size:10px; color:var(--text-muted);" id="homeLogsToggle">Show ▾</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+                     onclick="toggleHomeLogs()">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                                color:var(--text-muted);font-family:var(--font-mono);">Operational Logs</div>
+                    <span style="font-size:10px;color:var(--text-muted);" id="homeLogsToggle">Show ▾</span>
                 </div>
-                <div id="homeLogsInner" style="display:none; margin-top:8px;">
+                <div id="homeLogsInner" style="display:none;margin-top:8px;">
                     <div class="log-section" id="logsContainer" style="max-height:100px;">
                         <div class="log-entry">ARGUS Intelligence Engine v2.5 // Ready.</div>
                     </div>
                 </div>
             </div>
-            <!-- Hidden agent status elements (still needed by JS) -->
+
+            <!-- Hidden agent status elements (required by JS) -->
             <div style="display:none;">
                 <div id="newsGathererStatus"></div>
                 <div id="classifierStatus"></div>
@@ -251,12 +227,11 @@
         </div><!-- /page-home -->
 
 
-        <!-- ─────────────────────────────────────
+        <!-- ─────────────────────────────────────────────────
              PAGE: RISK MONITOR
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page" id="page-risk">
 
-            <!-- Executive KPIs -->
             <div class="kpi-row" style="margin-bottom:20px;">
                 <div class="kpi-card">
                     <div class="kpi-label">Monitored Jurisdictions</div>
@@ -281,35 +256,30 @@
                 </div>
             </div>
 
-            <!-- Top Countries -->
             <div class="card" style="margin-bottom:20px;">
                 <div class="section-title">Top Risk Jurisdictions</div>
-                <div id="countryBoardGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px;"></div>
+                <div id="countryBoardGrid"
+                     style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;"></div>
             </div>
 
-            <!-- Two-column alerts: News + Data -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
 
                 <!-- News Alerts -->
-                <div class="card" style="padding:0; overflow:hidden;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;
-                                padding:12px 16px; border-bottom:1px solid var(--border);
-                                background:#F8FAFC;">
-                        <div style="font-size:10px; font-weight:700; text-transform:uppercase;
-                                    letter-spacing:0.08em; color:var(--text-muted); font-family:var(--font-mono);">
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;
+                                padding:12px 16px;border-bottom:1px solid var(--border);background:#F8FAFC;">
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+                                    letter-spacing:0.08em;color:var(--text-muted);font-family:var(--font-mono);">
                             📰 News Alerts
                         </div>
                         <span class="status-badge" id="newsAlertCount"
-                              style="background:var(--idle-bg); color:var(--idle-text);">—</span>
+                              style="background:var(--idle-bg);color:var(--idle-text);">—</span>
                     </div>
-                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;">
+                    <div style="overflow-y:auto;max-height:480px;scrollbar-width:thin;">
                         <table class="data-table" style="font-size:11px;">
                             <thead>
                                 <tr>
-                                    <th>Country</th>
-                                    <th>Category</th>
-                                    <th>Score</th>
-                                    <th>Headline</th>
+                                    <th>Country</th><th>Category</th><th>Score</th><th>Headline</th>
                                 </tr>
                             </thead>
                             <tbody id="criticalAlertsTableBody"></tbody>
@@ -318,26 +288,24 @@
                 </div>
 
                 <!-- Data Alerts -->
-                <div class="card" style="padding:0; overflow:hidden;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;
-                                padding:12px 16px; border-bottom:1px solid var(--border);
-                                background:#F8FAFC;">
-                        <div style="font-size:10px; font-weight:700; text-transform:uppercase;
-                                    letter-spacing:0.08em; color:var(--text-muted); font-family:var(--font-mono);">
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;
+                                padding:12px 16px;border-bottom:1px solid var(--border);background:#F8FAFC;">
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+                                    letter-spacing:0.08em;color:var(--text-muted);font-family:var(--font-mono);">
                             📊 Data Alerts
                         </div>
-                        <div style="display:flex; gap:6px; align-items:center;">
+                        <div style="display:flex;gap:6px;align-items:center;">
                             <span class="status-badge" id="dataAlertHighCount"
-                                  style="display:none; background:var(--danger-bg); color:var(--danger-text);">0 High</span>
+                                  style="display:none;background:var(--danger-bg);color:var(--danger-text);">0 High</span>
                             <span class="status-badge" id="dataAlertTotalCount"
-                                  style="background:var(--idle-bg); color:var(--idle-text);">—</span>
+                                  style="background:var(--idle-bg);color:var(--idle-text);">—</span>
                             <button class="btn btn-sm btn-ghost" onclick="loadDataAlerts(true)"
-                                style="font-size:10px; padding:2px 6px;">↻</button>
+                                style="font-size:10px;padding:2px 6px;">↻</button>
                         </div>
                     </div>
-                    <div style="overflow-y:auto; max-height:480px; scrollbar-width:thin; scrollbar-color:var(--border) transparent;" id="dataAlertsBody">
-                        <div style="text-align:center; padding:32px; color:var(--text-muted);
-                                    font-size:11px; font-family:var(--font-mono);">
+                    <div style="overflow-y:auto;max-height:480px;scrollbar-width:thin;" id="dataAlertsBody">
+                        <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;font-family:var(--font-mono);">
                             Loading data alerts…
                         </div>
                     </div>
@@ -346,19 +314,18 @@
             </div>
 
             <!-- Risk Matrix -->
-            <div class="card" id="riskMatrixSection" style="display:none; margin-bottom:20px;">
+            <div class="card" id="riskMatrixSection" style="display:none;margin-bottom:20px;">
                 <div class="section-title">2D Risk Assessment Matrix</div>
-                <div style="overflow-x:auto; margin-bottom:24px;">
-                    <div id="riskMatrixGrid"></div>
-                </div>
+                <div style="overflow-x:auto;margin-bottom:24px;" id="riskMatrixGrid"></div>
                 <div class="section-title" id="riskMatrixItemsHeader">Scored Intelligence Nodes</div>
-                <div id="riskMatrixItems" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:16px;"></div>
+                <div id="riskMatrixItems"
+                     style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;"></div>
             </div>
 
             <!-- Empty state -->
-            <div id="riskEmptyState" class="card" style="text-align:center; padding:48px; color:var(--text-muted);">
-                <div style="font-size:32px; margin-bottom:12px;">◈</div>
-                <div style="font-size:13px; font-weight:600; margin-bottom:6px;">No pipeline data yet</div>
+            <div id="riskEmptyState" class="card" style="text-align:center;padding:48px;color:var(--text-muted);">
+                <div style="font-size:32px;margin-bottom:12px;">◈</div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:6px;">No pipeline data yet</div>
                 <div style="font-size:12px;">Run the pipeline from Home to populate risk data.</div>
                 <button class="btn btn-primary" style="margin-top:20px;" onclick="showPage('home', null)">Go to Home</button>
             </div>
@@ -366,24 +333,21 @@
         </div><!-- /page-risk -->
 
 
-        <!-- ─────────────────────────────────────
+        <!-- ─────────────────────────────────────────────────
              PAGE: GUARDIAN CHAT
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page" id="page-chat">
             <div class="chat-shell">
 
-                <!-- History Panel -->
                 <div class="chat-history-panel">
                     <div class="chat-history-header">
                         Conversations
-                        <button class="btn btn-sm btn-ghost" onclick="newChatSession()" style="font-size:16px; padding:0 4px;">＋</button>
+                        <button class="btn btn-sm btn-ghost" onclick="newChatSession()"
+                            style="font-size:16px;padding:0 4px;">＋</button>
                     </div>
-                    <div class="chat-history-list" id="chatHistoryList">
-                        <!-- populated by JS -->
-                    </div>
+                    <div class="chat-history-list" id="chatHistoryList"></div>
                 </div>
 
-                <!-- Chat Main -->
                 <div class="chat-main">
                     <div class="chat-messages" id="chatMessages">
                         <div class="chat-message ai">
@@ -407,39 +371,33 @@
         </div><!-- /page-chat -->
 
 
-        <!-- ─────────────────────────────────────
+        <!-- ─────────────────────────────────────────────────
              PAGE: CASH POSITION
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page" id="page-cash">
 
-            <!-- Header row -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <div>
-                    <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">
-                        SIMULATED DATA — Google Treasury Global Cash Position
-                    </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                    SIMULATED DATA — Google Treasury Global Cash Position
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <div style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);" id="cashAsOf">—</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);" id="cashAsOf">—</div>
                     <button class="btn btn-sm" onclick="renderCashPage()">↻ Refresh</button>
                 </div>
             </div>
 
-            <!-- Global summary KPIs -->
-            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:16px;" id="cashKpiRow"></div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="cashKpiRow"></div>
 
-            <!-- Currency filter -->
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
-                <span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-                             color:var(--text-muted); font-family:var(--font-mono);">Filter:</span>
-                <button class="btn btn-sm cash-filter active" data-filter="all" onclick="filterCash('all',this)">All Regions</button>
-                <button class="btn btn-sm cash-filter" data-filter="americas" onclick="filterCash('americas',this)">Americas</button>
-                <button class="btn btn-sm cash-filter" data-filter="europe" onclick="filterCash('europe',this)">Europe</button>
-                <button class="btn btn-sm cash-filter" data-filter="apac" onclick="filterCash('apac',this)">Asia Pacific</button>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                             color:var(--text-muted);font-family:var(--font-mono);">Filter:</span>
+                <button class="btn btn-sm cash-filter active" data-filter="all"      onclick="filterCash('all',this)">All Regions</button>
+                <button class="btn btn-sm cash-filter"        data-filter="americas" onclick="filterCash('americas',this)">Americas</button>
+                <button class="btn btn-sm cash-filter"        data-filter="europe"   onclick="filterCash('europe',this)">Europe</button>
+                <button class="btn btn-sm cash-filter"        data-filter="apac"     onclick="filterCash('apac',this)">Asia Pacific</button>
             </div>
 
-            <!-- Main table -->
-            <div class="card" style="padding:0; overflow:hidden;">
+            <div class="card" style="padding:0;overflow:hidden;">
                 <table class="data-table" id="cashTable" style="font-size:12px;">
                     <thead>
                         <tr>
@@ -455,32 +413,29 @@
                         </tr>
                     </thead>
                     <tbody id="cashTableBody"></tbody>
-                    <tfoot id="cashTableFoot"></tfoot>
+                    <tfoot  id="cashTableFoot"></tfoot>
                 </table>
             </div>
 
-            <!-- Bottom row: bar chart + history chart -->
-            <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:14px; margin-top:14px;">
+            <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:14px;margin-top:14px;">
 
-                <!-- Bar chart -->
                 <div class="card" style="padding:16px;">
-                    <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-                                 color:var(--text-muted); font-family:var(--font-mono); margin-bottom:12px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                                color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;">
                         USD Equivalent by Entity (Top 10)
                     </div>
-                    <div id="cashBarChart" style="display:flex; flex-direction:column; gap:6px;"></div>
+                    <div id="cashBarChart" style="display:flex;flex-direction:column;gap:6px;"></div>
                 </div>
 
-                <!-- History trend chart -->
                 <div class="card" style="padding:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-                                     color:var(--text-muted); font-family:var(--font-mono);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                                    color:var(--text-muted);font-family:var(--font-mono);">
                             Historical Trend — USD (Top 5 Entities)
                         </div>
                         <select id="cashHistoryCountry" onchange="renderCashHistoryChart()"
-                            style="font-size:11px; padding:4px 8px; border:1px solid var(--border);
-                                   border-radius:4px; font-family:var(--font-mono); background:white;">
+                            style="font-size:11px;padding:4px 8px;border:1px solid var(--border);
+                                   border-radius:4px;font-family:var(--font-mono);background:white;">
                             <option value="top5">Top 5</option>
                             <option value="USA">USA</option>
                             <option value="UK">UK</option>
@@ -497,7 +452,7 @@
                             <option value="Hong Kong">Hong Kong</option>
                         </select>
                     </div>
-                    <div id="cashHistoryChartWrap" style="height:220px; position:relative;">
+                    <div id="cashHistoryChartWrap" style="height:220px;position:relative;">
                         <canvas id="cashHistoryChart"></canvas>
                     </div>
                 </div>
@@ -507,68 +462,50 @@
         </div><!-- /page-cash -->
 
 
-        <!-- ─────────────────────────────────────
+        <!-- ─────────────────────────────────────────────────
              PAGE: REGULATORY CHANGES
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page" id="page-news">
 
-            <!-- Header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div>
-                    <div style="font-size:16px; font-weight:700; color:var(--text-main);">
-                        ⚖ Regulatory Changes Tracker
-                    </div>
-                    <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);
-                                margin-top:2px;" id="regLastFetch">—</div>
+                    <div style="font-size:16px;font-weight:700;color:var(--text-main);">⚖ Regulatory Changes Tracker</div>
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;"
+                         id="regLastFetch">—</div>
                 </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <span id="regTotalBadge" style="font-size:11px; font-family:var(--font-mono);
-                          color:var(--text-muted);">—</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span id="regTotalBadge" style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">—</span>
                     <button class="btn btn-sm" onclick="loadRegulatory()">↻ Refresh</button>
-                    <button class="btn btn-sm btn-ghost" onclick="refreshRegulatoryAI()"
-                        style="font-size:10px;">✦ Re-analyse</button>
+                    <button class="btn btn-sm btn-ghost" onclick="refreshRegulatoryAI()" style="font-size:10px;">✦ Re-analyse</button>
                 </div>
             </div>
 
-            <!-- Filter chips row -->
+            <!-- Filter chips -->
             <div style="margin-bottom:12px;">
-                <!-- Country filters -->
-                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
-                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
-                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Country</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);min-width:60px;">Country</span>
                     <button class="reg-filter active" data-filter-type="country" data-filter-val=""
                             onclick="setRegFilter('country','',this)">All</button>
                     <div id="regCountryFilters" style="display:contents;"></div>
                 </div>
-                <!-- Category filters -->
-                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
-                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
-                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Type</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);min-width:60px;">Type</span>
                     <button class="reg-filter active" data-filter-type="category" data-filter-val=""
                             onclick="setRegFilter('category','',this)">All</button>
                     <div id="regCategoryFilters" style="display:contents;"></div>
                 </div>
-                <!-- Severity filters -->
-                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                    <span style="font-size:9px; font-weight:700; text-transform:uppercase;
-                                 color:var(--text-muted); font-family:var(--font-mono); min-width:60px;">Severity</span>
-                    <button class="reg-filter active" data-filter-type="severity" data-filter-val=""
-                            onclick="setRegFilter('severity','',this)">All</button>
-                    <button class="reg-filter" data-filter-type="severity" data-filter-val="High"
-                            onclick="setRegFilter('severity','High',this)"
-                            style="border-color:var(--danger-text);color:var(--danger-text);">High</button>
-                    <button class="reg-filter" data-filter-type="severity" data-filter-val="Medium"
-                            onclick="setRegFilter('severity','Medium',this)"
-                            style="border-color:var(--warning-text);color:var(--warning-text);">Medium</button>
-                    <button class="reg-filter" data-filter-type="severity" data-filter-val="Low"
-                            onclick="setRegFilter('severity','Low',this)">Low</button>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);min-width:60px;">Severity</span>
+                    <button class="reg-filter active" data-filter-type="severity" data-filter-val=""       onclick="setRegFilter('severity','',this)">All</button>
+                    <button class="reg-filter"        data-filter-type="severity" data-filter-val="High"   onclick="setRegFilter('severity','High',this)"   style="border-color:var(--danger-text);color:var(--danger-text);">High</button>
+                    <button class="reg-filter"        data-filter-type="severity" data-filter-val="Medium" onclick="setRegFilter('severity','Medium',this)" style="border-color:var(--warning-text);color:var(--warning-text);">Medium</button>
+                    <button class="reg-filter"        data-filter-type="severity" data-filter-val="Low"    onclick="setRegFilter('severity','Low',this)">Low</button>
                 </div>
             </div>
 
-            <!-- Regulatory changes list -->
             <div id="regList">
-                <div style="text-align:center; padding:48px; color:var(--text-muted);">
-                    <div style="font-size:24px; margin-bottom:12px;">⚖</div>
+                <div style="text-align:center;padding:48px;color:var(--text-muted);">
+                    <div style="font-size:24px;margin-bottom:12px;">⚖</div>
                     <div>Loading regulatory changes…</div>
                 </div>
             </div>
@@ -576,861 +513,19 @@
         </div><!-- /page-news -->
 
 
-        <!-- ─────────────────────────────────────
+        <!-- ─────────────────────────────────────────────────
              PAGE: DATA SOURCE
-        ───────────────────────────────────── -->
+        ───────────────────────────────────────────────── -->
         <div class="page" id="page-data">
-            <div class="card" style="padding:0; overflow:hidden;">
+            <div class="card" style="padding:0;overflow:hidden;">
                 <iframe id="dataDashboardFrame"
-                    style="width:100%; height:calc(100vh - 52px - 48px - 32px); border:none; display:block;"
+                    style="width:100%;height:calc(100vh - 52px - 48px - 32px);border:none;display:block;"
                     src="/data"></iframe>
             </div>
         </div><!-- /page-data -->
 
-        <!-- ─────────────────────────────────────
-             PAGE: PERSONA SETTINGS
-        ───────────────────────────────────── -->
-        <!-- page-settings removed: Persona Settings now lives in the Tune Strategy modal -->
 
     </div><!-- /page-content -->
-
-<style>
-/* ═══════════════════════════════════════
-   PERSONA SETTINGS — design system
-   Font: Inter, grayscale palette, thin lines
-═══════════════════════════════════════ */
-
-/* Shell */
-.ps-shell {
-    display: flex;
-    height: calc(100vh - 52px - 36px);
-    font-family: 'Inter', var(--font-sans);
-}
-
-/* ── Left nav ───────────────────────── */
-.ps-nav {
-    width: 192px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    background: #fff;
-    padding: 20px 0;
-    overflow-y: auto;
-}
-.ps-nav-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: var(--text-muted);
-    padding: 0 16px 12px;
-    font-family: 'IBM Plex Mono', monospace;
-}
-.ps-tab {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 10px 16px 10px 18px;
-    border: none;
-    border-left: 2px solid transparent;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    gap: 3px;
-    transition: background 0.1s, border-color 0.1s;
-}
-.ps-tab:hover { background: var(--bg-color); }
-.ps-tab.active { background: #F8FAFC; border-left-color: #1F2937; }
-.ps-tab-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-main);
-    font-family: 'Inter', sans-serif;
-    line-height: 1.3;
-}
-.ps-tab-desc {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: 'Inter', sans-serif;
-    line-height: 1.4;
-}
-.ps-tab.active .ps-tab-name { color: #111827; }
-
-/* ── Editor area ────────────────────── */
-.ps-editor {
-    flex: 1;
-    overflow-y: auto;
-    padding: 28px 32px 40px;
-    background: var(--bg-color);
-    min-width: 0;
-}
-
-/* Header */
-.ps-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-}
-.ps-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-main);
-    font-family: 'Inter', sans-serif;
-    margin-bottom: 4px;
-    letter-spacing: -0.01em;
-}
-.ps-subtitle {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'Inter', sans-serif;
-}
-.ps-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-shrink: 0;
-}
-.ps-reset-link {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    font-family: 'Inter', sans-serif;
-    text-decoration: underline;
-    text-decoration-color: #CBD5E1;
-    text-underline-offset: 2px;
-    transition: color 0.12s, text-decoration-color 0.12s;
-}
-.ps-reset-link:hover { color: var(--text-main); text-decoration-color: #94A3B8; }
-.ps-save-btn {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: #fff;
-    background: #1F2937;
-    border: none;
-    cursor: pointer;
-    padding: 8px 18px;
-    border-radius: 4px;
-    font-family: 'Inter', sans-serif;
-    transition: background 0.12s;
-}
-.ps-save-btn:hover { background: #111827; }
-.ps-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
-
-/* Shared card */
-.ps-card {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-}
-
-/* Threshold row */
-.ps-threshold-row {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 14px 20px;
-    margin-bottom: 20px;
-}
-.ps-threshold-left { min-width: 160px; }
-.ps-threshold-label {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--text-main);
-    font-family: 'IBM Plex Mono', monospace;
-    margin-bottom: 3px;
-}
-.ps-threshold-hint {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: 'Inter', sans-serif;
-}
-.ps-threshold-control { flex: 1; }
-
-/* Section heading */
-.ps-section-heading {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-.ps-section-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-}
-.ps-section-note {
-    font-size: 10px;
-    color: #CBD5E1;
-    font-family: 'Inter', sans-serif;
-}
-
-/* Slider grid */
-.ps-grid {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-/* Group label inside grid */
-.ps-group-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: #9CA3AF;
-    text-transform: uppercase;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 9px 20px 7px;
-    background: #FAFAFA;
-    border-top: 1px solid var(--border);
-}
-.ps-group-label:first-child { border-top: none; }
-
-/* Slider row */
-.ps-row {
-    display: grid;
-    grid-template-columns: 116px 1fr 80px;
-    align-items: center;
-    gap: 16px;
-    padding: 9px 20px;
-    border-top: 1px solid #F1F5F9;
-    transition: background 0.1s;
-}
-.ps-row:hover { background: #FAFBFC; }
-
-.ps-cat-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    font-family: 'Inter', sans-serif;
-}
-
-/* Slider */
-.ps-slider-wrap { position: relative; }
-.ps-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 2px;
-    background: #E5E7EB;
-    border-radius: 1px;
-    outline: none;
-    cursor: pointer;
-    display: block;
-    margin-bottom: 0;
-}
-.ps-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    background: #6B7280;
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #D1D5DB;
-    transition: background 0.12s, transform 0.1s;
-}
-.ps-slider::-webkit-slider-thumb:hover {
-    background: #374151;
-    transform: scale(1.2);
-    box-shadow: 0 0 0 1px #9CA3AF;
-}
-.ps-slider::-moz-range-thumb {
-    width: 13px; height: 13px;
-    border-radius: 50%;
-    background: #6B7280;
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #D1D5DB;
-}
-.ps-slider.modified::-webkit-slider-thumb {
-    background: #2563EB;
-    box-shadow: 0 0 0 1px #BFDBFE;
-}
-.ps-slider.modified { background: linear-gradient(to right, #DBEAFE, #E5E7EB); }
-.ps-slider.modified::-moz-range-thumb { background: #2563EB; }
-
-.ps-track-markers {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 5px;
-}
-.ps-track-markers span {
-    font-size: 8px;
-    color: #D1D5DB;
-    font-family: 'IBM Plex Mono', monospace;
-    line-height: 1;
-}
-
-/* Value column */
-.ps-value-col {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    justify-content: flex-end;
-}
-.ps-multiplier {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-main);
-    font-family: 'IBM Plex Mono', monospace;
-    min-width: 32px;
-    text-align: right;
-}
-.ps-unit {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-}
-.ps-mod-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #2563EB;
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-.ps-mod-dot.visible { opacity: 1; }
-.ps-mod-badge {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: #2563EB;
-    background: #EFF6FF;
-    padding: 1px 5px;
-    border-radius: 2px;
-    font-family: 'IBM Plex Mono', monospace;
-    border: 1px solid #BFDBFE;
-    opacity: 0;
-    transition: opacity 0.15s;
-    white-space: nowrap;
-}
-.ps-mod-badge.visible { opacity: 1; }
-
-/* Tooltip on modified values */
-.ps-def-tip {
-    position: relative;
-}
-.ps-def-tip::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: 130%;
-    right: 0;
-    background: #1F2937;
-    color: #fff;
-    font-size: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 4px 8px;
-    border-radius: 3px;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 10;
-}
-.ps-def-tip:hover::after { opacity: 1; }
-
-/* Feedback strip */
-.ps-feedback {
-    margin-top: 16px;
-    padding: 10px 16px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    border: 1px solid transparent;
-}
-.ps-feedback-success { background: var(--success-bg); color: var(--success-text); border-color: #BBF7D0; }
-.ps-feedback-error   { background: var(--danger-bg);  color: var(--danger-text);  border-color: #FECACA; }
-
-/* ── Profiles card ──────────────────────────── */
-.ps-profiles-card { overflow: hidden; }
-
-.ps-profile-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 16px 20px;
-}
-.ps-profile-meta { min-width: 0; }
-.ps-profile-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-.ps-profile-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 0 20px;
-}
-
-/* Text input */
-.ps-profile-input {
-    height: 34px;
-    padding: 0 11px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-main);
-    outline: none;
-    width: 240px;
-    background: #fff;
-    transition: border-color 0.12s;
-}
-.ps-profile-input:focus { border-color: #9CA3AF; }
-.ps-profile-input::placeholder { color: #CBD5E1; }
-
-/* Dropdown */
-.ps-profile-select {
-    height: 34px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-main);
-    outline: none;
-    width: 240px;
-    background: #fff;
-    cursor: pointer;
-}
-
-/* Save button */
-.ps-profile-save-btn {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-main);
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.1s, border-color 0.1s;
-}
-.ps-profile-save-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
-
-/* Load button */
-.ps-profile-load-btn {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    color: #fff;
-    background: #1F2937;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.1s;
-}
-.ps-profile-load-btn:hover  { background: #111827; }
-.ps-profile-load-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
-
-/* ═══════════════════════════════════════════
-   TUNE STRATEGY — topbar button
-═══════════════════════════════════════════ */
-.tune-trigger-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: 28px;
-    padding: 0 12px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Inter', var(--font-sans);
-    letter-spacing: 0.02em;
-    color: var(--text-main);
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.1s, border-color 0.1s;
-}
-.tune-trigger-btn:hover { background: var(--bg-color); border-color: #9CA3AF; }
-.tune-trigger-icon { font-size: 13px; line-height: 1; }
-
-/* ═══════════════════════════════════════════
-   TUNE STRATEGY MODAL
-   Font: Inter · grayscale · 1px lines · no heavy shadows
-═══════════════════════════════════════════ */
-
-/* Overlay — semi-transparent blur so background stays visible */
-.tune-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.18);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    display: none;
-    align-items: flex-start;
-    justify-content: center;
-    z-index: 8000;
-    padding-top: 52px; /* below topbar */
-}
-.tune-overlay.open { display: flex; }
-
-/* Modal card — compact, leaves bottom of page visible */
-.tune-modal {
-    width: min(740px, calc(100vw - 32px));
-    background: #fff;
-    border: 1px solid #D1D5DB;
-    border-radius: 6px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0,0,0,0.04);
-    font-family: 'Inter', var(--font-sans);
-    overflow: hidden;
-    animation: tuneSlideIn 0.18s ease-out;
-}
-@keyframes tuneSlideIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0);    }
-}
-
-/* Header */
-.tune-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid #F1F5F9;
-}
-.tune-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0F172A;
-    letter-spacing: -0.01em;
-    margin-bottom: 2px;
-}
-.tune-subtitle {
-    font-size: 10px;
-    color: #94A3B8;
-    font-family: 'Inter', sans-serif;
-}
-.tune-close-btn {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: transparent;
-    color: #94A3B8;
-    cursor: pointer;
-    font-size: 14px;
-    border-radius: 3px;
-    transition: background 0.1s, color 0.1s;
-    flex-shrink: 0;
-}
-.tune-close-btn:hover { background: #F1F5F9; color: #0F172A; }
-
-/* Persona pills */
-.tune-persona-bar {
-    display: flex;
-    gap: 4px;
-    padding: 10px 20px;
-    border-bottom: 1px solid #F1F5F9;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-.tune-persona-bar::-webkit-scrollbar { display: none; }
-.tune-pill {
-    display: inline-flex;
-    align-items: center;
-    height: 26px;
-    padding: 0 12px;
-    border-radius: 13px;
-    border: 1px solid #E2E8F0;
-    background: #fff;
-    font-size: 11px;
-    font-weight: 500;
-    color: #64748B;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.1s;
-}
-.tune-pill:hover { border-color: #94A3B8; color: #0F172A; }
-.tune-pill.active {
-    background: #0F172A;
-    border-color: #0F172A;
-    color: #fff;
-}
-
-/* Two-column slider body */
-.tune-body {
-    display: grid;
-    grid-template-columns: 1fr 1px 1fr;
-    max-height: 280px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #E2E8F0 transparent;
-}
-.tune-col { padding: 8px 0; }
-.tune-col-divider { background: #F1F5F9; }
-
-/* Category group label */
-.tune-group {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: #CBD5E1;
-    text-transform: uppercase;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 8px 20px 4px;
-}
-
-/* Slider row */
-.tune-row {
-    display: grid;
-    grid-template-columns: 90px 1fr 48px;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 20px;
-    transition: background 0.08s;
-}
-.tune-row:hover { background: #FAFAFA; }
-.tune-cat {
-    font-size: 11px;
-    font-weight: 500;
-    color: #475569;
-    font-family: 'Inter', sans-serif;
-    white-space: nowrap;
-}
-
-/* Range slider */
-.tune-range {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 2px;
-    background: #E5E7EB;
-    border-radius: 1px;
-    outline: none;
-    cursor: pointer;
-    display: block;
-}
-.tune-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #6B7280;
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #D1D5DB;
-    transition: background 0.1s, transform 0.08s;
-}
-.tune-range::-webkit-slider-thumb:hover {
-    background: #374151;
-    transform: scale(1.25);
-}
-.tune-range::-moz-range-thumb {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: #6B7280;
-    border: 2px solid #fff;
-    cursor: pointer;
-}
-.tune-range.modified::-webkit-slider-thumb { background: #2563EB; box-shadow: 0 0 0 1px #BFDBFE; }
-.tune-range.modified { background: linear-gradient(90deg, #DBEAFE 0%, #E5E7EB 100%); }
-.tune-range.modified::-moz-range-thumb { background: #2563EB; }
-
-/* Value display */
-.tune-val-wrap {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    justify-content: flex-end;
-}
-.tune-val {
-    font-size: 11px;
-    font-weight: 600;
-    color: #0F172A;
-    font-family: 'IBM Plex Mono', monospace;
-    min-width: 28px;
-    text-align: right;
-    transition: color 0.15s;
-}
-.tune-val.changed { color: #2563EB; }
-.tune-mod-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #2563EB;
-    opacity: 0;
-    flex-shrink: 0;
-    transition: opacity 0.12s;
-}
-.tune-mod-dot.on { opacity: 1; }
-
-/* Threshold row */
-.tune-threshold-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 20px;
-    border-top: 1px solid #F1F5F9;
-    background: #FAFAFA;
-}
-.tune-thresh-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: #94A3B8;
-    font-family: 'IBM Plex Mono', monospace;
-    white-space: nowrap;
-}
-.tune-thresh-track { flex: 1; }
-.tune-thresh-range { width: 100%; }
-.tune-track-ticks {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 3px;
-}
-.tune-track-ticks span {
-    font-size: 8px;
-    color: #D1D5DB;
-    font-family: 'IBM Plex Mono', monospace;
-}
-.tune-thresh-val {
-    font-size: 12px;
-    font-weight: 700;
-    color: #0F172A;
-    font-family: 'IBM Plex Mono', monospace;
-    min-width: 24px;
-    text-align: right;
-}
-.tune-thresh-unit {
-    font-size: 9px;
-    color: #94A3B8;
-    font-family: 'IBM Plex Mono', monospace;
-}
-
-/* Footer */
-.tune-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px 20px;
-    border-top: 1px solid #F1F5F9;
-    flex-wrap: wrap;
-}
-.tune-footer-left { }
-.tune-footer-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.tune-reset-link {
-    font-size: 11px;
-    font-weight: 500;
-    color: #94A3B8;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    font-family: 'Inter', sans-serif;
-    transition: color 0.1s;
-}
-.tune-reset-link:hover { color: #0F172A; }
-.tune-footer-sep {
-    width: 1px;
-    height: 20px;
-    background: #E2E8F0;
-    flex-shrink: 0;
-}
-.tune-select {
-    height: 28px;
-    padding: 0 8px;
-    border: 1px solid #E2E8F0;
-    border-radius: 4px;
-    font-size: 11px;
-    font-family: 'Inter', sans-serif;
-    color: #374151;
-    background: #fff;
-    outline: none;
-    cursor: pointer;
-    max-width: 160px;
-}
-.tune-load-btn {
-    height: 28px;
-    padding: 0 10px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    color: #374151;
-    background: #fff;
-    border: 1px solid #E2E8F0;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.1s, border-color 0.1s;
-    white-space: nowrap;
-}
-.tune-load-btn:hover { background: #F8FAFC; border-color: #9CA3AF; }
-.tune-name-input {
-    height: 28px;
-    padding: 0 10px;
-    border: 1px solid #E2E8F0;
-    border-radius: 4px;
-    font-size: 11px;
-    font-family: 'Inter', sans-serif;
-    color: #0F172A;
-    outline: none;
-    width: 148px;
-    transition: border-color 0.1s;
-}
-.tune-name-input:focus { border-color: #9CA3AF; }
-.tune-name-input::placeholder { color: #CBD5E1; }
-.tune-save-btn {
-    height: 28px;
-    padding: 0 12px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    color: #fff;
-    background: #1F2937;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.1s;
-}
-.tune-save-btn:hover { background: #111827; }
-.tune-save-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
-
-/* Feedback */
-.tune-feedback {
-    padding: 8px 20px;
-    font-size: 11px;
-    font-family: 'Inter', sans-serif;
-    border-top: 1px solid transparent;
-}
-.tune-feedback-success { background: #F0FDF4; color: #166534; border-top-color: #BBF7D0; }
-.tune-feedback-error   { background: #FEF2F2; color: #991B1B; border-top-color: #FECACA; }
-
-/* Live-preview flash on re-sorted rows */
-@keyframes tuneFlash {
-    0%   { background: #EFF6FF; }
-    100% { background: transparent; }
-}
-.tune-live-flash { animation: tuneFlash 0.6s ease-out; }
-</style>
 
     <div class="app-footer">
         CONFIDENTIAL // ARGUS MULTI-AGENT PLATFORM &copy; 2026 // INSTITUTIONAL ACCESS ONLY
@@ -1439,13 +534,12 @@
 </div><!-- /app-shell -->
 
 
-<!-- ═══════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════
      TUNE STRATEGY MODAL
-═══════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════ -->
 <div id="tuneOverlay" class="tune-overlay" onclick="handleTuneOverlayClick(event)">
     <div class="tune-modal" id="tuneModal">
 
-        <!-- ── Header ───────────────────────────── -->
         <div class="tune-header">
             <div class="tune-header-left">
                 <div class="tune-title">Risk Weights Tuner</div>
@@ -1454,17 +548,15 @@
             <button class="tune-close-btn" onclick="closeTuneModal()" aria-label="Close">✕</button>
         </div>
 
-        <!-- ── Persona pills ─────────────────────── -->
         <div class="tune-persona-bar" id="tunePersonaBar"></div>
+        <div class="tune-region-bar" id="tuneRegionBar"></div>
 
-        <!-- ── Slider grid (2 columns) ───────────── -->
         <div class="tune-body">
             <div class="tune-col" id="tuneColLeft"></div>
             <div class="tune-col-divider"></div>
             <div class="tune-col" id="tuneColRight"></div>
         </div>
 
-        <!-- ── Threshold ─────────────────────────── -->
         <div class="tune-threshold-row">
             <span class="tune-thresh-label">ALERT THRESHOLD</span>
             <div class="tune-thresh-track">
@@ -1478,7 +570,6 @@
             <span class="tune-thresh-unit">pts</span>
         </div>
 
-        <!-- ── Footer: save / load profile ──────── -->
         <div class="tune-footer">
             <div class="tune-footer-left">
                 <button class="tune-reset-link" onclick="tuneReset()">↺ Reset to AI Defaults</button>
@@ -1495,2332 +586,99 @@
             </div>
         </div>
 
-        <!-- ── Feedback ──────────────────────────── -->
         <div class="tune-feedback" id="tuneFeedback" style="display:none;"></div>
 
-    </div><!-- /tune-modal -->
-</div><!-- /tuneOverlay -->
+    </div>
+</div>
 
 
-<!-- ═══════════════════════════════════════════
-     PERSONA LOGIN MODAL
-═══════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     PERSONA SELECTION MODAL
+═══════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="personaLoginOverlay" onclick="handlePersonaOverlayClick(event)">
-    <div style="background:white; border-radius:12px; padding:32px; width:min(720px,95vw); box-shadow:0 20px 50px rgba(0,0,0,0.1); border:1px solid var(--border);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+    <div style="background:white;border-radius:12px;padding:32px;width:min(720px,95vw);
+                box-shadow:0 20px 50px rgba(0,0,0,0.1);border:1px solid var(--border);">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">
             <div>
-                <h2 style="font-size:16px; font-weight:700; color:var(--text-main); margin:0;">
+                <h2 style="font-size:16px;font-weight:700;color:var(--text-main);margin:0;">
                     Analytical Environment Selection
                 </h2>
-                <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0;">Select your primary analytical persona to configure risk weighting and monitoring priorities.</p>
+                <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;">
+                    Select your primary analytical persona to configure risk weighting and monitoring priorities.
+                </p>
             </div>
-            <button type="button" onclick="closePersonaLogin()" style="background:transparent; border:none; font-size:20px; color:var(--text-muted); cursor:pointer;">&times;</button>
+            <button type="button" onclick="closePersonaLogin()"
+                style="background:transparent;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;">&times;</button>
         </div>
 
-        <div style="display:grid; gap:20px;">
+        <div style="display:grid;gap:20px;">
+
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">Operator Name</label>
+                <label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);
+                               margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Operator Name</label>
                 <input id="loginName" type="text" placeholder="e.g. Lead Strategist"
-                    style="width:100%; padding:12px 14px; border-radius:6px; border:1px solid var(--border); font-size:13px; outline:none; transition:all 0.15s; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                    style="width:100%;padding:12px 14px;border-radius:6px;border:1px solid var(--border);
+                           font-size:13px;outline:none;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
             </div>
 
             <div>
-                <label style="display:block; font-size:10px; font-weight:700; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Analytical Persona</label>
-                <div id="personaCardGrid" class="persona-card-grid">
-                    <!-- Cards injected by JS -->
-                </div>
+                <label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);
+                               margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Analytical Persona</label>
+                <div id="personaCardGrid" class="persona-card-grid"></div>
             </div>
 
-            <div id="personaPreviewArea" style="background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border); transition:all 0.2s; min-height:80px;">
-                <div id="loginPersonaHeadline" style="font-weight:700; color:var(--text-main); margin-bottom:6px; font-size:13px; display:flex; align-items:center; gap:8px;">
+            <div id="personaPreviewArea"
+                 style="background:#F8FAFC;padding:16px;border-radius:8px;border:1px solid var(--border);min-height:80px;">
+                <div id="loginPersonaHeadline"
+                     style="font-weight:700;color:var(--text-main);margin-bottom:6px;font-size:13px;
+                            display:flex;align-items:center;gap:8px;">
                     <span id="previewIcon" style="font-size:16px;"></span>
                     <span id="previewLabel">-</span>
                 </div>
-                <div id="loginPersonaCopy" style="font-size:12px; color:var(--text-secondary); line-height:1.6;">-</div>
+                <div id="loginPersonaCopy" style="font-size:12px;color:var(--text-secondary);line-height:1.6;">-</div>
             </div>
 
-            <div style="display:flex; gap:12px; margin-top:8px;">
+            <div style="display:flex;gap:12px;margin-top:8px;">
                 <button type="button" onclick="savePersonaSelection()"
-                    style="flex:1; justify-content:center; background:var(--primary); color:white; padding:14px; border:none; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.05em; cursor:pointer; box-shadow:0 4px 12px var(--primary-glow); transition:all 0.15s;">
+                    style="flex:1;justify-content:center;background:var(--primary);color:white;padding:14px;
+                           border:none;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:0.05em;
+                           cursor:pointer;box-shadow:0 4px 12px var(--primary-glow);transition:all 0.15s;">
                     RESET ENVIRONMENT
                 </button>
                 <button type="button" onclick="closePersonaLogin()"
-                    style="padding:14px 24px; border:1px solid var(--border); background:white; color:var(--text-secondary); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+                    style="padding:14px 24px;border:1px solid var(--border);background:white;
+                           color:var(--text-secondary);border-radius:8px;font-size:13px;font-weight:600;
+                           cursor:pointer;transition:all 0.15s;">
                     CANCEL
                 </button>
             </div>
         </div>
+
     </div>
 </div>
 
-<!-- Modal overlay styles (inline for modal only) -->
-<style>
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    padding: 20px;
-    transition: all 0.2s;
-}
-.modal-overlay.show { display: flex; }
 
-.persona-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-}
-
-.persona-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.persona-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.persona-card.selected {
-    border-color: var(--primary);
-    border-width: 2px;
-    background: #EFF6FF;
-    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
-}
-
-.persona-card-icon {
-    font-size: 18px;
-    margin-bottom: 4px;
-}
-
-.persona-card-label {
-    font-weight: 700;
-    font-size: 12px;
-    color: var(--text-main);
-}
-
-.persona-card-summary {
-    font-size: 10px;
-    color: var(--text-muted);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.persona-card.selected .persona-card-label { color: var(--primary); }
-
-#loginName:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-glow);
-}
-
-/* ── Regulatory filter chips ────────────────── */
-.reg-filter {
-    font-size: 10px; padding: 3px 10px;
-    border-radius: 12px; border: 1px solid var(--border);
-    background: white; color: var(--text-secondary);
-    cursor: pointer; font-family: var(--font-mono);
-    font-weight: 600; transition: all 0.15s; white-space: nowrap;
-}
-.reg-filter:hover { background: var(--bg-color); }
-.reg-filter.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-    </style>
-
-
-<!-- ═══════════════════════════════════════════
-     JAVASCRIPT
-═══════════════════════════════════════════ -->
-<script>
-const API_BASE = '/api';
-let isExecuting = false;
-let currentPersona = localStorage.getItem('argusPersona') || 'cash_manager';
-let availablePersonas = [];
-let guardianTopAlerts = [];
-
-const PROB_LABELS   = ['Unlikely','Seldom','Occasional','Likely','Frequent'];
-const IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic'];
-const MATRIX_LEVEL  = [
-    ['Low','Low','Low','Medium','Medium'],
-    ['Low','Low','Medium','Medium','High'],
-    ['Low','Medium','Medium','High','High'],
-    ['Medium','Medium','High','High','Extreme'],
-    ['Medium','High','High','Extreme','Extreme']
-];
-
-// ── Utilities ──────────────────────────────
-function escapeHtml(t) {
-    return t == null ? '' : String(t)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function showAlert(msg) {
-    const el = document.getElementById('alertBanner');
-    el.textContent = msg;
-    el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 5000);
-}
-
-function log(msg, type = '') {
-    const container = document.getElementById('logsContainer');
-    const entry = document.createElement('div');
-    entry.className = `log-entry${type ? ' log-'+type : ''}`;
-    const ts = new Date().toISOString().replace('T',' ').substr(0,19);
-    entry.textContent = `[${ts}] ${msg}`;
-    container.appendChild(entry);
-    container.scrollTop = container.scrollHeight;
-}
-
-// ── Page Navigation ─────────────────────────
-const PAGE_TITLES = {
-    home:     'Home',
-    risk:     'Risk Monitor',
-    chat:     'Guardian Chat',
-    cash:     'Cash Position',
-    news:     'Regulatory',
-    data:     'Data Source',
-    settings: 'Persona Settings',
-};
-
-function showPage(pageId, navEl) {
-    // Hide all pages
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-    // Show target
-    document.getElementById('page-' + pageId).classList.add('active');
-    document.getElementById('topbarTitle').textContent = PAGE_TITLES[pageId] || pageId;
-
-    // Mark nav active
-    if (navEl) navEl.classList.add('active');
-
-    // Lazy-load page data
-    if (pageId === 'risk') {
-        // Load Guardian first so guardianTopAlerts is populated before Data Alerts merges GCS entries
-        loadGuardianDashboard();
-        loadDataAlerts();
-        // Reload matrix with merged GCS data if pipeline results exist
-        fetch(`${API_BASE}/results`).then(r => r.json()).then(d => {
-            if (d.status === 'success') renderRiskMatrix(d.stages.analysis?.analysis);
-        }).catch(() => {});
-    }
-    if (pageId === 'news')     loadRegulatory();
-    if (pageId === 'chat')     renderChatHistory();
-    if (pageId === 'cash')     renderCashPage();
-    if (pageId === 'settings') loadPersonaSettings();
-}
-
-function toggleSection(id) {
-    const el = document.getElementById(id);
-    const isHidden = el.style.display === 'none';
-    el.style.display = isHidden ? 'block' : 'none';
-    const labelId = id === 'agentGrid' ? 'agentToggleLabel' : 'logsToggleLabel';
-    document.getElementById(labelId).textContent = isHidden ? 'Hide ▴' : 'Show ▾';
-}
-
-function toggleAgentDetail(card) {
-    const det = card.querySelector('.agent-detail');
-    det.style.display = det.style.display === 'none' ? 'block' : 'none';
-}
-
-// ── Clock ───────────────────────────────────
-function startClock() {
-    function tick() {
-        const now = new Date();
-        const utc = now.toUTCString().replace('GMT','UTC').split(' ').slice(-2).join(' ');
-        const iso = now.toISOString().replace('T',' ').substr(0,19);
-        document.getElementById('topbarClock').textContent = iso + ' UTC';
-        document.getElementById('sidebarClock').textContent = now.toUTCString().substr(17,8) + ' UTC';
-    }
-    tick();
-    setInterval(tick, 1000);
-}
-
-// ── Persona ─────────────────────────────────
-let selectedPersonaKey = localStorage.getItem('argusPersona') || 'cash_manager';
-
-async function loadPersonas() {
-    try {
-        const r = await fetch(`${API_BASE}/personas`);
-        const d = await r.json();
-        availablePersonas = d.personas || [];
-        
-        const grid = document.getElementById('personaCardGrid');
-        if (grid) {
-            grid.innerHTML = availablePersonas.map(p => {
-                const icon = p.icon || '👤';
-                const isSelected = p.key === selectedPersonaKey;
-                return `
-                <div class="persona-card${isSelected ? ' selected' : ''}" 
-                     onclick="selectPersonaCard('${p.key}')" 
-                     data-key="${p.key}">
-                    <div class="persona-card-icon">${icon}</div>
-                    <div class="persona-card-label">${p.label}</div>
-                    <div class="persona-card-summary">${p.summary || ''}</div>
-                </div>`;
-            }).join('');
-        }
-        
-        selectPersonaCard(selectedPersonaKey);
-
-        // Update sidebar label
-        const active = availablePersonas.find(p => p.key === currentPersona);
-        if (active) {
-            document.getElementById('sidebarRoleName').textContent = active.label;
-            const homeRole = document.getElementById('homeRoleName');
-            if (homeRole) homeRole.textContent = active.label;
-        }
-    } catch(e) {
-        console.warn('Could not load personas:', e);
-    }
-}
-
-function selectPersonaCard(key) {
-    selectedPersonaKey = key;
-    
-    // Update visual state of cards
-    document.querySelectorAll('.persona-card').forEach(card => {
-        card.classList.toggle('selected', card.dataset.key === key);
-    });
-
-    const p = availablePersonas.find(x => x.key === key);
-    if (p) {
-        const icon = p.icon || '👤';
-        const label = document.getElementById('previewLabel');
-        const copy = document.getElementById('loginPersonaCopy');
-        const iconEl = document.getElementById('previewIcon');
-        
-        if (label) label.textContent = p.label;
-        if (copy) copy.textContent = p.summary || '';
-        if (iconEl) iconEl.textContent = icon;
-    }
-}
-
-function openPersonaLogin() {
-    document.getElementById('personaLoginOverlay').classList.add('show');
-    // Ensure the current persona is highlighted
-    selectPersonaCard(currentPersona);
-}
-function closePersonaLogin() {
-    document.getElementById('personaLoginOverlay').classList.remove('show');
-}
-function handlePersonaOverlayClick(e) {
-    if (e.target === document.getElementById('personaLoginOverlay')) closePersonaLogin();
-}
-function savePersonaSelection() {
-    currentPersona = selectedPersonaKey;
-    localStorage.setItem('argusPersona', currentPersona);
-    const active = availablePersonas.find(p => p.key === currentPersona);
-    if (active) {
-        document.getElementById('sidebarRoleName').textContent = active.label;
-        const homeRole = document.getElementById('homeRoleName');
-        if (homeRole) homeRole.textContent = active.label;
-    }
-    closePersonaLogin();
-}
-
-// ── Pipeline ─────────────────────────────────
-async function executePipeline() {
-    if (isExecuting) return;
-    isExecuting = true;
-    const execBtnEl = document.getElementById('executeBtn');
-    if (execBtnEl) execBtnEl.disabled = true;
-    document.getElementById('pipelineCard').style.display = 'block';
-    const runBadge = document.getElementById('pipelineStatusBadge');
-    if (runBadge) { runBadge.className = 'status-badge status-running'; runBadge.textContent = 'Running'; }
-    const homeBadgeEl = document.getElementById('homePipelineBadge');
-    if (homeBadgeEl) { homeBadgeEl.className = 'status-badge status-running'; homeBadgeEl.textContent = 'Running'; }
-    showAlert('Intelligence pipeline engaged — monitoring execution…');
-    log('Pipeline initiated by operator.');
-
-    try {
-        const r = await fetch(`${API_BASE}/execute`, { method: 'POST' });
-        if (r.ok) startStatusPolling();
-        else throw new Error('Execute failed');
-    } catch(e) {
-        log('Pipeline start error: ' + e.message, 'error');
-        resetPipelineUI();
-    }
-}
-
-function startStatusPolling() {
-    const itv = setInterval(async () => {
-        try {
-            const r = await fetch(`${API_BASE}/status`);
-            const s = await r.json();
-            updateStages(s.agents_status);
-            if (!s.is_running) {
-                clearInterval(itv);
-                resetPipelineUI();
-                // Hide pipeline card after completion
-                const pc = document.getElementById('pipelineCard');
-                if (pc) pc.style.display = 'none';
-                await loadResults();
-                showAlert('Operational cycle complete — generating intelligence brief…');
-                log('Pipeline complete.', 'success');
-                const lastRunKpi = document.getElementById('kpiLastRun');
-                if (lastRunKpi) lastRunKpi.textContent = 'Just now';
-                // Auto-generate brief now that pipeline data is ready
-                await generateBrief();
-                // Refresh risk category cards
-                loadRiskCategories();
-            }
-        } catch(e) {
-            clearInterval(itv);
-            resetPipelineUI();
-        }
-    }, 1500);
-}
-
-function resetPipelineUI() {
-    isExecuting = false;
-    const execBtn = document.getElementById('executeBtn');
-    if (execBtn) execBtn.disabled = false;
-    const badge = document.getElementById('pipelineStatusBadge');
-    if (badge) { badge.className = 'status-badge status-idle'; badge.textContent = 'Idle'; }
-    const homeBadge = document.getElementById('homePipelineBadge');
-    if (homeBadge) { homeBadge.className = 'status-badge status-idle'; homeBadge.textContent = 'Idle'; }
-}
-
-function updateStages(stats) {
-    const stages = ['stage1','stage2','stage3','stage4','stage5'];
-    const keys   = ['news_gatherer','risk_classifier','database_manager','analyzer','reporter'];
-    keys.forEach((k, i) => {
-        const el = document.getElementById(stages[i]);
-        if (!el) return;
-        if (stats[k]?.status === 'running') {
-            el.className = 'stage active';
-        } else if (stats[k]?.status === 'success') {
-            el.className = 'stage done';
-        }
-    });
-}
-
-// ── Results ──────────────────────────────────
-async function loadResults() {
-    try {
-        const r = await fetch(`${API_BASE}/results`);
-        const d = await r.json();
-        if (d.status !== 'success') return;
-
-        const count = d.stages.news_gathering?.count || 0;
-        document.getElementById('kpiSignals').textContent = count;
-        document.getElementById('kpiRisk').textContent = 'ELEVATED';
-        const now = new Date().toISOString().replace('T',' ').substr(0,16);
-        const lastRunEl = document.getElementById('homeLastRun');
-        if (lastRunEl) lastRunEl.textContent = 'Last run: ' + now + ' UTC';
-        document.getElementById('kpiLastRun') && (document.getElementById('kpiLastRun').textContent = 'Just now');
-
-        // Show risk badge in sidebar
-        document.getElementById('riskBadge').style.display = '';
-
-        await renderRiskMatrix(d.stages.analysis?.analysis);
-    } catch(e) {
-        log('Error loading results: ' + e.message, 'error');
-    }
-}
-
-async function renderRiskMatrix(analysis) {
-    if (!analysis) return;
-    document.getElementById('riskEmptyState').style.display = 'none';
-    document.getElementById('riskMatrixSection').style.display = 'block';
-
-    const gridEl  = document.getElementById('riskMatrixGrid');
-    const itemsEl = document.getElementById('riskMatrixItems');
-    const summary = analysis.matrix_summary;
-
-    // ★ Fetch GCS data alerts as matrix items
-    let gcsItems = [];
-    try {
-        const gr = await fetch('/api/data/alerts/matrix-items');
-        const gd = await gr.json();
-        if (gd.status === 'success') gcsItems = gd.items || [];
-    } catch(e) { /* GCS alerts unavailable, continue with news only */ }
-
-    // Merge: pipeline news items + GCS alert items
-    const newsScored = analysis.scored_items || [];
-    const allScored  = [...newsScored, ...gcsItems];
-
-    // Sort by severity: Extreme > High > Medium > Low, then by score desc
-    const _lvlOrder = { 'Extreme': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
-    allScored.sort((a, b) => {
-        const la = _lvlOrder[a.matrix_level] ?? 9;
-        const lb = _lvlOrder[b.matrix_level] ?? 9;
-        if (la !== lb) return la - lb;
-        return (b.matrix_score || 0) - (a.matrix_score || 0);
-    });
-
-    // Rebuild summary grid counting both sources
-    // summary is a 5×5 array [prob][impact] from pipeline
-    // We add GCS items on top
-    const combinedSummary = Array.from({length:5}, () => Array(5).fill(0));
-
-    // Fill from existing pipeline summary
-    if (summary) {
-        for (let p = 0; p < 5; p++)
-            for (let i = 0; i < 5; i++)
-                combinedSummary[p][i] = Number(summary[p]?.[i] || 0);
-    }
-
-    // Add GCS items to summary
-    gcsItems.forEach(item => {
-        const p = Math.max(0, Math.min(4, (item.probability || 3) - 1));
-        const i = Math.max(0, Math.min(4, (item.impact      || 3) - 1));
-        combinedSummary[p][i]++;
-    });
-
-    let gridHtml = '<table class="matrix-grid"><thead><tr><th class="matrix-axis-label">PROB \ IMPACT</th>';
-    IMPACT_LABELS.forEach(lbl => gridHtml += `<th class="matrix-axis-label">${lbl}</th>`);
-    gridHtml += '</tr></thead><tbody>';
-    for (let p = 5; p >= 1; p--) {
-        gridHtml += `<tr><th class="matrix-axis-label">${PROB_LABELS[p-1]}</th>`;
-        for (let i = 1; i <= 5; i++) {
-            const level = MATRIX_LEVEL[p-1][i-1];
-            const count = combinedSummary[p-1][i-1] || 0;
-            gridHtml += `<td class="matrix-cell-${level.toLowerCase()}">
-                <div style="font-size:14px;font-weight:700;">${count}</div>
-                <div style="font-size:8px;opacity:0.8;text-transform:uppercase;">${level}</div>
-            </td>`;
-        }
-        gridHtml += '</tr>';
-    }
-    gridHtml += '</tbody></table>';
-    gridEl.innerHTML = gridHtml;
-
-    document.getElementById('riskMatrixItemsHeader').textContent = `Scored Intelligence Nodes (${allScored.length} total — ${newsScored.length} news + ${gcsItems.length} data alerts)`;
-
-    // Color mapping by matrix level
-    const levelStyle = {
-        'Extreme': { bg:'#FEE2E2', border:'#EF4444', badge:'#991B1B', badgeBg:'#FEE2E2' },
-        'High':    { bg:'#FFF7ED', border:'#F97316', badge:'#9A3412', badgeBg:'#FFEDD5' },
-        'Medium':  { bg:'#FEFCE8', border:'#EAB308', badge:'#854D0E', badgeBg:'#FEF9C3' },
-        'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
-    };
-
-    // Store for live-preview re-scoring from Tune Strategy modal
-    window._lastScoredItems = allScored;
-
-    itemsEl.innerHTML = allScored.map((item, idx) => {
-        const lvl   = item.matrix_level || 'Low';
-        const style = levelStyle[lvl] || levelStyle['Low'];
-        const prob  = Number(item.probability) || 1;
-        const imp   = Number(item.impact)      || 1;
-        return `
-        <div class="card" data-item-idx="${idx}" style="border-left:3px solid ${style.border}; background:${style.bg}; transition: border-color 0.25s, background 0.25s;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <span class="status-badge tune-lvl-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;transition:background 0.25s,color 0.25s;">${lvl}</span>
-                    ${item.source === 'GCS Data Alert' ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#EFF6FF;color:var(--primary);font-family:var(--font-mono);">DATA</span>` : `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">NEWS</span>`}
-                </div>
-                <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
-                    P:${prob} × I:${imp}
-                </span>
-            </div>
-            <div style="font-weight:700;font-size:12px;margin-bottom:10px;line-height:1.4;color:var(--text-main);">${escapeHtml(item.title)}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
-                <div style="background:rgba(255,255,255,0.7);padding:7px 10px;border:1px solid rgba(0,0,0,0.06);border-radius:4px;">
-                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Probability</div>
-                    <div style="font-size:13px;font-weight:700;color:${style.badge};">${item.probability}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.7);padding:7px 10px;border:1px solid rgba(0,0,0,0.06);border-radius:4px;">
-                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Impact</div>
-                    <div style="font-size:13px;font-weight:700;color:${style.badge};">${item.impact}</div>
-                </div>
-            </div>
-            <div style="font-size:11px;line-height:1.5;color:var(--text-secondary);">
-                <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:3px;">Rationale</span>
-                ${escapeHtml(item.impact_reasoning || '—')}
-            </div>
-        </div>`;
-    }).join('');
-}
-
-// ── Guardian Dashboard (Risk Monitor page) ───
-async function loadGuardianDashboard() {
-    try {
-        const r = await fetch(`${API_BASE}/guardian/dashboard`);
-        const d = await r.json();
-        if (d.status !== 'success') {
-            document.getElementById('riskEmptyState').style.display = 'block';
-            return;
-        }
-        document.getElementById('riskEmptyState').style.display = 'none';
-
-        // executive_summary fields
-        const es = d.executive_summary || {};
-        document.getElementById('riskKpiCountries').textContent = es.at_risk_country_count ?? es.high_risk_country_count ?? '—';
-        document.getElementById('riskKpiAlerts').textContent    = es.total_risk_alert_count ?? '—';
-        document.getElementById('riskKpiHigh').textContent      = es.high_risk_alert_count ?? '—';
-        document.getElementById('kpiCountries').textContent     = es.at_risk_country_count ?? '—';
-
-        // Trend indicator
-        const trend = es.trend || {};
-        if (trend.direction) {
-            const arrow = trend.direction === 'UP' ? '↑' : trend.direction === 'DOWN' ? '↓' : '→';
-            document.getElementById('riskKpiAlerts').textContent =
-                `${es.total_risk_alert_count ?? '—'} ${arrow}`;
-        }
-
-        // google_downside — may be unavailable
-        const gd = d.google_downside || {};
-        if (gd.status === 'unavailable') {
-            document.getElementById('riskKpiDownside').textContent    = 'N/A';
-            document.getElementById('riskKpiDownsideSub').textContent = gd.reason || 'Unavailable';
-        } else {
-            document.getElementById('riskKpiDownside').textContent    = (gd.percent ?? '—') + '%';
-            document.getElementById('riskKpiDownsideSub').textContent = gd.level || '';
-        }
-
-        // fx_summary
-        const fx = d.fx_summary || {};
-        document.getElementById('riskKpiFX').textContent = fx.high_risk_country_count ?? fx.medium_or_above_country_count ?? '—';
-
-        // country_rank_top5
-        const top5 = d.country_rank_top5 || [];
-        document.getElementById('countryBoardGrid').innerHTML = top5.map(c => {
-            const riskColor = c.risk_level === 'High' ? 'var(--danger-text)' :
-                              c.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--text-muted)';
-            return `<div class="card" style="padding:14px;">
-                <div style="font-weight:700;font-size:13px;">${escapeHtml(c.country)}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:var(--font-mono);">${c.alert_count} Alerts</div>
-                <div style="font-size:10px;margin-top:4px;color:${riskColor};font-weight:600;">${c.top_category || ''}</div>
-            </div>`;
-        }).join('');
-
-        // Use all alerts — filter out GCS data updates (shown in Data Alerts), dedup by title
-        const seen_titles = new Set();
-        guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
-            const src   = (a.source || '').toLowerCase();
-            const title = (a.title  || '').trim();
-            // Exclude raw GCS data entries — they go to Data Alerts panel
-            if (src === 'gcs_raw' || src === 'gcs_data') return false;
-            if (/^US .* update:/i.test(title)) return false;
-            // Dedup by title
-            const key = title.toLowerCase();
-            if (seen_titles.has(key)) return false;
-            seen_titles.add(key);
-            return true;
-        });
-        // Update news alert badge
-        const newsCountBadge = document.getElementById('newsAlertCount');
-        if (newsCountBadge) {
-            const nc = guardianTopAlerts.length;
-            newsCountBadge.textContent = nc + ' Alert' + (nc !== 1 ? 's' : '');
-            newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
-            newsCountBadge.style.color = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
-        }
-        // Delegate to shared renderer so Tune Strategy modal can call the same function
-        renderGuardianAlerts(guardianTopAlerts);
-
-    } catch(e) {
-        console.error('loadGuardianDashboard error:', e);
-        document.getElementById('riskEmptyState').style.display = 'block';
-    }
-}
-
-// ── AI Brief ─────────────────────────────────
-async function generateBrief() {
-    const btn  = document.getElementById('briefBtn');
-    const body = document.getElementById('briefBody');
-    const meta = document.getElementById('briefMeta');
-
-    btn.disabled = true;
-    btn.textContent = '…';
-    body.className = 'brief-body loading';
-    body.innerHTML = 'Generating intelligence brief<span class="typewriter-cursor"></span>';
-
-    try {
-        const r = await fetch(`${API_BASE}/brief`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ persona: currentPersona }) });
-        const d = await r.json();
-
-        if (d.status === 'success') {
-            body.className = 'brief-body';
-            await typewriterEffect(body, d.brief);
-            meta.textContent = 'Generated ' + new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC';
-
-            if (d.signals?.length) {
-                document.getElementById('briefSignals').innerHTML = d.signals.map(s =>
-                    `<span class="signal-pill ${s.level}">${s.label}</span>`
-                ).join('');
-            }
-        } else {
-            body.className = 'brief-body loading';
-            body.textContent = d.message || 'Brief generation failed. Run the pipeline first.';
-        }
-    } catch(e) {
-        body.className = 'brief-body loading';
-        body.textContent = 'Could not reach /api/brief — ensure backend is running.';
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Regenerate';
-}
-
-async function typewriterEffect(el, text) {
-    el.innerHTML = '';
-    const cursor = document.createElement('span');
-    cursor.className = 'typewriter-cursor';
-    el.appendChild(cursor);
-
-    for (const char of text) {
-        cursor.insertAdjacentText('beforebegin', char);
-        await new Promise(r => setTimeout(r, 18));
-    }
-    cursor.remove();
-}
-
-// ── News ─────────────────────────────────────
-// ── News selection state ─────────────────────
-let selectedNewsIds = new Set();
-let allNewsItems    = [];
-
-function toggleNewsSelect(id, btn) {
-    if (selectedNewsIds.has(id)) {
-        selectedNewsIds.delete(id);
-        btn.style.background = 'white';
-        btn.style.color      = 'var(--text-muted)';
-        btn.textContent      = '+';
-    } else {
-        selectedNewsIds.add(id);
-        btn.style.background = 'var(--primary)';
-        btn.style.color      = 'white';
-        btn.textContent      = '✓';
-    }
-    updateNewsSelectionUI();
-}
-
-function updateNewsSelectionUI() {
-    const count    = selectedNewsIds.size;
-    const countEl  = document.getElementById('newsSelectedCount');
-    const analyzeEl= document.getElementById('analyzeSelectedBtn');
-    if (countEl)   { countEl.textContent = count + ' selected'; countEl.style.display = count ? '' : 'none'; }
-    if (analyzeEl) { analyzeEl.style.display = count ? '' : 'none'; }
-}
-
-function closeNewsAnalysis() {
-    document.getElementById('newsAnalysisPanel').style.display = 'none';
-    selectedNewsIds.clear();
-    updateNewsSelectionUI();
-    // Reset all + buttons
-    document.querySelectorAll('.news-select-btn').forEach(btn => {
-        btn.style.background = 'white';
-        btn.style.color      = 'var(--text-muted)';
-        btn.textContent      = '+';
-    });
-}
-
-async function analyzeSelectedNews() {
-    if (!selectedNewsIds.size) return;
-
-    const panel  = document.getElementById('newsAnalysisPanel');
-    const body   = document.getElementById('newsAnalysisBody');
-    panel.style.display = 'block';
-    body.innerHTML = '<span style="color:var(--text-muted);font-style:italic;">Analysing selected news<span class="typewriter-cursor"></span></span>';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    const selected = allNewsItems.filter(item =>
-        selectedNewsIds.has(String(item.id || item.title))
-    );
-
-    const headlines = selected.map((n, i) =>
-        `${i+1}. ${n.title} [${n.risk_category || n.risk_level || 'General'}]`
-    ).join('\n');
-
-    try {
-        const r = await fetch(`${API_BASE}/chat`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-                message:  `As a treasury risk analyst, analyse these ${selected.length} news items for me:\n\n${headlines}\n\nFor each item briefly explain:\n1. What is the hidden implication for treasury operations?\n2. What specific action do you recommend?\n\nThen provide an overall assessment of how these signals interact.`,
-                persona:  currentPersona,
-                history:  [],
-            }),
-        });
-        const d = await r.json();
-        const reply = d.reply || d.message || 'No response.';
-        // Typewriter effect
-        body.innerHTML = '';
-        const cursor = document.createElement('span');
-        cursor.className = 'typewriter-cursor';
-        body.appendChild(cursor);
-        for (const char of reply) {
-            cursor.insertAdjacentText('beforebegin', char);
-            await new Promise(res => setTimeout(res, 12));
-        }
-        cursor.remove();
-    } catch(e) {
-        body.innerHTML = `<span style="color:var(--danger-text);">Analysis failed: ${escapeHtml(e.message)}</span>`;
-    }
-}
-
-async function loadNews() {
-    const grid = document.getElementById('newsGrid');
-    selectedNewsIds.clear();
-    updateNewsSelectionUI();
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
-        <div style="font-size:24px;margin-bottom:12px;">◉</div>
-        <div>Fetching news feed…</div>
-    </div>`;
-
-    try {
-        const r = await fetch(`${API_BASE}/news`);
-        const d = await r.json();
-        allNewsItems = d.items || d.news || [];
-
-        if (!allNewsItems.length) {
-            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
-                No news available. Run the pipeline first.
-            </div>`;
-            return;
-        }
-
-        document.getElementById('newsLastFetch').textContent =
-            'Updated ' + new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC · ' + allNewsItems.length + ' articles';
-
-        const levelColor = l => l === 'high' ? 'var(--danger-text)' : l === 'medium' ? 'var(--warning-text)' : 'var(--success-text)';
-        const levelBg    = l => l === 'high' ? 'var(--danger-bg)'   : l === 'medium' ? 'var(--warning-bg)'   : 'var(--success-bg)';
-
-        grid.innerHTML = allNewsItems.map(item => {
-            const id    = String(item.id || item.title);
-            const lvl   = item.risk_level || 'low';
-            const cat   = item.risk_category || '';
-            return `<div class="news-card" style="position:relative;">
-                <!-- + select button -->
-                <button class="news-select-btn"
-                    onclick="toggleNewsSelect('${escapeHtml(id)}', this)"
-                    style="position:absolute;top:10px;right:10px;width:22px;height:22px;
-                           border-radius:50%;border:1px solid var(--border);background:white;
-                           color:var(--text-muted);font-size:14px;font-weight:700;
-                           display:flex;align-items:center;justify-content:center;
-                           cursor:pointer;padding:0;line-height:1;transition:all 0.15s;">+</button>
-
-                <div class="news-card-meta" style="padding-right:28px;">
-                    <span class="news-source">${escapeHtml(item.source || 'ARGUS DB')}</span>
-                    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
-                                 background:${levelBg(lvl)};color:${levelColor(lvl)};font-family:var(--font-mono);">
-                        ${lvl}
-                    </span>
-                </div>
-                <div class="news-card-title" style="padding-right:8px;">${escapeHtml(item.title || '')}</div>
-                ${cat ? `<div style="font-size:10px;color:var(--primary);font-family:var(--font-mono);
-                                      margin:4px 0 6px;font-weight:600;">${escapeHtml(cat)}</div>` : ''}
-                ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank"
-                    style="display:inline-block;margin-top:6px;font-size:11px;
-                           color:var(--primary);text-decoration:none;font-family:var(--font-mono);">
-                    Read →</a>` : ''}
-            </div>`;
-        }).join('');
-
-    } catch(e) {
-        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted);">
-            Failed to load news: ${escapeHtml(e.message)}
-        </div>`;
-    }
-}
-
-// ── Guardian Chatbot ──────────────────────────
-let chatSessions = JSON.parse(localStorage.getItem('argusChatSessions') || '[]');
-let currentSessionId = null;
-
-function saveSessions() {
-    localStorage.setItem('argusChatSessions', JSON.stringify(chatSessions));
-}
-
-function newChatSession() {
-    const id = 'session_' + Date.now();
-    const session = { id, title: 'New Conversation', createdAt: new Date().toISOString(), messages: [] };
-    chatSessions.unshift(session);
-    saveSessions();
-    loadSession(id);
-    renderChatHistory();
-}
-
-function loadSession(id) {
-    currentSessionId = id;
-    const session = chatSessions.find(s => s.id === id);
-    const container = document.getElementById('chatMessages');
-
-    // Default greeting
-    const greeting = `<div class="chat-message ai">
-        <div class="chat-avatar ai">A</div>
-        <div class="chat-bubble">
-            Hello. I'm the ARGUS Guardian. I have access to your pipeline results, risk data, and market signals.<br><br>
-            Ask me anything — current risk exposure, country analysis, pipeline results, or market conditions.
-        </div>
-    </div>`;
-
-    if (!session || !session.messages.length) {
-        container.innerHTML = greeting;
-        return;
-    }
-
-    container.innerHTML = greeting + session.messages.map(m => `
-        <div class="chat-message ${m.role}">
-            <div class="chat-avatar ${m.role}">${m.role === 'ai' ? 'A' : 'U'}</div>
-            <div class="chat-bubble">${escapeHtml(m.content)}</div>
-        </div>`).join('');
-
-    container.scrollTop = container.scrollHeight;
-    renderChatHistory();
-}
-
-function renderChatHistory() {
-    const list = document.getElementById('chatHistoryList');
-    if (!chatSessions.length) {
-        list.innerHTML = `<div style="padding:16px;text-align:center;font-size:11px;color:var(--text-muted);">
-            No conversations yet.<br>Click + to start.
-        </div>`;
-        return;
-    }
-    list.innerHTML = chatSessions.map(s => `
-        <div class="chat-history-item ${s.id === currentSessionId ? 'active' : ''}"
-             onclick="loadSession('${s.id}')">
-            <div class="chat-history-item-title">${escapeHtml(s.title)}</div>
-            <div class="chat-history-item-meta">${s.createdAt.substr(0,10)}</div>
-        </div>`).join('');
-}
-
-function handleChatKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-    }
-}
-
-function autoResize(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
-
-async function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text) return;
-
-    // Ensure we have a session
-    if (!currentSessionId) newChatSession();
-
-    input.value = '';
-    autoResize(input);
-
-    // Append user message to UI
-    appendChatBubble('user', text);
-
-    // Save to session
-    const session = chatSessions.find(s => s.id === currentSessionId);
-    if (session) {
-        session.messages.push({ role: 'user', content: text });
-        if (session.title === 'New Conversation') {
-            session.title = text.substring(0, 40) + (text.length > 40 ? '…' : '');
-        }
-        saveSessions();
-        renderChatHistory();
-    }
-
-    // Show typing indicator
-    const typingId = 'typing_' + Date.now();
-    appendChatBubble('ai', '<span class="typewriter-cursor"></span>', typingId);
-
-    try {
-        const r = await fetch(`${API_BASE}/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text, persona: currentPersona, session_id: currentSessionId })
-        });
-        const d = await r.json();
-        const reply = d.reply || d.message || 'No response.';
-
-        // Remove typing indicator and show real reply
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
-        appendChatBubble('ai', reply);
-
-        // Save AI reply
-        if (session) {
-            session.messages.push({ role: 'ai', content: reply });
-            saveSessions();
-        }
-    } catch(e) {
-        const typingEl = document.getElementById(typingId);
-        if (typingEl) typingEl.remove();
-        appendChatBubble('ai', 'Connection error — ensure the backend /api/chat endpoint is running.');
-    }
-}
-
-function appendChatBubble(role, content, id = '') {
-    const container = document.getElementById('chatMessages');
-    const div = document.createElement('div');
-    div.className = `chat-message ${role}`;
-    if (id) div.id = id;
-    div.innerHTML = `
-        <div class="chat-avatar ${role}">${role === 'ai' ? 'A' : 'U'}</div>
-        <div class="chat-bubble">${role === 'user' ? escapeHtml(content) : content}</div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-}
-
-// ── Cash Position ────────────────────────────
-let CASH_DATA = [];
-let CASH_HISTORY = [];
-let cashCurrentFilter = 'all';
-let cashHistoryChart = null;
-
-function fmtUSD(n) {
-    if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
-    if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-    return '$' + Math.round(n).toLocaleString();
-}
-
-function fmtLocal(n, currency) {
-    if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + 'T ' + currency;
-    if (Math.abs(n) >= 1e9)  return (n / 1e9).toFixed(2)  + 'B ' + currency;
-    if (Math.abs(n) >= 1e6)  return (n / 1e6).toFixed(1)  + 'M ' + currency;
-    return Math.round(n).toLocaleString() + ' ' + currency;
-}
-
-function riskBadgeStyle(level) {
-    if (level === 'High')   return 'background:var(--danger-bg);color:var(--danger-text);';
-    if (level === 'Medium') return 'background:var(--warning-bg);color:var(--warning-text);';
-    return 'background:var(--success-bg);color:var(--success-text);';
-}
-
-function filterCash(filter, btn) {
-    cashCurrentFilter = filter;
-    document.querySelectorAll('.cash-filter').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    renderCashTable();
-    renderCashBar();
-}
-
-async function renderCashPage() {
-    // Show loading state
-    const kpiRow = document.getElementById('cashKpiRow');
-    if (kpiRow) kpiRow.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;">Loading cash positions…</div>`;
-
-    try {
-        // Fetch positions and history in parallel
-        const [posResp, histResp] = await Promise.all([
-            fetch('/api/cash/positions'),
-            fetch('/api/cash/history'),
-        ]);
-        const posData  = await posResp.json();
-        const histData = await histResp.json();
-
-        if (posData.status !== 'success') throw new Error(posData.message || 'Failed to load positions');
-
-        CASH_DATA    = posData.positions || [];
-        CASH_HISTORY = histData.history  || [];
-
-        const asOf = document.getElementById('cashAsOf');
-        if (asOf) asOf.textContent = posData.as_of + ' (simulated)';
-
-        renderCashKPIs(posData);
-        renderCashTable();
-        renderCashBar();
-        renderCashHistoryChart();
-
-    } catch(e) {
-        if (kpiRow) kpiRow.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--danger-text);font-size:12px;">Error loading cash data: ${e.message}</div>`;
-    }
-}
-
-function renderCashKPIs(posData) {
-    const totalUSD   = posData.total_usd || 0;
-    const regions    = posData.regional_totals || {};
-    const highRisk   = posData.high_risk_usd || 0;
-    const entityCount = posData.entity_count || 0;
-
-    const americas = regions['Americas'] || 0;
-    const europe   = regions['Europe']   || 0;
-    const apac     = regions['APAC']     || 0;
-
-    document.getElementById('cashKpiRow').innerHTML = `
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;border-left:3px solid var(--primary);">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Total Global Cash</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(totalUSD)}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${entityCount} entities</div>
-        </div>
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Americas</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(americas)}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (americas/totalUSD*100).toFixed(1) : 0}% of total</div>
-        </div>
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Europe</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(europe)}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (europe/totalUSD*100).toFixed(1) : 0}% of total</div>
-        </div>
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">Asia Pacific</div>
-            <div style="font-size:20px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">${fmtUSD(apac)}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (apac/totalUSD*100).toFixed(1) : 0}% of total</div>
-        </div>
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;border-left:3px solid var(--danger-text);">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">High-Risk Exposure</div>
-            <div style="font-size:20px;font-weight:700;color:var(--danger-text);font-family:var(--font-mono);">${fmtUSD(highRisk)}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${totalUSD ? (highRisk/totalUSD*100).toFixed(1) : 0}% of total</div>
-        </div>`;
-}
-
-function renderCashTable() {
-    const totalUSD = CASH_DATA.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
-    const filtered = cashCurrentFilter === 'all'
-        ? CASH_DATA
-        : CASH_DATA.filter(r => (r.region || '').toLowerCase() === cashCurrentFilter.toLowerCase());
-
-    const tbody = document.getElementById('cashTableBody');
-    const tfoot = document.getElementById('cashTableFoot');
-    if (!tbody) return;
-
-    tbody.innerHTML = filtered.map(row => {
-        const usd      = row.usd_equivalent || 0;
-        const pct      = totalUSD ? (usd / totalUSD * 100).toFixed(1) : '0.0';
-        const chg      = row.change_30d_pct || 0;
-        const chgColor = chg >= 0 ? 'var(--success-text)' : 'var(--danger-text)';
-        const chgSign  = chg >= 0 ? '+' : '';
-        const barWidth = Math.min(100, totalUSD ? usd / totalUSD * 100 * 5 : 0);
-        const risk     = row.risk_level || 'Low';
-
-        return `<tr>
-            <td>
-                <div style="font-weight:700;font-size:12px;">${escapeHtml(row.country || '')}</div>
-                <div style="font-size:10px;color:var(--text-muted);">${escapeHtml(row.entity || '')}</div>
-            </td>
-            <td style="font-family:var(--font-mono);font-weight:600;">${row.currency || ''}</td>
-            <td style="text-align:right;font-family:var(--font-mono);">${fmtLocal(row.local_balance || 0, row.currency || '')}</td>
-            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${fmtUSD(usd)}</td>
-            <td style="text-align:right;">
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">
-                    <div style="width:48px;background:#F1F5F9;border-radius:2px;height:4px;overflow:hidden;">
-                        <div style="width:${barWidth}%;background:var(--primary);height:100%;"></div>
-                    </div>
-                    <span style="font-family:var(--font-mono);font-size:11px;">${pct}%</span>
-                </div>
-            </td>
-            <td style="text-align:right;font-family:var(--font-mono);color:${chgColor};font-weight:600;">
-                ${chgSign}${chg.toFixed(1)}%
-            </td>
-            <td><span class="status-badge" style="${riskBadgeStyle(risk)}">${risk}</span></td>
-            <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${(row.fx_rate || 0).toFixed(4)}</td>
-            <td style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${row.notes || '—'}</td>
-        </tr>`;
-    }).join('');
-
-    const filteredUSD = filtered.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
-    if (tfoot) tfoot.innerHTML = `<tr style="background:#F8FAFC;border-top:2px solid var(--border);">
-        <td colspan="3" style="font-weight:700;font-size:12px;padding:10px 12px;">
-            Subtotal (${filtered.length} entities)
-        </td>
-        <td style="text-align:right;font-family:var(--font-mono);font-weight:700;font-size:13px;padding:10px 12px;">
-            ${fmtUSD(filteredUSD)}
-        </td>
-        <td style="text-align:right;font-family:var(--font-mono);font-size:11px;padding:10px 12px;">
-            ${totalUSD ? (filteredUSD/totalUSD*100).toFixed(1) : 0}%
-        </td>
-        <td colspan="4"></td>
-    </tr>`;
-}
-
-function renderCashBar() {
-    const totalUSD = CASH_DATA.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
-    const sorted   = [...CASH_DATA].sort((a,b) => (b.usd_equivalent||0) - (a.usd_equivalent||0)).slice(0,10);
-    const maxUSD   = sorted[0]?.usd_equivalent || 1;
-    const el       = document.getElementById('cashBarChart');
-    if (!el) return;
-
-    el.innerHTML = sorted.map(row => {
-        const usd      = row.usd_equivalent || 0;
-        const barPct   = (usd / maxUSD * 100).toFixed(1);
-        const barColor = row.risk_level === 'High'   ? '#EF4444' :
-                         row.risk_level === 'Medium' ? '#F59E0B' : '#2563EB';
-        return `<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:8px;align-items:center;">
-            <div style="font-size:11px;font-weight:600;text-align:right;color:var(--text-main);">${escapeHtml(row.country||'')}</div>
-            <div style="background:#F1F5F9;border-radius:2px;height:16px;overflow:hidden;">
-                <div style="width:${barPct}%;background:${barColor};height:100%;border-radius:2px;transition:width 0.6s ease;"></div>
-            </div>
-            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${fmtUSD(usd)}</div>
-        </div>`;
-    }).join('');
-}
-
-function renderCashHistoryChart() {
-    const chartContainer = document.getElementById('cashHistoryChartWrap');
-    if (!chartContainer || !CASH_HISTORY.length) return;
-
-    const selector = document.getElementById('cashHistoryCountry');
-    const selected = selector ? selector.value : 'top5';
-
-    let countries;
-    if (selected === 'top5') {
-        countries = [...CASH_DATA]
-            .sort((a,b) => (b.usd_equivalent||0) - (a.usd_equivalent||0))
-            .slice(0,5)
-            .map(r => r.country);
-    } else {
-        countries = [selected];
-    }
-
-    const dates = [...new Set(CASH_HISTORY.map(h => h.date))].sort();
-
-    const datasets = countries.map((country, i) => {
-        const colors = ['#2563EB','#F59E0B','#10B981','#EF4444','#8B5CF6'];
-        const vals = dates.map(d => {
-            const row = CASH_HISTORY.find(h => h.country === country && h.date === d);
-            return row ? row.usd_equivalent : null;
-        });
-        return {
-            label: country,
-            data: vals,
-            borderColor: colors[i],
-            backgroundColor: colors[i] + '18',
-            borderWidth: 1.5,
-            pointRadius: 3,
-            tension: 0.3,
-            fill: false,
-        };
-    });
-
-    const ctx = document.getElementById('cashHistoryChart');
-    if (!ctx) return;
-    if (cashHistoryChart) cashHistoryChart.destroy();
-
-    cashHistoryChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: dates, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: true, labels: { font: { size: 10 } } },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${fmtUSD(ctx.parsed.y)}`
-                    }
-                }
-            },
-            scales: {
-                x: { ticks: { font: { size: 10 } }, grid: { color: '#F1F5F9' } },
-                y: {
-                    ticks: {
-                        font: { size: 10 },
-                        callback: v => fmtUSD(v)
-                    },
-                    grid: { color: '#F1F5F9' }
-                }
-            }
-        }
-    });
-}
-
-// ── Regulatory Changes Tracker ───────────────────────
-let regFilters = { country: '', category: '', severity: '' };
-
-function setRegFilter(type, val, btn) {
-    regFilters[type] = val;
-    document.querySelectorAll(`.reg-filter[data-filter-type="${type}"]`).forEach(b => {
-        b.classList.toggle('active', b.dataset.filterVal === val);
-    });
-    loadRegulatory();
-}
-
-async function loadRegulatory() {
-    const list = document.getElementById('regList');
-    if (!list) return;
-    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">Loading…</div>`;
-    const params = new URLSearchParams();
-    if (regFilters.country)  params.set('country',  regFilters.country);
-    if (regFilters.category) params.set('category', regFilters.category);
-    if (regFilters.severity) params.set('severity', regFilters.severity);
-    params.set('limit', '100');
-    try {
-        const [sr, r] = await Promise.all([
-            fetch('/api/regulatory/summary'),
-            fetch(`/api/regulatory?${params}`),
-        ]);
-        const [sd, d] = await Promise.all([sr.json(), r.json()]);
-        if (sd.status === 'success') _renderRegFilters(sd);
-        const now = new Date().toISOString().replace('T',' ').substr(0,16);
-        const fetchEl = document.getElementById('regLastFetch');
-        const badgeEl = document.getElementById('regTotalBadge');
-        if (fetchEl) fetchEl.textContent = 'Updated ' + now + ' UTC';
-        if (badgeEl) badgeEl.textContent = (d.total || 0) + ' regulatory changes';
-        if (!d.items?.length) {
-            list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted);">
-                <div style="font-size:24px;margin-bottom:12px;">⚖</div>
-                <div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
-                <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>
-            </div>`;
-            return;
-        }
-        const sevColor  = s => s==='High' ? 'var(--danger-text)'  : s==='Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
-        const sevBg     = s => s==='High' ? 'var(--danger-bg)'    : s==='Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
-        const sevBorder = s => s==='High' ? 'var(--danger-text)'  : s==='Medium' ? 'var(--warning-text)'  : 'var(--border)';
-        list.innerHTML = d.items.map(item => {
-            const hasBefore = item.change_before?.trim();
-            const hasAfter  = item.change_after?.trim();
-            const hasAction = item.action_required?.trim();
-            const pubDate   = item.published_at ? item.published_at.substring(0,10) : '';
-            const effDate   = item.effective_date ? ` · Effective: ${item.effective_date}` : '';
-            return `<div style="background:white;border:1px solid var(--border);
-                        border-left:4px solid ${sevBorder(item.severity)};
-                        border-radius:6px;padding:14px 16px;margin-bottom:10px;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                    <div style="flex:1;margin-right:12px;">
-                        <div style="font-weight:700;font-size:13px;line-height:1.4;margin-bottom:4px;">
-                            ${escapeHtml(item.title)}</div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
-                                background:${sevBg(item.severity)};color:${sevColor(item.severity)};">${escapeHtml(item.severity)}</span>
-                            <span style="font-size:10px;padding:2px 8px;border-radius:10px;
-                                background:#EFF6FF;color:var(--primary);font-weight:600;">${escapeHtml(item.country)}</span>
-                            <span style="font-size:10px;padding:2px 8px;border-radius:10px;
-                                background:#F8FAFC;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(item.category)}</span>
-                            ${pubDate ? `<span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">${pubDate}${effDate}</span>` : ''}
-                        </div>
-                    </div>
-                    ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank"
-                        style="font-size:10px;color:var(--primary);text-decoration:none;
-                        font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;">Source →</a>` : ''}
-                </div>
-                ${(hasBefore || hasAfter) ? `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                    ${hasBefore ? `<div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 10px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#92400E;margin-bottom:4px;font-family:var(--font-mono);">Before</div>
-                        <div style="font-size:11px;color:#78350F;line-height:1.4;">${escapeHtml(item.change_before)}</div>
-                    </div>` : '<div></div>'}
-                    ${hasAfter ? `<div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:4px;padding:8px 10px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;font-family:var(--font-mono);">After</div>
-                        <div style="font-size:11px;color:#14532D;line-height:1.4;">${escapeHtml(item.change_after)}</div>
-                    </div>` : '<div></div>'}
-                </div>` : ''}
-                ${item.treasury_impact ? `
-                <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;">
-                    <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);">Impact: </span>
-                    ${escapeHtml(item.treasury_impact)}</div>` : ''}
-                ${hasAction ? `
-                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:4px;padding:8px 10px;">
-                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--primary);margin-bottom:3px;font-family:var(--font-mono);">▶ Action Required</div>
-                    <div style="font-size:11px;color:var(--primary);line-height:1.4;">${escapeHtml(item.action_required)}</div>
-                </div>` : ''}
-            </div>`;
-        }).join('');
-    } catch(e) {
-        list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">
-            Failed to load: ${escapeHtml(e.message)}</div>`;
-    }
-}
-
-function _renderRegFilters(summary) {
-    const countryEl  = document.getElementById('regCountryFilters');
-    const categoryEl = document.getElementById('regCategoryFilters');
-    if (countryEl) countryEl.innerHTML = (summary.countries || []).map(c =>
-        `<button class="reg-filter${regFilters.country===c.country?' active':''}"
-            data-filter-type="country" data-filter-val="${escapeHtml(c.country)}"
-            onclick="setRegFilter('country','${escapeHtml(c.country)}',this)">
-            ${escapeHtml(c.country)} <span style="opacity:0.7">(${c.count})</span>
-        </button>`).join('');
-    if (categoryEl) categoryEl.innerHTML = (summary.categories || []).map(c =>
-        `<button class="reg-filter${regFilters.category===c.category?' active':''}"
-            data-filter-type="category" data-filter-val="${escapeHtml(c.category)}"
-            onclick="setRegFilter('category','${escapeHtml(c.category)}',this)">
-            ${escapeHtml(c.category)} <span style="opacity:0.7">(${c.count})</span>
-        </button>`).join('');
-}
-
-async function refreshRegulatoryAI() {
-    const btn = event.currentTarget;
-    btn.textContent = '⟳ Analysing…';
-    btn.disabled = true;
-    try {
-        const r = await fetch('/api/regulatory/refresh', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({force: false}),
-        });
-        const d = await r.json();
-        btn.textContent = '✦ Re-analyse';
-        btn.disabled = false;
-        if (d.status === 'success') {
-            loadRegulatory();
-            showAlert(`Analysis complete: ${d.result?.regulatory||0} regulatory changes found`);
-        }
-    } catch(e) { btn.textContent = '✦ Re-analyse'; btn.disabled = false; }
-}
-
-// ── Home Logs toggle ─────────────────────────
-function toggleHomeLogs() {
-    const inner  = document.getElementById('homeLogsInner');
-    const toggle = document.getElementById('homeLogsToggle');
-    if (!inner) return;
-    const show = inner.style.display === 'none';
-    inner.style.display  = show ? 'block' : 'none';
-    toggle.textContent   = show ? 'Hide ▴' : 'Show ▾';
-}
-
-// ── Risk Category Cards (Home) ───────────────
-async function loadRiskCategories() {
-    const container = document.getElementById('riskCategoryCards');
-    if (!container) return;
-
-    try {
-        const r = await fetch('/api/home/risk-categories');
-        const d = await r.json();
-        if (d.status !== 'success' || !d.categories?.length) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;
-                color:var(--text-muted);font-size:11px;">No risk categories available. Run Daily Jobs first.</div>`;
-            return;
-        }
-
-        const CATEGORY_ICONS = {
-            'Liquidity Risk':              '💧',
-            'Funding Cost Pressure':       '📈',
-            'Payment & Disbursement Risk': '💳',
-            'Cash Concentration':          '🏦',
-            'Regulatory':                  '⚖️',
-            'Geopolitical':                '🌍',
-            'Macroeconomic':               '📊',
-            'Inflation':                   '🔥',
-            'FX Risk':                     '💱',
-            'Monetary Policy':             '🏛️',
-            'Natural Disaster':            '🌋',
-        };
-
-        container.innerHTML = d.categories.map(cat => {
-            const icon       = CATEGORY_ICONS[cat.risk_category] || '◈';
-            const newsCount  = cat.count      || 0;
-            const dataCount  = cat.data_count || 0;
-            const totalCount = newsCount + dataCount;
-            const src        = cat.source || 'news';
-
-            const borderColor = totalCount >= 5 ? 'var(--danger-text)' :
-                                totalCount >= 2 ? 'var(--warning-text)' :
-                                dataCount  >= 1 ? 'var(--primary)' : 'var(--border)';
-            const countColor  = totalCount >= 5 ? 'var(--danger-text)' :
-                                totalCount >= 2 ? 'var(--warning-text)' : 'var(--text-main)';
-            const topTitle    = (cat.top_title || '—').substring(0, 55) +
-                                ((cat.top_title || '').length > 55 ? '…' : '');
-
-            // Source badges
-            const newsBadge = newsCount > 0
-                ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;
-                               background:#F8FAFC;color:var(--text-muted);
-                               font-family:var(--font-mono);">${newsCount} news</span>` : '';
-            const dataBadge = dataCount > 0
-                ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;
-                               background:#EFF6FF;color:var(--primary);
-                               font-family:var(--font-mono);">${dataCount} data</span>` : '';
-
-            return `<div style="background:white; border:1px solid var(--border);
-                                border-top:3px solid ${borderColor};
-                                border-radius:6px; padding:12px 14px;
-                                cursor:pointer; transition:all 0.15s;"
-                         onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'"
-                         onmouseout="this.style.boxShadow=''"
-                         onclick="showPage('risk', document.querySelector('.nav-item[onclick*=risk]'))">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                    <div style="font-size:9px; font-weight:700; text-transform:uppercase;
-                                letter-spacing:0.08em; color:var(--primary);
-                                font-family:var(--font-mono);">${escapeHtml(cat.risk_category)}</div>
-                    <span style="font-size:13px;">${icon}</span>
-                </div>
-                <div style="font-size:22px; font-weight:700; color:${countColor};
-                            font-family:var(--font-mono); line-height:1; margin-bottom:6px;">
-                    ${totalCount}
-                    <span style="font-size:11px; font-weight:500; color:var(--text-muted);">signals</span>
-                </div>
-                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px;">
-                    ${newsBadge}${dataBadge}
-                </div>
-                <div style="font-size:10px; color:var(--text-muted); line-height:1.4;
-                            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    ${escapeHtml(topTitle)}
-                </div>
-            </div>`;
-        }).join('');
-
-    } catch(e) {
-        container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;
-            color:var(--text-muted);font-size:11px;">Could not load risk categories.</div>`;
-    }
-}
-
-// ── Data Alerts ──────────────────────────────
-async function loadDataAlerts(fresh = false) {
-    const body = document.getElementById('dataAlertsBody');
-    if (!body) return;
-
-    body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);
-        font-size:11px;font-family:var(--font-mono);">Evaluating thresholds…</div>`;
-
-    try {
-        const url = '/api/data/alerts' + (fresh ? '?fresh=1' : '');
-        const r   = await fetch(url);
-        const d   = await r.json();
-
-        if (d.status !== 'success') throw new Error(d.message || 'Failed');
-
-        const thresholdAlerts = d.alerts || [];
-
-        // Fetch Guardian alerts directly to get GCS data update entries
-        let gcsDataAlerts = [];
-        try {
-            const gr = await fetch(`${API_BASE}/guardian/dashboard`);
-            const gd = await gr.json();
-            if (gd.status === 'success') {
-                gcsDataAlerts = (gd.alerts || [])
-                    .filter(a => {
-                        const src   = (a.source || '').toLowerCase();
-                        const title = (a.title  || '').trim();
-                        return src === 'gcs_raw' || src === 'gcs_data' ||
-                               /^US .* update:/i.test(title);
-                    })
-                    .map(a => ({
-                        name:          a.title || 'GCS Data Update',
-                        country:       a.country || 'USA',
-                        indicator:     (a.category || 'gcs_data').toLowerCase().replace(' risk',''),
-                        category:      a.category || 'Market Data',
-                        severity:      a.score >= 70 ? 'High' : a.score >= 40 ? 'Medium' : 'Low',
-                        description:   a.recommendation || a.rationale || a.title || '',
-                        display_value: `Score: ${(a.score ?? 0).toFixed(2)}`,
-                        triggered_at:  a.published_at || a.raw_dt || '',
-                        source:        'Guardian GCS',
-                        operator:      '≥',
-                        threshold:     40,
-                    }));
-            }
-        } catch(e) { /* Guardian unavailable, skip */ }
-
-        const alerts = [...thresholdAlerts, ...gcsDataAlerts];
-        const total  = d.total_triggered || 0;
-        const high   = d.summary?.high || 0;
-
-        // Update badge counts
-        const totalBadge = document.getElementById('dataAlertTotalCount');
-        const highBadge  = document.getElementById('dataAlertHighCount');
-        if (totalBadge) {
-            const genAt = d.generated_at ? ' · ' + d.generated_at : '';
-            totalBadge.textContent = total + ' Triggered' + genAt;
-        }
-        if (highBadge) {
-            if (high > 0) {
-                highBadge.style.display = '';
-                highBadge.textContent   = high + ' High';
-            } else {
-                highBadge.style.display = 'none';
-            }
-        }
-
-        if (!alerts.length) {
-            body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--success-text);
-                font-size:11px;font-family:var(--font-mono);">
-                ✓ No threshold breaches detected
-            </div>`;
-            return;
-        }
-
-        const severityColor = s =>
-            s === 'High'   ? 'var(--danger-text)'  :
-            s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
-        const severityBg = s =>
-            s === 'High'   ? 'var(--danger-bg)'   :
-            s === 'Medium' ? 'var(--warning-bg)'   : 'var(--idle-bg)';
-
-        body.innerHTML = alerts.filter(a => !a._error).map(a => `
-            <div style="padding:10px 16px; border-bottom:1px solid var(--border);
-                        border-left:3px solid ${severityColor(a.severity)};">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <div style="font-weight:700; font-size:12px;">${escapeHtml(a.name)}</div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">
-                            ${escapeHtml(a.triggered_at || '')}
-                        </span>
-                        <span class="status-badge"
-                              style="background:${severityBg(a.severity)};color:${severityColor(a.severity)};">
-                            ${escapeHtml(a.severity)}
-                        </span>
-                    </div>
-                </div>
-                <div style="font-size:11px; color:var(--text-secondary); margin-bottom:6px;">
-                    ${escapeHtml(a.description)}
-                </div>
-                <div style="display:flex; gap:10px; font-size:10px; font-family:var(--font-mono);
-                            color:var(--text-muted); flex-wrap:wrap;">
-                    <span>${escapeHtml(a.country)} · ${escapeHtml(a.indicator)}</span>
-                    <span style="color:${severityColor(a.severity)};font-weight:700;">
-                        Actual: ${escapeHtml(a.display_value)}
-                    </span>
-                    <span>Threshold: ${a.operator} ${a.threshold}</span>
-                    <span style="background:var(--bg-color); padding:1px 6px; border-radius:3px;">
-                        ${escapeHtml(a.category)}
-                    </span>
-                </div>
-            </div>`).join('');
-
-    } catch(e) {
-        body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);
-            font-size:11px;">Could not load data alerts: ${escapeHtml(e.message)}</div>`;
-    }
-}
-
-// ── Sidebar Toggle ───────────────────────────
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const isCollapsed = sidebar.classList.toggle('collapsed');
-    localStorage.setItem('argusSidebarCollapsed', isCollapsed);
-    const icon = document.getElementById('sidebarToggleIcon');
-    if (icon) icon.textContent = isCollapsed ? '»' : '«';
-}
-
-function initSidebar() {
-    const isCollapsed = localStorage.getItem('argusSidebarCollapsed') === 'true';
-    const sidebar = document.getElementById('sidebar');
-    const icon = document.getElementById('sidebarToggleIcon');
-    if (isCollapsed && sidebar) {
-        sidebar.classList.add('collapsed');
-        if (icon) icon.textContent = '»';
-    }
-}
-
-// ══════════════════════════════════════════════
-// PERSONA SETTINGS
-// ══════════════════════════════════════════════
-
-// Risk categories in display order with group labels
-const PS_CATEGORIES = [
-    { key: 'market_risk',      label: 'Market',      group: 'Financial' },
-    { key: 'credit_risk',      label: 'Credit',      group: 'Financial' },
-    { key: 'liquidity_risk',   label: 'Liquidity',   group: 'Financial' },
-    { key: 'systematic_risk',  label: 'Systematic',  group: 'Financial' },
-    { key: 'operational_risk', label: 'Operational', group: 'Operational' },
-    { key: 'process_risk',     label: 'Process',     group: 'Operational' },
-    { key: 'business_risk',    label: 'Business',    group: 'Operational' },
-    { key: 'regulatory_risk',  label: 'Regulatory',  group: 'Geopolitical' },
-    { key: 'political_risk',   label: 'Political',   group: 'Geopolitical' },
-    { key: 'reputation_risk',  label: 'Reputation',  group: 'Geopolitical' },
-    { key: 'disaster_risk',    label: 'Disaster',    group: 'Environment' },
-    { key: 'supply_risk',      label: 'Supply',      group: 'Environment' },
-    { key: 'demand_risk',      label: 'Demand',      group: 'Environment' },
-];
-
-let psActivePersona  = localStorage.getItem('argusPersona') || 'cash_manager';
-let psDefaults       = {};   // merged defaults from API (ai baseline + any saved custom)
-let psDraft          = {};   // in-memory edits before user hits Save
-
-async function loadPersonaSettings() {
-    try {
-        const r = await fetch(`${API_BASE}/personas`);
-        const d = await r.json();
-        const personas = d.personas || [];
-
-        // Build a keyed snapshot of the current merged state
-        psDefaults = {};
-        personas.forEach(p => {
-            psDefaults[p.key] = {
-                alert_threshold: p.alert_threshold ?? 40,
-                risk_weights:    p.risk_weights    || {},
-            };
-        });
-
-        // Deep-copy defaults into draft so edits are isolated
-        psDraft = JSON.parse(JSON.stringify(psDefaults));
-
-        psRenderTabs(personas);
-        psRenderSliders(psActivePersona);
-        psRefreshProfileList();
-    } catch(e) {
-        console.warn('Persona settings load error:', e);
-    }
-}
-
-function psRenderTabs(personas) {
-    const nav = document.getElementById('psNav');
-    nav.innerHTML = '<div class="ps-nav-label">ROLE</div>';
-    personas.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'ps-tab' + (p.key === psActivePersona ? ' active' : '');
-        btn.innerHTML = `<span class="ps-tab-name">${p.label}</span><span class="ps-tab-desc">${p.summary || ''}</span>`;
-        btn.onclick = () => {
-            psActivePersona = p.key;
-            nav.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-            psRenderSliders(p.key);
-        };
-        nav.appendChild(btn);
-    });
-}
-
-function psRenderSliders(personaKey) {
-    const cfg      = psDraft[personaKey]    || {};
-    const defaults = psDefaults[personaKey] || {};
-
-    // Update header title
-    const meta = (availablePersonas || []).find(p => p.key === personaKey);
-    if (meta) document.getElementById('psTitle').textContent = meta.label + ' — Weight Configuration';
-
-    // ── Threshold slider ──────────────────────
-    const threshold    = cfg.alert_threshold ?? 40;
-    const defThreshold = defaults.alert_threshold ?? 40;
-    const thSlider     = document.getElementById('psThresholdSlider');
-    const thVal        = document.getElementById('psThresholdVal');
-
-    thSlider.value        = threshold;
-    thVal.textContent     = threshold;
-    thSlider.className    = 'ps-slider' + (threshold !== defThreshold ? ' modified' : '');
-    thSlider.oninput      = () => {
-        const v = parseInt(thSlider.value, 10);
-        thVal.textContent = v;
-        if (!psDraft[personaKey]) psDraft[personaKey] = {};
-        psDraft[personaKey].alert_threshold = v;
-        thSlider.className = 'ps-slider' + (v !== defThreshold ? ' modified' : '');
-    };
-
-    // ── Category sliders ──────────────────────
-    const grid = document.getElementById('psSliderGrid');
-    grid.innerHTML = '';
-
-    let lastGroup = null;
-    PS_CATEGORIES.forEach(cat => {
-        const weights    = cfg.risk_weights      || {};
-        const defWeights = defaults.risk_weights || {};
-        const val        = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
-        const defVal     = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
-        const modified   = Math.abs(val - defVal) > 0.005;
-
-        // Group header
-        if (cat.group !== lastGroup) {
-            const g = document.createElement('div');
-            g.className   = 'ps-group-label';
-            g.textContent = cat.group;
-            grid.appendChild(g);
-            lastGroup = cat.group;
-        }
-
-        // Row
-        const row = document.createElement('div');
-        row.className = 'ps-row';
-
-        // Fill the track gradient to show "filled" portion
-        const pct = ((val - 0.5) / (2.0 - 0.5)) * 100;
-
-        row.innerHTML = `
-            <span class="ps-cat-label">${cat.label}</span>
-            <div class="ps-slider-wrap">
-                <input
-                    type="range"
-                    class="ps-slider${modified ? ' modified' : ''}"
-                    id="ps-${cat.key}"
-                    min="0.5" max="2.0" step="0.05"
-                    value="${val.toFixed(2)}"
-                    style="--pct:${pct.toFixed(1)}%">
-                <div class="ps-track-markers">
-                    <span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span>
-                </div>
-            </div>
-            <div class="ps-value-col ps-def-tip" data-tip="AI default: ${defVal.toFixed(2)}×">
-                <span class="ps-multiplier" id="ps-val-${cat.key}">${val.toFixed(2)}×</span>
-                <span class="ps-mod-badge${modified ? ' visible' : ''}" id="ps-mod-${cat.key}">MOD</span>
-            </div>`;
-
-        const slider  = row.querySelector('.ps-slider');
-        const valEl   = row.querySelector('.ps-multiplier');
-        const modBadge = row.querySelector('.ps-mod-badge');
-
-        slider.addEventListener('input', () => {
-            const v   = parseFloat(slider.value);
-            const pct = ((v - 0.5) / (2.0 - 0.5)) * 100;
-            slider.style.setProperty('--pct', pct.toFixed(1) + '%');
-
-            valEl.textContent = v.toFixed(2) + '×';
-
-            const changed = Math.abs(v - defVal) > 0.005;
-            slider.classList.toggle('modified', changed);
-            modBadge.classList.toggle('visible', changed);
-
-            if (!psDraft[personaKey].risk_weights) psDraft[personaKey].risk_weights = {};
-            psDraft[personaKey].risk_weights[cat.key] = v;
-        });
-
-        grid.appendChild(row);
-    });
-}
-
-function resetPersonaWeights() {
-    // Discard all in-memory slider edits for the active persona by
-    // re-syncing psDraft from the AI defaults, then re-rendering.
-    const defaults = psDefaults[psActivePersona];
-    if (defaults) psDraft[psActivePersona] = JSON.parse(JSON.stringify(defaults));
-    psRenderSliders(psActivePersona);
-    psShowFeedback('Sliders reset to AI defaults. Use "Save Profile" to persist a named configuration.', 'success');
-}
-
-function psShowFeedback(msg, type) {
-    const el = document.getElementById('psFeedback');
-    el.textContent = msg;
-    el.style.display = 'block';
-    el.className = `ps-feedback ps-feedback-${type}`;
-    clearTimeout(el._timer);
-    el._timer = setTimeout(() => { el.style.display = 'none'; }, 5000);
-}
-
-// ── Profile helpers ───────────────────────────
-
-function psProfileFeedback(msg, type) {
-    const el = document.getElementById('psProfileFeedback');
-    el.textContent = msg;
-    el.style.display = 'block';
-    el.className = `ps-feedback ps-feedback-${type}`;
-    clearTimeout(el._timer);
-    el._timer = setTimeout(() => { el.style.display = 'none'; }, 6000);
-}
-
-async function psRefreshProfileList() {
-    try {
-        const r = await fetch(`${API_BASE}/list_profiles`);
-        const d = await r.json();
-        const sel = document.getElementById('psProfileSelect');
-        const profiles = d.profiles || [];
-        sel.innerHTML = '<option value="">— select a saved profile —</option>' +
-            profiles.map(p => {
-                const label = p.name + (p.saved_at ? '  ·  ' + p.saved_at.slice(0, 10) : '');
-                return `<option value="${p.filename}">${label}</option>`;
-            }).join('');
-    } catch(e) { console.warn('Could not load profiles:', e); }
-}
-
-async function psSaveCurrentAsProfile() {
-    const name = (document.getElementById('psProfileNameInput').value || '').trim();
-    if (!name) {
-        psProfileFeedback('Enter a profile name first.', 'error');
-        return;
-    }
-    // Collect current draft for the active persona
-    const cfg = psDraft[psActivePersona] || {};
-    try {
-        const r = await fetch(`${API_BASE}/save_profile`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-                name,
-                persona_key: psActivePersona,
-                weights: cfg,
-            }),
-        });
-        const d = await r.json();
-        if (d.status === 'success') {
-            document.getElementById('psProfileNameInput').value = '';
-            psProfileFeedback(`Profile "${name}" saved.`, 'success');
-            await psRefreshProfileList();
-        } else {
-            psProfileFeedback('Save failed: ' + (d.message || 'unknown'), 'error');
-        }
-    } catch(e) {
-        psProfileFeedback('Save failed: ' + e.message, 'error');
-    }
-}
-
-async function psLoadSelectedProfile() {
-    const sel = document.getElementById('psProfileSelect');
-    const filename = sel.value;
-    if (!filename) { psProfileFeedback('Select a profile first.', 'error'); return; }
-
-    const btn = document.querySelector('.ps-profile-load-btn');
-    btn.disabled    = true;
-    btn.textContent = 'Loading…';
-
-    try {
-        const r = await fetch(`${API_BASE}/load_profile`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ filename }),
-        });
-        const d = await r.json();
-        if (d.status !== 'success') {
-            psProfileFeedback('Load failed: ' + (d.message || 'unknown'), 'error');
-            return;
-        }
-
-        const profile = d.profile || {};
-        const weights = profile.weights || {};
-
-        // Switch to the profile's persona tab
-        const pKey = profile.persona_key || psActivePersona;
-        psActivePersona = pKey;
-        document.querySelectorAll('.ps-tab').forEach(t => t.classList.remove('active'));
-        const matchingTab = [...document.querySelectorAll('.ps-tab')]
-            .find(t => t.textContent.trim().startsWith(
-                (availablePersonas.find(p => p.key === pKey) || {}).label || ''
-            ));
-        if (matchingTab) matchingTab.classList.add('active');
-
-        // Merge loaded weights into draft
-        if (!psDraft[pKey]) psDraft[pKey] = {};
-        if (weights.alert_threshold !== undefined)
-            psDraft[pKey].alert_threshold = weights.alert_threshold;
-        if (weights.risk_weights) {
-            psDraft[pKey].risk_weights = Object.assign(
-                psDraft[pKey].risk_weights || {}, weights.risk_weights
-            );
-        }
-
-        // Re-render sliders to show loaded values
-        psRenderSliders(pKey);
-
-        // If re-analysis ran, refresh the risk matrix on the Risk Monitor page
-        if (d.rescored) {
-            // Store in execution_state so Risk Monitor page picks it up
-            renderRiskMatrix(d.rescored);
-            psProfileFeedback(
-                `Profile "${profile.name}" loaded. Risk matrix re-scored with ${d.rescored.total_items} items.`,
-                'success'
-            );
-        } else {
-            psProfileFeedback(
-                `Profile "${profile.name}" loaded. Run the Daily Jobs pipeline to apply weights to new data.`,
-                'success'
-            );
-        }
-    } catch(e) {
-        psProfileFeedback('Load failed: ' + e.message, 'error');
-    } finally {
-        btn.disabled    = false;
-        btn.textContent = 'Load & Re-score';
-    }
-}
-
-// ══════════════════════════════════════════════
-// TUNE STRATEGY MODAL
-// ══════════════════════════════════════════════
-
-// Category layout: [key, label, column (0=left, 1=right)]
-const TUNE_CATS = [
-    // ── Left column ──────────────────────────
-    { key: 'market_risk',      label: 'Market',      col: 0, group: 'Financial'    },
-    { key: 'credit_risk',      label: 'Credit',      col: 0, group: 'Financial'    },
-    { key: 'liquidity_risk',   label: 'Liquidity',   col: 0, group: 'Financial'    },
-    { key: 'systematic_risk',  label: 'Systematic',  col: 0, group: 'Financial'    },
-    { key: 'operational_risk', label: 'Operational', col: 0, group: 'Operational'  },
-    { key: 'process_risk',     label: 'Process',     col: 0, group: 'Operational'  },
-    { key: 'business_risk',    label: 'Business',    col: 0, group: 'Operational'  },
-    // ── Right column ─────────────────────────
-    { key: 'regulatory_risk',  label: 'Regulatory',  col: 1, group: 'Geopolitical' },
-    { key: 'political_risk',   label: 'Political',   col: 1, group: 'Geopolitical' },
-    { key: 'reputation_risk',  label: 'Reputation',  col: 1, group: 'Geopolitical' },
-    { key: 'disaster_risk',    label: 'Disaster',    col: 1, group: 'Environment'  },
-    { key: 'supply_risk',      label: 'Supply',      col: 1, group: 'Environment'  },
-    { key: 'demand_risk',      label: 'Demand',      col: 1, group: 'Environment'  },
-];
-
-// Maps guardian alert .category string → weight key (mirrors persona_loader.py)
-const TUNE_CAT_MAP = {
-    'market risk':      'market_risk',
-    'credit risk':      'credit_risk',
-    'liquidity risk':   'liquidity_risk',
-    'operational risk': 'operational_risk',
-    'political risk':   'political_risk',
-    'regulatory risk':  'regulatory_risk',
-    'reputation risk':  'reputation_risk',
-    'systematic risk':  'systematic_risk',
-    'systemic risk':    'systematic_risk',
-    'disaster risk':    'disaster_risk',
-    'supply risk':      'supply_risk',
-    'demand risk':      'demand_risk',
-    'process risk':     'process_risk',
-    'business risk':    'business_risk',
-};
-
-let tsPersona    = localStorage.getItem('argusPersona') || 'cash_manager';
-let tsDefaults   = {};   // AI baselines per persona key
-let tsDraft      = {};   // in-memory slider edits
-let _tuneRafId   = null; // rAF handle for live preview throttle
-
-// ── Open / Close ──────────────────────────────
-
-async function openTuneModal() {
-    // Switch to Risk Monitor so the live preview is visible behind the modal
-    const riskNavEl = document.querySelector('.nav-item[onclick*="risk"]');
-    showPage('risk', riskNavEl);
-
-    // Ensure persona defaults are loaded
-    if (!Object.keys(tsDefaults).length) await tuneLoadDefaults();
-
-    // Sync active persona with the current role
-    const stored = localStorage.getItem('argusPersona') || 'cash_manager';
-    tsPersona = stored;
-
-    tuneRenderPersonaBar();
-    tuneRenderSliders(tsPersona);
-    await tuneRefreshProfileList();
-
-    document.getElementById('tuneOverlay').classList.add('open');
-}
-
-function closeTuneModal() {
-    document.getElementById('tuneOverlay').classList.remove('open');
-    cancelAnimationFrame(_tuneRafId);
-    // Restore guardian alerts to original scores when modal closes without saving
-    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
-}
-
-function handleTuneOverlayClick(e) {
-    if (e.target === document.getElementById('tuneOverlay')) closeTuneModal();
-}
-
-// ── Load defaults from API ────────────────────
-
-async function tuneLoadDefaults() {
-    try {
-        const r = await fetch(`${API_BASE}/personas`);
-        const d = await r.json();
-        tsDefaults = {};
-        tsDraft    = {};
-        (d.personas || []).forEach(p => {
-            tsDefaults[p.key] = {
-                alert_threshold: p.alert_threshold ?? 40,
-                risk_weights:    p.risk_weights || {},
-            };
-            tsDraft[p.key] = JSON.parse(JSON.stringify(tsDefaults[p.key]));
-        });
-    } catch(e) { console.warn('tuneLoadDefaults error:', e); }
-}
-
-// ── Persona pills ─────────────────────────────
-
-function tuneRenderPersonaBar() {
-    const bar = document.getElementById('tunePersonaBar');
-    bar.innerHTML = '';
-    (availablePersonas || []).forEach(p => {
-        const pill = document.createElement('button');
-        pill.className = 'tune-pill' + (p.key === tsPersona ? ' active' : '');
-        pill.textContent = p.label;
-        pill.onclick = () => {
-            tsPersona = p.key;
-            bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
-            pill.classList.add('active');
-            tuneRenderSliders(p.key);
-        };
-        bar.appendChild(pill);
-    });
-}
-
-// ── Slider rendering ──────────────────────────
-
-function tuneRenderSliders(personaKey) {
-    const cfg = tsDraft[personaKey] || {};
-    const def = tsDefaults[personaKey] || {};
-
-    // Threshold
-    const thresh    = cfg.alert_threshold ?? 40;
-    const defThresh = def.alert_threshold ?? 40;
-    const thSlider  = document.getElementById('tuneThresholdSlider');
-    const thVal     = document.getElementById('tuneThresholdVal');
-    thSlider.value       = thresh;
-    thVal.textContent    = thresh;
-    thSlider.className   = 'tune-range tune-thresh-range' + (thresh !== defThresh ? ' modified' : '');
-    thSlider.oninput = () => {
-        const v = parseInt(thSlider.value, 10);
-        thVal.textContent = v;
-        if (!tsDraft[personaKey]) tsDraft[personaKey] = {};
-        tsDraft[personaKey].alert_threshold = v;
-        thSlider.className = 'tune-range tune-thresh-range' + (v !== defThresh ? ' modified' : '');
-    };
-
-    // Category sliders — two columns
-    const leftEl  = document.getElementById('tuneColLeft');
-    const rightEl = document.getElementById('tuneColRight');
-    leftEl.innerHTML  = '';
-    rightEl.innerHTML = '';
-
-    let lastGroupL = null, lastGroupR = null;
-
-    TUNE_CATS.forEach(cat => {
-        const weights    = cfg.risk_weights      || {};
-        const defWeights = def.risk_weights || {};
-        const val    = typeof weights[cat.key]    === 'number' ? weights[cat.key]    : 1.0;
-        const defVal = typeof defWeights[cat.key] === 'number' ? defWeights[cat.key] : 1.0;
-        const modified = Math.abs(val - defVal) > 0.005;
-
-        const target = cat.col === 0 ? leftEl : rightEl;
-        let lastGroup = cat.col === 0 ? lastGroupL : lastGroupR;
-
-        if (cat.group !== lastGroup) {
-            const g = document.createElement('div');
-            g.className   = 'tune-group';
-            g.textContent = cat.group;
-            target.appendChild(g);
-            if (cat.col === 0) lastGroupL = cat.group;
-            else               lastGroupR = cat.group;
-        }
-
-        const row = document.createElement('div');
-        row.className = 'tune-row';
-        row.dataset.catKey = cat.key;
-        row.innerHTML = `
-            <span class="tune-cat">${cat.label}</span>
-            <input type="range" class="tune-range${modified ? ' modified' : ''}"
-                id="tr-${cat.key}" min="0.5" max="2.0" step="0.05" value="${val.toFixed(2)}">
-            <div class="tune-val-wrap">
-                <span class="tune-val${modified ? ' changed' : ''}" id="tv-${cat.key}">${val.toFixed(2)}×</span>
-                <span class="tune-mod-dot${modified ? ' on' : ''}" id="td-${cat.key}"></span>
-            </div>`;
-
-        const slider  = row.querySelector('.tune-range');
-        const valEl   = row.querySelector('.tune-val');
-        const dotEl   = row.querySelector('.tune-mod-dot');
-
-        slider.addEventListener('input', () => {
-            const v       = parseFloat(slider.value);
-            const changed = Math.abs(v - defVal) > 0.005;
-
-            valEl.textContent = v.toFixed(2) + '×';
-            valEl.classList.toggle('changed', changed);
-            slider.classList.toggle('modified', changed);
-            dotEl.classList.toggle('on', changed);
-
-            if (!tsDraft[personaKey].risk_weights) tsDraft[personaKey].risk_weights = {};
-            tsDraft[personaKey].risk_weights[cat.key] = v;
-
-            // Live preview — throttled via rAF
-            cancelAnimationFrame(_tuneRafId);
-            _tuneRafId = requestAnimationFrame(tunePreviewLive);
-        });
-
-        target.appendChild(row);
-    });
-}
-
-// ── Live preview — re-score & re-sort the background alert table ──────────
-
-function tunePreviewLive() {
-    const weights = (tsDraft[tsPersona] || {}).risk_weights || {};
-
-    // ① Re-score guardian alerts in the news alerts table
-    if (guardianTopAlerts && guardianTopAlerts.length) {
-        const rescored = guardianTopAlerts.map(a => {
-            const wKey = TUNE_CAT_MAP[(a.category || '').toLowerCase().trim()] || '';
-            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
-            return { ...a, _eff: Math.min(100, parseFloat(a.score || 0) * w) };
-        });
-        rescored.sort((a, b) => b._eff - a._eff);
-        renderGuardianAlerts(rescored, true);
-    }
-
-    // ② Re-score scored intelligence nodes (riskMatrixItems)
-    if (window._lastScoredItems && window._lastScoredItems.length) {
-        const recolored = window._lastScoredItems.map(item => {
-            const wKey = TUNE_CAT_MAP[(item.risk_category || '').toLowerCase().trim()] || '';
-            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
-            const eff  = Math.min(100, parseFloat(item.risk_score || 0) * w);
-            // Remap matrix level based on effective score
-            let lvl = 'Low';
-            if (eff >= 80) lvl = 'Extreme';
-            else if (eff >= 60) lvl = 'High';
-            else if (eff >= 35) lvl = 'Medium';
-            return { ...item, _effScore: eff, _effLevel: lvl };
-        });
-        recolored.sort((a, b) => b._effScore - a._effScore);
-        tuneUpdateMatrixCards(recolored);
-    }
-}
-
-// Render guardian alert rows with optional effective-score override
-function renderGuardianAlerts(alerts, flash = false) {
-    const tbody = document.getElementById('criticalAlertsTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = alerts.map((a, idx) => {
-        const score = a._eff !== undefined ? a._eff : parseFloat(a.score || 0);
-        const scoreBg    = score >= 70 ? 'var(--danger-bg)'  : score >= 40 ? 'var(--warning-bg)' : 'var(--idle-bg)';
-        const scoreColor = score >= 70 ? 'var(--danger-text)': score >= 40 ? 'var(--warning-text)': 'var(--idle-text)';
-        const cls = flash && idx < 5 ? ' class="tune-live-flash"' : '';
-        return `<tr${cls}>
-            <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country || '')}</td>
-            <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
-            <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${Math.round(score)}</span></td>
-            <td style="font-size:11px;max-width:200px;">
-                ${a.url
-                    ? `<a href="${escapeHtml(a.url)}" target="_blank"
-                        style="color:var(--text-main);text-decoration:none;display:-webkit-box;
-                        -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                        ${escapeHtml(a.title || '')}</a>`
-                    : `<span style="display:-webkit-box;-webkit-line-clamp:2;
-                        -webkit-box-orient:vertical;overflow:hidden;">
-                        ${escapeHtml(a.title || '')}</span>`}
-            </td>
-        </tr>`;
-    }).join('');
-}
-
-// Update only the level badge / border on matrix node cards (no full re-render)
-function tuneUpdateMatrixCards(items) {
-    const container = document.getElementById('riskMatrixItems');
-    if (!container) return;
-    const levelStyle = {
-        'Extreme': { border: '#EF4444', badge: '#991B1B', badgeBg: '#FEE2E2' },
-        'High':    { border: '#F97316', badge: '#9A3412', badgeBg: '#FFEDD5' },
-        'Medium':  { border: '#EAB308', badge: '#854D0E', badgeBg: '#FEF9C3' },
-        'Low':     { border: '#E2E8F0', badge: '#166534', badgeBg: '#DCFCE7' },
-    };
-    const cards = container.querySelectorAll('[data-item-idx]');
-    items.forEach((item, i) => {
-        const card = container.querySelector(`[data-item-idx="${i}"]`);
-        if (!card) return;
-        const lvl   = item._effLevel || item.matrix_level || 'Low';
-        const style = levelStyle[lvl] || levelStyle['Low'];
-        card.style.borderColor = style.border;
-        const badge = card.querySelector('.tune-lvl-badge');
-        if (badge) {
-            badge.textContent       = lvl;
-            badge.style.background  = style.badgeBg;
-            badge.style.color       = style.badge;
-        }
-    });
-}
-
-// ── Profile save / load / reset ───────────────
-
-async function tuneRefreshProfileList() {
-    try {
-        const r = await fetch(`${API_BASE}/list_profiles`);
-        const d = await r.json();
-        const sel = document.getElementById('tuneProfileSelect');
-        if (!sel) return;
-        sel.innerHTML = '<option value="">Load saved profile…</option>' +
-            (d.profiles || []).map(p =>
-                `<option value="${p.filename}">${p.name}${p.saved_at ? '  ·  ' + p.saved_at.slice(0,10) : ''}</option>`
-            ).join('');
-    } catch(e) { console.warn('tuneRefreshProfileList error:', e); }
-}
-
-async function tuneSaveProfile() {
-    const name = (document.getElementById('tuneProfileName').value || '').trim();
-    if (!name) { tuneFeedback('Enter a profile name first.', 'error'); return; }
-    const btn = document.querySelector('.tune-save-btn');
-    btn.disabled = true;
-    try {
-        const r = await fetch(`${API_BASE}/save_profile`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, persona_key: tsPersona, weights: tsDraft[tsPersona] || {} }),
-        });
-        const d = await r.json();
-        if (d.status === 'success') {
-            document.getElementById('tuneProfileName').value = '';
-            tuneFeedback(`"${name}" saved.`, 'success');
-            await tuneRefreshProfileList();
-        } else { tuneFeedback('Save failed: ' + (d.message || 'error'), 'error'); }
-    } catch(e) { tuneFeedback('Save failed: ' + e.message, 'error'); }
-    finally    { btn.disabled = false; }
-}
-
-async function tuneLoadProfile() {
-    const sel      = document.getElementById('tuneProfileSelect');
-    const filename = sel ? sel.value : '';
-    if (!filename) { tuneFeedback('Select a profile first.', 'error'); return; }
-
-    const btn = document.querySelector('.tune-load-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    try {
-        const r = await fetch(`${API_BASE}/load_profile`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ filename }),
-        });
-        const d = await r.json();
-        if (d.status !== 'success') { tuneFeedback('Load failed: ' + (d.message || 'error'), 'error'); return; }
-
-        const profile = d.profile || {};
-        const pKey    = profile.persona_key || tsPersona;
-        const weights = profile.weights     || {};
-
-        // Apply into draft
-        tsPersona = pKey;
-        if (!tsDraft[pKey]) tsDraft[pKey] = {};
-        if (weights.alert_threshold !== undefined) tsDraft[pKey].alert_threshold = weights.alert_threshold;
-        if (weights.risk_weights) {
-            tsDraft[pKey].risk_weights = Object.assign(tsDraft[pKey].risk_weights || {}, weights.risk_weights);
-        }
-
-        // Re-render persona bar + sliders
-        tuneRenderPersonaBar();
-        tuneRenderSliders(pKey);
-
-        if (d.rescored) {
-            renderRiskMatrix(d.rescored);
-            tuneFeedback(`"${profile.name}" loaded · ${d.rescored.total_items} items re-scored.`, 'success');
-        } else {
-            tuneFeedback(`"${profile.name}" loaded · run Daily Jobs to apply to new data.`, 'success');
-        }
-    } catch(e) { tuneFeedback('Load failed: ' + e.message, 'error'); }
-    finally    { if (btn) { btn.disabled = false; btn.textContent = 'Load'; } }
-}
-
-function tuneReset() {
-    const def = tsDefaults[tsPersona];
-    if (def) tsDraft[tsPersona] = JSON.parse(JSON.stringify(def));
-    tuneRenderSliders(tsPersona);
-    // Restore original alert scores in the background
-    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
-    tuneFeedback('Sliders reset to AI defaults.', 'success');
-}
-
-function tuneFeedback(msg, type) {
-    const el = document.getElementById('tuneFeedback');
-    if (!el) return;
-    el.textContent   = msg;
-    el.style.display = 'block';
-    el.className     = `tune-feedback tune-feedback-${type}`;
-    clearTimeout(el._t);
-    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
-}
-
-// ── Boot ─────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-    initSidebar(); // Initialize sidebar state
-    startClock();
-    await loadPersonas();
-    // Sync home role name
-    const activeP = availablePersonas.find(p => p.key === currentPersona);
-    if (activeP) {
-        const homeRole = document.getElementById('homeRoleName');
-        if (homeRole) homeRole.textContent = activeP.label;
-    }
-
-    // Keyboard shortcut for sidebar: Ctrl+B
-    document.addEventListener('keydown', e => {
-        if (e.ctrlKey && e.key.toLowerCase() === 'b') {
-            e.preventDefault();
-            toggleSidebar();
-        }
-    });
-
-    // Init chat with a default session if none exists
-    if (!chatSessions.length) newChatSession();
-    else { currentSessionId = chatSessions[0].id; renderChatHistory(); }
-
-    // Try to load existing results
-    try {
-        await loadResults();
-    } catch(e) { /* no results yet */ }
-
-    // Load risk category cards
-    loadRiskCategories();
-});
-</script>
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT MODULES
+═══════════════════════════════════════════════════════════ -->
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/sidebar.js"></script>
+<script src="/static/js/navigation.js"></script>
+<script src="/static/js/persona.js"></script>
+<script src="/static/js/pipeline.js"></script>
+<script src="/static/js/brief.js"></script>
+<script src="/static/js/results.js"></script>
+<script src="/static/js/guardian.js"></script>
+<script src="/static/js/news.js"></script>
+<script src="/static/js/chat.js"></script>
+<script src="/static/js/cash.js"></script>
+<script src="/static/js/regulatory.js"></script>
+<script src="/static/js/risk-categories.js"></script>
+<script src="/static/js/persona-settings.js"></script>
+<script src="/static/js/tune-modal.js"></script>
+<script src="/static/js/app.js"></script>
 
 </body>
 </html>

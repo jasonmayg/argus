@@ -2,6 +2,10 @@
 # To override, save a named profile via /api/save_profile.
 # Profiles live in personas/profiles/ and are merged over these defaults
 # in-memory when loaded — no floating config file is written.
+#
+# region_overrides: shallow diffs applied on top of the global risk_weights.
+# Only keys that differ from global need to be listed.
+# Effective weight = global value, overridden by matching region key where present.
 
 personas:
   cash_manager:
@@ -20,8 +24,47 @@ personas:
       demand_risk: 0.7
       process_risk: 1.4
       business_risk: 0.9
+    region_overrides:
+      us:
+        regulatory_risk: 1.4
+        credit_risk: 1.2
+        political_risk: 0.9
+      canada:
+        regulatory_risk: 1.3
+        political_risk: 0.8
+        liquidity_risk: 1.5
+      mexico:
+        political_risk: 1.5
+        operational_risk: 1.6
+        credit_risk: 1.5
+        demand_risk: 1.0
+      china:
+        regulatory_risk: 1.7
+        political_risk: 1.6
+        credit_risk: 1.5
+        liquidity_risk: 1.7
+      japan:
+        systematic_risk: 1.5
+        liquidity_risk: 1.4
+        political_risk: 0.7
+        disaster_risk: 1.4
+      uk:
+        regulatory_risk: 1.6
+        market_risk: 1.2
+        liquidity_risk: 1.5
+        political_risk: 1.1
+      korea:
+        systematic_risk: 1.5
+        political_risk: 1.3
+        market_risk: 1.2
+        credit_risk: 1.4
+      india:
+        political_risk: 1.5
+        regulatory_risk: 1.6
+        operational_risk: 1.5
+        credit_risk: 1.4
 
-  fx_trader:
+  fx_manager:
     alert_threshold: 45
     risk_weights:
       market_risk: 1.5
@@ -37,6 +80,51 @@ personas:
       demand_risk: 0.9
       process_risk: 0.8
       business_risk: 1.0
+    region_overrides:
+      us:
+        market_risk: 1.6
+        regulatory_risk: 1.3
+        political_risk: 1.0
+        systematic_risk: 1.2
+      canada:
+        market_risk: 1.4
+        political_risk: 0.8
+        liquidity_risk: 1.2
+      mexico:
+        political_risk: 1.8
+        market_risk: 1.7
+        operational_risk: 1.2
+        credit_risk: 1.5
+        liquidity_risk: 1.5
+      china:
+        political_risk: 1.7
+        regulatory_risk: 1.8
+        market_risk: 1.8
+        liquidity_risk: 1.5
+        systematic_risk: 1.6
+      japan:
+        market_risk: 1.6
+        systematic_risk: 1.6
+        political_risk: 0.7
+        disaster_risk: 0.9
+        liquidity_risk: 1.1
+      uk:
+        market_risk: 1.7
+        regulatory_risk: 1.6
+        systematic_risk: 1.4
+        political_risk: 1.3
+        liquidity_risk: 1.4
+      korea:
+        market_risk: 1.6
+        systematic_risk: 1.7
+        political_risk: 1.5
+        liquidity_risk: 1.4
+      india:
+        political_risk: 1.6
+        market_risk: 1.6
+        regulatory_risk: 1.5
+        operational_risk: 1.1
+        credit_risk: 1.4
 
   treasury_ops:
     alert_threshold: 40
@@ -54,6 +142,45 @@ personas:
       demand_risk: 0.8
       process_risk: 1.2
       business_risk: 1.0
+    region_overrides:
+      us:
+        regulatory_risk: 1.5
+        process_risk: 1.3
+        political_risk: 0.9
+      canada:
+        political_risk: 0.8
+        regulatory_risk: 1.4
+        liquidity_risk: 1.3
+      mexico:
+        operational_risk: 1.7
+        political_risk: 1.6
+        process_risk: 1.5
+        credit_risk: 1.4
+      china:
+        regulatory_risk: 1.8
+        political_risk: 1.7
+        operational_risk: 1.5
+        process_risk: 1.4
+      japan:
+        operational_risk: 1.4
+        systematic_risk: 1.4
+        disaster_risk: 1.6
+        political_risk: 0.7
+      uk:
+        regulatory_risk: 1.7
+        operational_risk: 1.3
+        political_risk: 1.2
+        systematic_risk: 1.3
+      korea:
+        systematic_risk: 1.5
+        operational_risk: 1.4
+        political_risk: 1.4
+        disaster_risk: 1.1
+      india:
+        operational_risk: 1.6
+        regulatory_risk: 1.7
+        political_risk: 1.5
+        process_risk: 1.5
 
   treasury_tech:
     alert_threshold: 38
@@ -71,6 +198,46 @@ personas:
       demand_risk: 0.8
       process_risk: 1.5
       business_risk: 1.1
+    region_overrides:
+      us:
+        regulatory_risk: 1.4
+        operational_risk: 1.5
+        process_risk: 1.5
+      canada:
+        operational_risk: 1.4
+        process_risk: 1.4
+        political_risk: 0.7
+      mexico:
+        operational_risk: 1.8
+        process_risk: 1.7
+        political_risk: 1.3
+        disaster_risk: 1.4
+      china:
+        regulatory_risk: 1.6
+        operational_risk: 1.7
+        political_risk: 1.4
+        process_risk: 1.6
+      japan:
+        disaster_risk: 1.9
+        operational_risk: 1.7
+        systematic_risk: 1.3
+        process_risk: 1.6
+        political_risk: 0.6
+      uk:
+        regulatory_risk: 1.5
+        operational_risk: 1.5
+        systematic_risk: 1.2
+      korea:
+        systematic_risk: 1.5
+        operational_risk: 1.6
+        political_risk: 1.3
+        disaster_risk: 1.2
+      india:
+        operational_risk: 1.8
+        process_risk: 1.8
+        regulatory_risk: 1.5
+        disaster_risk: 1.5
+        political_risk: 1.2
 
   risk_manager:
     alert_threshold: 42
@@ -88,3 +255,49 @@ personas:
       demand_risk: 1.0
       process_risk: 1.1
       business_risk: 1.2
+    region_overrides:
+      us:
+        systematic_risk: 1.4
+        regulatory_risk: 1.3
+        political_risk: 1.1
+        reputation_risk: 1.2
+      canada:
+        political_risk: 0.9
+        systematic_risk: 1.3
+        regulatory_risk: 1.2
+      mexico:
+        political_risk: 1.8
+        operational_risk: 1.5
+        credit_risk: 1.6
+        systematic_risk: 1.4
+        supply_risk: 1.3
+      china:
+        political_risk: 1.9
+        regulatory_risk: 1.8
+        systematic_risk: 1.7
+        credit_risk: 1.5
+        reputation_risk: 1.3
+      japan:
+        systematic_risk: 1.7
+        disaster_risk: 1.7
+        political_risk: 0.8
+        market_risk: 1.3
+        credit_risk: 1.1
+      uk:
+        systematic_risk: 1.6
+        regulatory_risk: 1.6
+        political_risk: 1.5
+        market_risk: 1.4
+        reputation_risk: 1.2
+      korea:
+        systematic_risk: 1.9
+        political_risk: 1.8
+        market_risk: 1.5
+        credit_risk: 1.4
+        supply_risk: 1.3
+      india:
+        political_risk: 1.7
+        regulatory_risk: 1.6
+        systematic_risk: 1.5
+        operational_risk: 1.4
+        credit_risk: 1.5
