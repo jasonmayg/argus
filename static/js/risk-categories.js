@@ -83,39 +83,61 @@ async function loadDataAlerts(fresh = false) {
         const d   = await r.json();
         if (d.status !== 'success') throw new Error(d.message || 'Failed');
 
+        // Threshold-based alerts (already deduped by backend per country+indicator)
         const thresholdAlerts = d.alerts || [];
 
-        // Merge in GCS data update entries from Guardian
+        // ── Merge GCS data update entries from Guardian ──────────────
         let gcsDataAlerts = [];
         try {
             const gr = await fetch(`${API_BASE}/guardian/dashboard`);
             const gd = await gr.json();
             if (gd.status === 'success') {
-                gcsDataAlerts = (gd.alerts || [])
+                // Dedup GCS entries by title — keep highest score per unique title
+                const seenTitles = new Map();
+                (gd.alerts || [])
                     .filter(a => {
                         const src   = (a.source || '').toLowerCase();
                         const title = (a.title  || '').trim();
-                        return src === 'gcs_raw' || src === 'gcs_data' || /^US .* update:/i.test(title);
+                        return src === 'gcs_raw' || src === 'gcs_data' ||
+                               /^US .* update:/i.test(title);
                     })
-                    .map(a => ({
-                        name:          a.title || 'GCS Data Update',
-                        country:       a.country || 'USA',
-                        indicator:     (a.category || 'gcs_data').toLowerCase().replace(' risk', ''),
-                        category:      a.category || 'Market Data',
-                        severity:      a.score >= 70 ? 'High' : a.score >= 40 ? 'Medium' : 'Low',
-                        description:   a.recommendation || a.rationale || a.title || '',
-                        display_value: `Score: ${(a.score ?? 0).toFixed(2)}`,
-                        triggered_at:  a.published_at || a.raw_dt || '',
-                        source:        'Guardian GCS',
-                        operator:      '≥',
-                        threshold:     40,
-                    }));
+                    .forEach(a => {
+                        const key      = (a.title || '').trim().toLowerCase();
+                        const existing = seenTitles.get(key);
+                        if (!existing || (a.score ?? 0) > (existing.score ?? 0)) {
+                            seenTitles.set(key, a);
+                        }
+                    });
+
+                gcsDataAlerts = Array.from(seenTitles.values()).map(a => ({
+                    name:          a.title || 'GCS Data Update',
+                    country:       a.country || 'USA',
+                    indicator:     (a.category || 'gcs_data').toLowerCase().replace(' risk', ''),
+                    category:      a.category || 'Market Data',
+                    severity:      a.score >= 70 ? 'High' : a.score >= 40 ? 'Medium' : 'Low',
+                    description:   a.recommendation || a.rationale || a.title || '',
+                    display_value: `Score: ${(a.score ?? 0).toFixed(2)}`,
+                    triggered_at:  a.published_at || a.raw_dt || '',
+                    source:        'Guardian GCS',
+                    operator:      '≥',
+                    threshold:     40,
+                }));
             }
         } catch(e) { /* Guardian unavailable */ }
 
-        const alerts = [...thresholdAlerts, ...gcsDataAlerts];
-        const total  = d.total_triggered || 0;
-        const high   = d.summary?.high   || 0;
+        // ── Final merge: dedup across both sources by name ──────────
+        const seenNames = new Set();
+        const alerts = [...thresholdAlerts, ...gcsDataAlerts].filter(a => {
+            if (a._error) return true; // keep errors
+            const key = (a.name || '').trim().toLowerCase();
+            if (seenNames.has(key)) return false;
+            seenNames.add(key);
+            return true;
+        });
+
+        // ── Update badges ────────────────────────────────────────────
+        const total = d.total_triggered || 0;
+        const high  = d.summary?.high   || 0;
 
         const totalBadge = document.getElementById('dataAlertTotalCount');
         const highBadge  = document.getElementById('dataAlertHighCount');
@@ -153,6 +175,7 @@ async function loadDataAlerts(fresh = false) {
                     <span style="background:var(--bg-color);padding:1px 6px;border-radius:3px;">${escapeHtml(a.category)}</span>
                 </div>
             </div>`).join('');
+
     } catch(e) {
         body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:11px;">
             Could not load data alerts: ${escapeHtml(e.message)}</div>`;

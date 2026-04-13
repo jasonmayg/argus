@@ -235,8 +235,27 @@ def _run_all_rules() -> List[Dict]:
                 "_error":       True,
             })
 
-    # Sort: High → Medium → Low
+    # ── Deduplicate: keep only highest severity per (country, indicator) ──
     severity_order = {"High": 0, "Medium": 1, "Low": 2}
+    best: Dict[str, Dict] = {}
+    for a in alerts:
+        if a.get("_error"):
+            continue
+        key = f"{a.get('country','')}__{a.get('indicator','')}"
+        existing = best.get(key)
+        if existing is None:
+            best[key] = a
+        else:
+            # Keep the one with higher severity (lower order number)
+            if severity_order.get(a.get("severity","Low"), 9) < severity_order.get(existing.get("severity","Low"), 9):
+                best[key] = a
+
+    # Rebuild alerts list: deduped real alerts + errors
+    deduped = list(best.values())
+    errors  = [a for a in alerts if a.get("_error")]
+    alerts  = deduped + errors
+
+    # Sort: High → Medium → Low
     alerts.sort(key=lambda a: severity_order.get(a.get("severity", "Low"), 9))
     return alerts
 
