@@ -15,7 +15,7 @@ personas:
       demand_risk: 0.7
       process_risk: 1.4
       business_risk: 0.9
-  fx_trader:
+  fx_manager:
     alert_threshold: 45
     risk_weights:
       market_risk: 1.5
