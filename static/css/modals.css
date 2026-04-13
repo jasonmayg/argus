@@ -597,6 +597,47 @@
 .tune-pill:hover  { border-color: #94A3B8; color: #0F172A; }
 .tune-pill.active { background: #0F172A; border-color: #0F172A; color: #fff; }
 
+/* Region bar */
+.tune-region-bar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 20px 8px;
+    border-bottom: 1px solid #F1F5F9;
+    overflow-x: auto;
+    scrollbar-width: none;
+    align-items: center;
+    background: #FAFBFC;
+}
+.tune-region-bar::-webkit-scrollbar { display: none; }
+.tune-region-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    font-family: var(--font-mono);
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+.tune-region-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 11px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 500;
+    color: #64748B;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.1s;
+}
+.tune-region-pill:hover  { border-color: #3B82F6; color: #1D4ED8; }
+.tune-region-pill.active { background: #1D4ED8; border-color: #1D4ED8; color: #fff; }
+
 /* Two-column slider body */
 .tune-body {
     display: grid;

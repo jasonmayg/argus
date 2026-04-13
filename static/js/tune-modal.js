@@ -38,10 +38,26 @@ const TUNE_CAT_MAP = {
     'business risk':    'business_risk',
 };
 
+const TUNE_REGIONS = [
+    { key: 'global',  label: 'Global'  },
+    { key: 'us',      label: 'US'      },
+    { key: 'canada',  label: 'Canada'  },
+    { key: 'mexico',  label: 'Mexico'  },
+    { key: 'china',   label: 'China'   },
+    { key: 'japan',   label: 'Japan'   },
+    { key: 'uk',      label: 'UK'      },
+    { key: 'korea',   label: 'Korea'   },
+    { key: 'india',   label: 'India'   },
+];
+
 let tsPersona  = localStorage.getItem('argusPersona') || 'cash_manager';
+let tsRegion   = localStorage.getItem('argusRegion')  || 'global';
 let tsDefaults = {};
 let tsDraft    = {};
 let _tuneRafId = null;
+
+// Composite draft key: persona + region
+function _tuneKey(persona, region) { return persona + '__' + (region || 'global'); }
 
 // ── Open / Close ──────────────────────────────────────────────
 
@@ -52,8 +68,10 @@ async function openTuneModal() {
     if (!Object.keys(tsDefaults).length) await tuneLoadDefaults();
 
     tsPersona = localStorage.getItem('argusPersona') || 'cash_manager';
+    tsRegion  = localStorage.getItem('argusRegion')  || 'global';
     tuneRenderPersonaBar();
-    tuneRenderSliders(tsPersona);
+    tuneRenderRegionBar();
+    tuneRenderSliders(tsPersona, tsRegion);
     await tuneRefreshProfileList();
 
     document.getElementById('tuneOverlay').classList.add('open');
@@ -78,8 +96,12 @@ async function tuneLoadDefaults() {
         tsDefaults = {};
         tsDraft    = {};
         (d.personas || []).forEach(p => {
-            tsDefaults[p.key] = { alert_threshold: p.alert_threshold ?? 40, risk_weights: p.risk_weights || {} };
-            tsDraft[p.key]    = JSON.parse(JSON.stringify(tsDefaults[p.key]));
+            const base = { alert_threshold: p.alert_threshold ?? 40, risk_weights: p.risk_weights || {} };
+            TUNE_REGIONS.forEach(reg => {
+                const k = _tuneKey(p.key, reg.key);
+                tsDefaults[k] = base;
+                tsDraft[k]    = JSON.parse(JSON.stringify(base));
+            });
         });
     } catch(e) { console.warn('tuneLoadDefaults error:', e); }
 }
@@ -97,7 +119,28 @@ function tuneRenderPersonaBar() {
             tsPersona = p.key;
             bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
             pill.classList.add('active');
-            tuneRenderSliders(p.key);
+            tuneRenderSliders(p.key, tsRegion);
+        };
+        bar.appendChild(pill);
+    });
+}
+
+// ── Region pills ──────────────────────────────────────────────
+
+function tuneRenderRegionBar() {
+    const bar = document.getElementById('tuneRegionBar');
+    if (!bar) return;
+    bar.innerHTML = '<span class="tune-region-label">Region</span>';
+    TUNE_REGIONS.forEach(reg => {
+        const pill = document.createElement('button');
+        pill.className   = 'tune-region-pill' + (reg.key === tsRegion ? ' active' : '');
+        pill.textContent = reg.label;
+        pill.onclick = () => {
+            tsRegion = reg.key;
+            localStorage.setItem('argusRegion', tsRegion);
+            bar.querySelectorAll('.tune-region-pill').forEach(b => b.classList.remove('active'));
+            pill.classList.add('active');
+            tuneRenderSliders(tsPersona, tsRegion);
         };
         bar.appendChild(pill);
     });
@@ -105,9 +148,11 @@ function tuneRenderPersonaBar() {
 
 // ── Slider rendering ──────────────────────────────────────────
 
-function tuneRenderSliders(personaKey) {
-    const cfg = tsDraft[personaKey]    || {};
-    const def = tsDefaults[personaKey] || {};
+function tuneRenderSliders(personaKey, regionKey) {
+    regionKey    = regionKey || tsRegion || 'global';
+    const dk     = _tuneKey(personaKey, regionKey);
+    const cfg    = tsDraft[dk]    || {};
+    const def    = tsDefaults[dk] || {};
 
     const thresh    = cfg.alert_threshold ?? 40;
     const defThresh = def.alert_threshold ?? 40;
@@ -119,8 +164,8 @@ function tuneRenderSliders(personaKey) {
     thSlider.oninput = () => {
         const v = parseInt(thSlider.value, 10);
         thVal.textContent = v;
-        if (!tsDraft[personaKey]) tsDraft[personaKey] = {};
-        tsDraft[personaKey].alert_threshold = v;
+        if (!tsDraft[dk]) tsDraft[dk] = {};
+        tsDraft[dk].alert_threshold = v;
         thSlider.className = 'tune-range tune-thresh-range' + (v !== defThresh ? ' modified' : '');
     };
 
@@ -172,8 +217,8 @@ function tuneRenderSliders(personaKey) {
             valEl.classList.toggle('changed', changed);
             slider.classList.toggle('modified', changed);
             dotEl.classList.toggle('on', changed);
-            if (!tsDraft[personaKey].risk_weights) tsDraft[personaKey].risk_weights = {};
-            tsDraft[personaKey].risk_weights[cat.key] = v;
+            if (!tsDraft[dk].risk_weights) tsDraft[dk].risk_weights = {};
+            tsDraft[dk].risk_weights[cat.key] = v;
             cancelAnimationFrame(_tuneRafId);
             _tuneRafId = requestAnimationFrame(tunePreviewLive);
         });
@@ -185,7 +230,7 @@ function tuneRenderSliders(personaKey) {
 // ── Live preview ──────────────────────────────────────────────
 
 function tunePreviewLive() {
-    const weights = (tsDraft[tsPersona] || {}).risk_weights || {};
+    const weights = (tsDraft[_tuneKey(tsPersona, tsRegion)] || {}).risk_weights || {};
 
     if (guardianTopAlerts && guardianTopAlerts.length) {
         const rescored = guardianTopAlerts.map(a => {
@@ -261,7 +306,12 @@ async function tuneSaveProfile() {
         const r = await fetch(`${API_BASE}/save_profile`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, persona_key: tsPersona, weights: tsDraft[tsPersona] || {} }),
+            body: JSON.stringify({
+                name,
+                persona_key: tsPersona,
+                region_key:  tsRegion,
+                weights: tsDraft[_tuneKey(tsPersona, tsRegion)] || {},
+            }),
         });
         const d = await r.json();
         if (d.status === 'success') {
@@ -291,15 +341,20 @@ async function tuneLoadProfile() {
 
         const profile = d.profile || {};
         const pKey    = profile.persona_key || tsPersona;
+        const rKey    = profile.region_key  || tsRegion || 'global';
         const weights = profile.weights     || {};
         tsPersona = pKey;
+        tsRegion  = rKey;
+        localStorage.setItem('argusRegion', tsRegion);
 
-        if (!tsDraft[pKey]) tsDraft[pKey] = {};
-        if (weights.alert_threshold !== undefined) tsDraft[pKey].alert_threshold = weights.alert_threshold;
-        if (weights.risk_weights) tsDraft[pKey].risk_weights = Object.assign(tsDraft[pKey].risk_weights || {}, weights.risk_weights);
+        const dk = _tuneKey(pKey, rKey);
+        if (!tsDraft[dk]) tsDraft[dk] = {};
+        if (weights.alert_threshold !== undefined) tsDraft[dk].alert_threshold = weights.alert_threshold;
+        if (weights.risk_weights) tsDraft[dk].risk_weights = Object.assign(tsDraft[dk].risk_weights || {}, weights.risk_weights);
 
         tuneRenderPersonaBar();
-        tuneRenderSliders(pKey);
+        tuneRenderRegionBar();
+        tuneRenderSliders(pKey, rKey);
 
         if (d.rescored) {
             renderRiskMatrix(d.rescored);
@@ -312,9 +367,10 @@ async function tuneLoadProfile() {
 }
 
 function tuneReset() {
-    const def = tsDefaults[tsPersona];
-    if (def) tsDraft[tsPersona] = JSON.parse(JSON.stringify(def));
-    tuneRenderSliders(tsPersona);
+    const dk  = _tuneKey(tsPersona, tsRegion);
+    const def = tsDefaults[dk];
+    if (def) tsDraft[dk] = JSON.parse(JSON.stringify(def));
+    tuneRenderSliders(tsPersona, tsRegion);
     if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
     tuneFeedback('Sliders reset to AI defaults.', 'success');
 }
