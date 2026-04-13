@@ -96,9 +96,14 @@ async function tuneLoadDefaults() {
         tsDefaults = {};
         tsDraft    = {};
         (d.personas || []).forEach(p => {
-            const base = { alert_threshold: p.alert_threshold ?? 40, risk_weights: p.risk_weights || {} };
+            const globalBase = { alert_threshold: p.alert_threshold ?? 40, risk_weights: p.risk_weights || {} };
             TUNE_REGIONS.forEach(reg => {
                 const k = _tuneKey(p.key, reg.key);
+                // Use region-specific defaults when available, else fall back to global
+                const regionCfg = p.region_defaults?.[reg.key];
+                const base = regionCfg && regionCfg.risk_weights
+                    ? { alert_threshold: regionCfg.alert_threshold ?? globalBase.alert_threshold, risk_weights: regionCfg.risk_weights }
+                    : globalBase;
                 tsDefaults[k] = base;
                 tsDraft[k]    = JSON.parse(JSON.stringify(base));
             });
