@@ -34,4 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Populate home risk category cards
     loadRiskCategories();
+
+    // Render geospatial risk map
+    try { await loadRiskMap(); } catch(e) { /* map unavailable */ }
 });

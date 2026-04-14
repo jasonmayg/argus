@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/static/css/main.css">
     <link rel="stylesheet" href="/static/css/modals.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 </head>
 <body>
 
@@ -200,6 +201,22 @@
                         Loading risk categories…
                     </div>
                 </div>
+            </div>
+
+            <!-- Geospatial Risk Map -->
+            <div class="card risk-map-card" style="margin-bottom:10px;padding:12px 14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                color:var(--text-muted);font-family:var(--font-mono);">Geospatial Risk Map</div>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <span class="map-legend-item" data-level="Extreme">Extreme</span>
+                        <span class="map-legend-item" data-level="High">High</span>
+                        <span class="map-legend-item" data-level="Medium">Medium</span>
+                        <span class="map-legend-item" data-level="Low">Low</span>
+                        <span class="map-legend-item" data-level="Focus">Monitored</span>
+                    </div>
+                </div>
+                <div id="riskMapContainer" class="risk-map-container"></div>
             </div>
 
             <!-- Operational logs (collapsible) -->
@@ -678,6 +695,7 @@
 <script src="/static/js/risk-categories.js"></script>
 <script src="/static/js/persona-settings.js"></script>
 <script src="/static/js/tune-modal.js"></script>
+<script src="/static/js/geomap.js"></script>
 <script src="/static/js/app.js"></script>
 
 </body>
