@@ -1118,8 +1118,19 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
     height: 280px;
     border-radius: 4px;
     overflow: hidden;
-    background: #F0F7FF;
+    background: #EFF6FF;
     position: relative;
+}
+.risk-map-container svg { user-select: none; }
+.risk-map-hint {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: #94A3B8;
+    pointer-events: none;
+    letter-spacing: 0.03em;
 }
 
 /* Legend pills */

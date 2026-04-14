@@ -180,25 +180,93 @@ async function _drawMap(container) {
     svg.setAttribute('height',  '100%');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.style.display = 'block';
+    svg.style.cursor  = 'grab';
 
-    // Ocean
+    // Ocean (fixed — outside the draggable canvas)
     const bg = document.createElementNS(ns, 'rect');
     bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', '#EFF6FF');
     svg.appendChild(bg);
 
-    // Layers
+    // Single draggable canvas wrapping all map content
+    const canvas = document.createElementNS(ns, 'g');
+    canvas.setAttribute('id', 'mapCanvas');
+    svg.appendChild(canvas);
+
+    // Layers inside canvas
     const pathGroup  = document.createElementNS(ns, 'g');
-    const labelGroup = document.createElementNS(ns, 'g');  // country name labels
-    const badgeGroup = document.createElementNS(ns, 'g');  // alert-count badges
-    svg.appendChild(pathGroup);
-    svg.appendChild(labelGroup);
-    svg.appendChild(badgeGroup);
+    const labelGroup = document.createElementNS(ns, 'g');
+    const badgeGroup = document.createElementNS(ns, 'g');
+    canvas.appendChild(pathGroup);
+    canvas.appendChild(labelGroup);
+    canvas.appendChild(badgeGroup);
 
     // Tooltip
     const tooltip = document.createElement('div');
-    tooltip.className    = 'map-tooltip';
+    tooltip.className     = 'map-tooltip';
     tooltip.style.display = 'none';
     container.style.position = 'relative';
+
+    // ── Pan (drag) state ──────────────────────────────────────
+    let _pan    = { x: 0, y: 0 };
+    let _drag   = null;   // { startX, startY, panX, panY } while dragging
+    let _moved  = false;  // true once pointer moved enough to count as a drag
+
+    function _applyPan() {
+        canvas.setAttribute('transform', `translate(${_pan.x},${_pan.y})`);
+    }
+
+    function _onPointerDown(e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        _drag  = { startX: e.clientX, startY: e.clientY, panX: _pan.x, panY: _pan.y };
+        _moved = false;
+        svg.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+    function _onPointerMove(e) {
+        if (!_drag) return;
+        const dx = e.clientX - _drag.startX;
+        const dy = e.clientY - _drag.startY;
+        if (!_moved && Math.abs(dx) + Math.abs(dy) > 3) _moved = true;
+        if (_moved) {
+            tooltip.style.display = 'none';
+            _pan.x = _drag.panX + dx;
+            _pan.y = _drag.panY + dy;
+            _applyPan();
+        }
+    }
+    function _onPointerUp() {
+        _drag = null;
+        svg.style.cursor = 'grab';
+    }
+
+    // Touch equivalents
+    function _onTouchStart(e) {
+        const t = e.touches[0];
+        _drag  = { startX: t.clientX, startY: t.clientY, panX: _pan.x, panY: _pan.y };
+        _moved = false;
+    }
+    function _onTouchMove(e) {
+        if (!_drag) return;
+        const t  = e.touches[0];
+        const dx = t.clientX - _drag.startX;
+        const dy = t.clientY - _drag.startY;
+        if (!_moved && Math.abs(dx) + Math.abs(dy) > 3) _moved = true;
+        if (_moved) { _pan.x = _drag.panX + dx; _pan.y = _drag.panY + dy; _applyPan(); e.preventDefault(); }
+    }
+    function _onTouchEnd() { _drag = null; }
+
+    svg.addEventListener('mousedown',  _onPointerDown);
+    window.addEventListener('mousemove', _onPointerMove);
+    window.addEventListener('mouseup',   _onPointerUp);
+    svg.addEventListener('touchstart', _onTouchStart, { passive: true });
+    svg.addEventListener('touchmove',  _onTouchMove,  { passive: false });
+    svg.addEventListener('touchend',   _onTouchEnd);
+
+    // Reset button (double-click recenters)
+    svg.addEventListener('dblclick', () => {
+        _pan = { x: 0, y: 0 };
+        _applyPan();
+    });
 
     // ── Draw country paths ────────────────────────────────────
     countries.forEach(feature => {
@@ -226,6 +294,7 @@ async function _drawMap(container) {
         const tooltipData = data || (isFocus ? { country: _FOCUS[iso3], alert_count: 0, risk_level: 'Monitored', top_category: 'Focus country' } : null);
         if (tooltipData) {
             path.addEventListener('mouseenter', () => {
+                if (_moved) return;
                 path.style.filter = 'brightness(0.88)';
                 tooltip.style.display = 'block';
                 tooltip.innerHTML =
@@ -236,7 +305,7 @@ async function _drawMap(container) {
                         : `<span style="font-size:9px;color:#3B82F6;">Focus country — no active alerts</span>`
                     );
             });
-            path.addEventListener('mousemove', e => _positionTooltip(e, tooltip, container));
+            path.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
             path.addEventListener('mouseleave', () => { path.style.filter = ''; tooltip.style.display = 'none'; });
         }
         pathGroup.appendChild(path);
@@ -335,6 +404,7 @@ async function _drawMap(container) {
         g.appendChild(text);
 
         g.addEventListener('mouseenter', () => {
+            if (_moved) return;
             circle.setAttribute('r', r + 2);
             tooltip.style.display = 'block';
             tooltip.innerHTML =
@@ -342,15 +412,28 @@ async function _drawMap(container) {
                 `${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''} · ${data.risk_level}<br>` +
                 `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''}</span>`;
         });
-        g.addEventListener('mousemove', e => _positionTooltip(e, tooltip, container));
+        g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
         g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });
 
         badgeGroup.appendChild(g);
     });
 
+    // Clean up window listeners if map is ever re-rendered
+    if (container._mapCleanup) container._mapCleanup();
+    container._mapCleanup = () => {
+        window.removeEventListener('mousemove', _onPointerMove);
+        window.removeEventListener('mouseup',   _onPointerUp);
+    };
+
     container.innerHTML = '';
     container.appendChild(svg);
     container.appendChild(tooltip);
+
+    const hint = document.createElement('div');
+    hint.className   = 'risk-map-hint';
+    hint.textContent = 'drag to pan · double-click to reset';
+    container.appendChild(hint);
+
     _mapRendered = true;
 }
 
