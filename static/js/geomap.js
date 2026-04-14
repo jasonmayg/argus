@@ -96,6 +96,40 @@ const _BADGE_BG = {
 let _mapCountryData = {};
 let _mapRendered    = false;
 
+// ── Compute initial pan+zoom so all 8 focus countries fit in view ─
+// Returns { zoom, panX, panY } given the container's W and H.
+function _initialView(W, H) {
+    // Mercator project helper (same formula as _drawMap)
+    function proj(lon, lat) {
+        const x      = (lon + 180) / 360 * W;
+        const latRad = lat * Math.PI / 180;
+        const mercN  = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
+        const y      = (H / 2) - (W * mercN / (2 * Math.PI));
+        return [x, y];
+    }
+
+    // Collect projected centroids of focus countries
+    const pts = Object.keys(_FOCUS).map(iso3 => proj(..._CENTROIDS[iso3]));
+    const xs  = pts.map(p => p[0]);
+    const ys  = pts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+    // Add generous padding (countries are bigger than their centroids)
+    const padX = 70, padY = 55;
+    const bboxW = (maxX - minX) + padX * 2;
+    const bboxH = (maxY - minY) + padY * 2;
+
+    // Scale to fit bbox in container, capped at 2.0
+    const zoom  = Math.min(2.0, Math.min(W / bboxW, H / bboxH));
+    // Translate so bbox centre lands at container centre
+    const cxProj = (minX + maxX) / 2;
+    const cyProj = (minY + maxY) / 2;
+    const panX   = W / 2 - cxProj * zoom;
+    const panY   = H / 2 - cyProj * zoom;
+    return { zoom, panX, panY };
+}
+
 // ── Entry point
 async function loadRiskMap() {
     const container = document.getElementById('riskMapContainer');
@@ -176,15 +210,20 @@ async function _drawMap(container) {
 
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('width',   '100%');
-    svg.setAttribute('height',  '100%');
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('width',    '100%');
+    svg.setAttribute('height',   '100%');
+    svg.setAttribute('viewBox',  `0 0 ${W} ${H}`);
+    // Allow map content to render outside the viewBox; container CSS clips it
+    svg.setAttribute('overflow', 'visible');
     svg.style.display = 'block';
     svg.style.cursor  = 'grab';
 
-    // Ocean (fixed — outside the draggable canvas)
+    // Ocean background — sits at root level so it fills the viewBox regardless of pan.
+    // Container background (#EFF6FF) covers any gap when panning beyond the rect edge.
     const bg = document.createElementNS(ns, 'rect');
-    bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', '#EFF6FF');
+    bg.setAttribute('x', -W); bg.setAttribute('y', -H);
+    bg.setAttribute('width', W * 3); bg.setAttribute('height', H * 3);
+    bg.setAttribute('fill', '#EFF6FF');
     svg.appendChild(bg);
 
     // Single draggable canvas wrapping all map content
@@ -206,14 +245,17 @@ async function _drawMap(container) {
     tooltip.style.display = 'none';
     container.style.position = 'relative';
 
-    // ── Pan (drag) state ──────────────────────────────────────
-    let _pan    = { x: 0, y: 0 };
+    // ── Pan + zoom state ──────────────────────────────────────
+    const _init = _initialView(W, H);
+    let _pan    = { x: _init.panX, y: _init.panY };
+    let _zoom   = _init.zoom;
     let _drag   = null;   // { startX, startY, panX, panY } while dragging
     let _moved  = false;  // true once pointer moved enough to count as a drag
 
-    function _applyPan() {
-        canvas.setAttribute('transform', `translate(${_pan.x},${_pan.y})`);
+    function _applyTransform() {
+        canvas.setAttribute('transform', `translate(${_pan.x},${_pan.y}) scale(${_zoom})`);
     }
+    _applyTransform();
 
     function _onPointerDown(e) {
         if (e.button !== undefined && e.button !== 0) return;
@@ -231,7 +273,7 @@ async function _drawMap(container) {
             tooltip.style.display = 'none';
             _pan.x = _drag.panX + dx;
             _pan.y = _drag.panY + dy;
-            _applyPan();
+            _applyTransform();
         }
     }
     function _onPointerUp() {
@@ -251,7 +293,7 @@ async function _drawMap(container) {
         const dx = t.clientX - _drag.startX;
         const dy = t.clientY - _drag.startY;
         if (!_moved && Math.abs(dx) + Math.abs(dy) > 3) _moved = true;
-        if (_moved) { _pan.x = _drag.panX + dx; _pan.y = _drag.panY + dy; _applyPan(); e.preventDefault(); }
+        if (_moved) { _pan.x = _drag.panX + dx; _pan.y = _drag.panY + dy; _applyTransform(); e.preventDefault(); }
     }
     function _onTouchEnd() { _drag = null; }
 
@@ -262,10 +304,11 @@ async function _drawMap(container) {
     svg.addEventListener('touchmove',  _onTouchMove,  { passive: false });
     svg.addEventListener('touchend',   _onTouchEnd);
 
-    // Reset button (double-click recenters)
+    // Double-click resets to initial focus-countries view
     svg.addEventListener('dblclick', () => {
-        _pan = { x: 0, y: 0 };
-        _applyPan();
+        _pan  = { x: _init.panX, y: _init.panY };
+        _zoom = _init.zoom;
+        _applyTransform();
     });
 
     // ── Draw country paths ────────────────────────────────────
@@ -293,6 +336,7 @@ async function _drawMap(container) {
 
         const tooltipData = data || (isFocus ? { country: _FOCUS[iso3], alert_count: 0, risk_level: 'Monitored', top_category: 'Focus country' } : null);
         if (tooltipData) {
+            const clickName = data ? data.country : (isFocus ? _FOCUS[iso3] : null);
             path.addEventListener('mouseenter', () => {
                 if (_moved) return;
                 path.style.filter = 'brightness(0.88)';
@@ -302,11 +346,19 @@ async function _drawMap(container) {
                     (data
                         ? `${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''} · ${data.risk_level}<br>` +
                           `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''}</span>`
-                        : `<span style="font-size:9px;color:#3B82F6;">Focus country — no active alerts</span>`
+                        : `<span style="font-size:9px;color:#3B82F6;">Click to view events</span>`
                     );
             });
             path.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
             path.addEventListener('mouseleave', () => { path.style.filter = ''; tooltip.style.display = 'none'; });
+            if (clickName) {
+                path.addEventListener('click', () => {
+                    if (_moved) return;
+                    tooltip.style.display = 'none';
+                    showCountryEvents(clickName);
+                });
+                path.style.cursor = 'pointer';
+            }
         }
         pathGroup.appendChild(path);
     });
@@ -316,13 +368,11 @@ async function _drawMap(container) {
         const centroid = _CENTROIDS[iso3];
         if (!centroid) return;
         const [cx, cy] = project(centroid[0], centroid[1]);
-        if (cx < 4 || cy < 4 || cx > W - 4 || cy > H - 4) return;
 
         const data   = _mapCountryData[iso3];
-        const hasData = !!data;
 
-        // Offset label below the badge (or just below centroid if no badge)
-        const labelY = cy + (hasData ? 22 : 13);
+        // All focus countries now have a badge — label always sits below it
+        const labelY = cy + 22;
 
         // Background pill for readability
         const pillW = label.length * 5.5 + 8;
@@ -332,7 +382,7 @@ async function _drawMap(container) {
         pill.setAttribute('width',  pillW.toFixed(1));
         pill.setAttribute('height', '11');
         pill.setAttribute('rx',     '3');
-        pill.setAttribute('fill',   hasData ? (_BADGE_BG[data.risk_level] || '#64748B') : '#3B82F6');
+        pill.setAttribute('fill',   data ? (_BADGE_BG[data.risk_level] || '#64748B') : '#3B82F6');
         pill.setAttribute('opacity','0.85');
         pill.setAttribute('pointer-events', 'none');
 
@@ -356,7 +406,6 @@ async function _drawMap(container) {
         const centroid = _CENTROIDS[iso3];
         if (!centroid) return;
         const [cx, cy] = project(centroid[0], centroid[1]);
-        if (cx < 4 || cy < 4 || cx > W - 4 || cy > H - 4) return;
 
         const level  = data.risk_level || 'None';
         const count  = data.alert_count || 0;
@@ -410,10 +459,68 @@ async function _drawMap(container) {
             tooltip.innerHTML =
                 `<strong>${data.country}</strong><br>` +
                 `${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''} · ${data.risk_level}<br>` +
-                `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''}</span>`;
+                `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''} — click to view events</span>`;
         });
         g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
         g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });
+        g.addEventListener('click', () => {
+            if (_moved) return;
+            tooltip.style.display = 'none';
+            showCountryEvents(data.country);
+        });
+
+        badgeGroup.appendChild(g);
+    });
+
+    // ── Draw "0" badges for focus countries with no alert data ─
+    Object.entries(_FOCUS).forEach(([iso3, displayName]) => {
+        if (_mapCountryData[iso3]) return;   // already has a real badge above
+        const centroid = _CENTROIDS[iso3];
+        if (!centroid) return;
+        const [cx, cy] = project(centroid[0], centroid[1]);
+
+        const r = 9;
+        const g = document.createElementNS(ns, 'g');
+        g.style.cursor = 'pointer';
+
+        const circle = document.createElementNS(ns, 'circle');
+        circle.setAttribute('cx',           cx.toFixed(1));
+        circle.setAttribute('cy',           cy.toFixed(1));
+        circle.setAttribute('r',            r);
+        circle.setAttribute('fill',         '#3B82F6');
+        circle.setAttribute('stroke',       'white');
+        circle.setAttribute('stroke-width', '1.5');
+        circle.setAttribute('opacity',      '0.75');
+
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x',              cx.toFixed(1));
+        text.setAttribute('y',              (cy + 3.5).toFixed(1));
+        text.setAttribute('text-anchor',    'middle');
+        text.setAttribute('font-size',      '8');
+        text.setAttribute('font-weight',    '700');
+        text.setAttribute('fill',           'white');
+        text.setAttribute('font-family',    'IBM Plex Mono, monospace');
+        text.setAttribute('pointer-events', 'none');
+        text.textContent = '0';
+
+        g.appendChild(circle);
+        g.appendChild(text);
+
+        g.addEventListener('mouseenter', () => {
+            if (_moved) return;
+            circle.setAttribute('r', r + 2);
+            tooltip.style.display = 'block';
+            tooltip.innerHTML =
+                `<strong>${displayName}</strong><br>` +
+                `<span style="font-size:9px;color:#3B82F6;">No active alerts — click to view events</span>`;
+        });
+        g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
+        g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });
+        g.addEventListener('click', () => {
+            if (_moved) return;
+            tooltip.style.display = 'none';
+            showCountryEvents(displayName);
+        });
 
         badgeGroup.appendChild(g);
     });
@@ -431,7 +538,7 @@ async function _drawMap(container) {
 
     const hint = document.createElement('div');
     hint.className   = 'risk-map-hint';
-    hint.textContent = 'drag to pan · double-click to reset';
+    hint.textContent = 'click country → events · drag to pan · double-click to reset';
     container.appendChild(hint);
 
     _mapRendered = true;

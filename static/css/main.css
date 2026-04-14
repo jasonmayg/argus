@@ -1160,6 +1160,17 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
 .map-legend-item[data-level="Low"]::before     { background: #BAE6FD; border: 1px solid #38BDF8; }
 .map-legend-item[data-level="Focus"]::before   { background: #DBEAFE; border: 1px solid #3B82F6; }
 
+/* Country filter banner inside News Alerts card */
+#newsAlertsFilterBanner {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: #1D4ED8;
+    background: #EFF6FF;
+    border-bottom: 1px solid #BFDBFE;
+    padding: 5px 16px;
+    animation: fadeIn 0.2s ease;
+}
+
 /* Tooltip */
 .map-tooltip {
     position: absolute;
