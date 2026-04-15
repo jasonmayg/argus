@@ -2,7 +2,60 @@
    ARGUS — Guardian Dashboard (Risk Monitor page)
    ============================================================ */
 
-let guardianTopAlerts = [];
+let guardianTopAlerts      = [];
+let _guardianCountryFilter = null;   // country name string or null = show all
+
+// Called from the map when a country is clicked
+function showCountryEvents(countryName) {
+    // Navigate to Risk Monitor
+    const riskNav = document.querySelector('.nav-item[onclick*="risk"]');
+    showPage('risk', riskNav);
+
+    // Wait one tick for loadGuardianDashboard to fire, then apply filter
+    _guardianCountryFilter = countryName;
+    setTimeout(() => _applyCountryFilter(countryName), 400);
+}
+
+function _applyCountryFilter(countryName) {
+    const filtered = guardianTopAlerts.filter(
+        a => (a.country || '').toLowerCase() === countryName.toLowerCase()
+    );
+    _renderAlertsWithFilter(filtered, countryName);
+}
+
+function _renderAlertsWithFilter(alerts, countryName) {
+    // Show/update the filter banner inside the News Alerts card header
+    let banner = document.getElementById('newsAlertsFilterBanner');
+    if (!banner) {
+        const header = document.querySelector('#criticalAlertsTableBody')
+            ?.closest('.card')
+            ?.querySelector('div[style*="border-bottom"]');
+        if (header) {
+            banner = document.createElement('div');
+            banner.id = 'newsAlertsFilterBanner';
+            banner.style.cssText =
+                'display:flex;align-items:center;justify-content:space-between;' +
+                'padding:6px 16px;background:#EFF6FF;border-bottom:1px solid #BFDBFE;' +
+                'font-size:10px;font-family:var(--font-mono);color:#1D4ED8;';
+            header.insertAdjacentElement('afterend', banner);
+        }
+    }
+    if (banner) {
+        banner.style.display = 'flex';
+        banner.innerHTML =
+            `<span>Showing: <strong>${escapeHtml(countryName)}</strong> · ${alerts.length} alert${alerts.length !== 1 ? 's' : ''}</span>` +
+            `<button onclick="clearCountryFilter()" style="font-size:10px;padding:1px 8px;border:1px solid #BFDBFE;` +
+            `border-radius:3px;background:white;cursor:pointer;color:#1D4ED8;">✕ All countries</button>`;
+    }
+    renderGuardianAlerts(alerts);
+}
+
+function clearCountryFilter() {
+    _guardianCountryFilter = null;
+    const banner = document.getElementById('newsAlertsFilterBanner');
+    if (banner) banner.style.display = 'none';
+    renderGuardianAlerts(guardianTopAlerts);
+}
 
 async function loadGuardianDashboard() {
     try {
@@ -73,7 +126,11 @@ async function loadGuardianDashboard() {
             newsCountBadge.style.color      = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
         }
 
-        renderGuardianAlerts(guardianTopAlerts);
+        if (_guardianCountryFilter) {
+            _applyCountryFilter(_guardianCountryFilter);
+        } else {
+            renderGuardianAlerts(guardianTopAlerts);
+        }
     } catch(e) {
         console.error('loadGuardianDashboard error:', e);
         document.getElementById('riskEmptyState').style.display = 'block';
