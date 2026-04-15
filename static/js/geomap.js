@@ -99,9 +99,8 @@ let _mapRendered    = false;
 // ── Compute initial pan+zoom so all 8 focus countries fit in view ─
 // Returns { zoom, panX, panY } given the container's W and H.
 function _initialView(W, H) {
-    // Mercator project helper (same formula as _drawMap, with same lat clamp)
+    // Mercator project helper (same formula as _drawMap)
     function proj(lon, lat) {
-        lat = Math.max(-80, Math.min(80, lat));
         const x      = (lon + 180) / 360 * W;
         const latRad = lat * Math.PI / 180;
         const mercN  = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
@@ -135,6 +134,14 @@ function _initialView(W, H) {
 async function loadRiskMap() {
     const container = document.getElementById('riskMapContainer');
     if (!container) return;
+
+    // Show loading state immediately
+    container.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'height:100%;gap:10px;color:var(--text-muted);font-size:11px;font-family:var(--font-mono);">' +
+        '<div class="map-loading-spinner"></div>' +
+        '<span>Loading risk map…</span>' +
+        '</div>';
 
     try {
         const r = await fetch(`${API_BASE}/guardian/dashboard`);
@@ -187,9 +194,9 @@ async function _drawMap(container) {
     const W = container.clientWidth  || 720;
     const H = container.clientHeight || 280;
 
-    // Mercator projection — clamp lat to ±80° to avoid blowup near poles
+    // Mercator projection — clamped at ±85° to avoid arithmetic overflow near poles
     function project(lon, lat) {
-        lat = Math.max(-80, Math.min(80, lat));
+        lat = Math.max(-85, Math.min(85, lat));
         const x      = (lon + 180) / 360 * W;
         const latRad = lat * Math.PI / 180;
         const mercN  = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
@@ -197,16 +204,39 @@ async function _drawMap(container) {
         return [x, y];
     }
 
+    // Normalize ring longitudes to prevent antimeridian wrap-around artifacts.
+    // Canada has territory near ±180°; without this, consecutive vertices can jump
+    // ~360° in x, causing SVG's fill engine to draw a horizontal band across the map.
+    function _normalizeRing(coords) {
+        const out = [coords[0].slice()];
+        for (let i = 1; i < coords.length; i++) {
+            let lon = coords[i][0];
+            const prev = out[i - 1][0];
+            while (lon - prev >  180) lon -= 360;
+            while (lon - prev < -180) lon += 360;
+            out.push([lon, coords[i][1]]);
+        }
+        return out;
+    }
+
+    // Skip rings whose southernmost projected point is still above canvas y = -(H/4).
+    // In Mercator (with 85° clamp) this corresponds to ~72°N — removes extreme arctic
+    // island polygons that would flood the viewport as large fills when panning.
     function ringToPath(coords) {
-        return coords.map((pt, i) => {
-            const [x, y] = project(pt[0], pt[1]);
-            return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-        }).join(' ') + ' Z';
+        const norm = _normalizeRing(coords);
+        const pts  = norm.map(pt => project(pt[0], pt[1]));
+        const maxY = Math.max(...pts.map(([, y]) => y));
+        if (maxY < -(H / 4)) return '';
+        return pts.map(([x, y], i) =>
+            (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1)
+        ).join(' ') + ' Z';
     }
     function geometryToPath(geom) {
         if (!geom) return '';
-        if (geom.type === 'Polygon')      return geom.coordinates.map(ringToPath).join(' ');
-        if (geom.type === 'MultiPolygon') return geom.coordinates.map(p => p.map(ringToPath).join(' ')).join(' ');
+        if (geom.type === 'Polygon')
+            return geom.coordinates.map(ringToPath).filter(Boolean).join(' ');
+        if (geom.type === 'MultiPolygon')
+            return geom.coordinates.map(p => p.map(ringToPath).filter(Boolean).join(' ')).join(' ');
         return '';
     }
 
@@ -329,6 +359,7 @@ async function _drawMap(container) {
         const path = document.createElementNS(ns, 'path');
         path.setAttribute('d',            geometryToPath(feature.geometry));
         path.setAttribute('fill',         fill);
+        path.setAttribute('fill-rule',    'evenodd');
         path.setAttribute('stroke',       stroke);
         path.setAttribute('stroke-width', sw);
         path.style.transition = 'filter 0.15s';
