@@ -21,6 +21,7 @@ lxml>=4.9.0               # Fast XML processing
 # AI & API Integration
 # ============================================================================
 anthropic>=0.7.0          # Claude API client
+openai>=1.0.0            # OpenAI API client
 
 # ============================================================================
 # Data Processing & Storage

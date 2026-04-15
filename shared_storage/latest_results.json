@@ -1,6 +1,6 @@
 {
   "status": "success",
-  "timestamp": "2026-04-14T15:59:51.715952",
+  "timestamp": "2026-04-15T10:19:46.593144",
   "stages": {
     "news_gathering": {
       "status": "success",
@@ -143,7 +143,7 @@
         "federal_reserve": {
           "count": 22,
           "status": "success",
-          "path": "shared_storage/raw/federal_reserve_20260414_160000.json"
+          "path": "shared_storage/raw/federal_reserve_20260415_101952.json"
         }
       }
     },
@@ -156,29 +156,39 @@
           "title": "Minutes of the Board’s discount rate meetings on February 9 and March 18, 2026",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260414a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Political Risk",
+          "risk_score": 10,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "un"
+          ]
         },
         {
           "date": "2026-04-10",
           "title": "Federal Reserve Board announces approval of application by Burke & Herbert Financial Services Corp.",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260410a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Political Risk",
+          "risk_score": 20,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "un",
+            "federal reserve"
+          ]
         },
         {
           "date": "2026-04-09",
           "title": "Federal Reserve Board announces termination of enforcement actions with Crédit Agricole S.A. and Crédit Agricole Corporate and Investment Bank, Mega International Commercial Bank Co., Ltd, and the Goldman Sachs Group, Inc.",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260409a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
-          "risk_level": "Low",
+          "risk_category": "Regulatory Risk",
+          "risk_score": 40,
+          "risk_level": "Medium",
           "matched_keywords": [
-            "ban"
+            "ach",
+            "un",
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -186,13 +196,12 @@
           "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260408a.htm",
           "source": "federal_reserve",
-          "risk_category": "FINANCIAL_RISK::CREDIT_RISK",
-          "risk_score": 30,
+          "risk_category": "Political Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "credit",
-            "ban",
-            "public"
+            "un",
+            "federal reserve"
           ]
         },
         {
@@ -200,11 +209,13 @@
           "title": "Federal Reserve Board issues enforcement action with former employee of United Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260403a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 30,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "un",
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -212,12 +223,13 @@
           "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
           "source": "federal_reserve",
-          "risk_category": "FINANCIAL_RISK::MARKET_RISK",
-          "risk_score": 20,
+          "risk_category": "Market Risk",
+          "risk_score": 30,
           "risk_level": "Low",
           "matched_keywords": [
             "currency",
-            "ban"
+            "un",
+            "federal reserve"
           ]
         },
         {
@@ -225,20 +237,25 @@
           "title": "Federal Reserve Board releases annual audited financial statements",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260325a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Market Risk",
+          "risk_score": 20,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "aud",
+            "federal reserve"
+          ]
         },
         {
           "date": "2026-03-20",
           "title": "Federal Reserve Board issues enforcement actions with former employee of Ally Bank and former employee of Regions Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260320a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -246,12 +263,12 @@
           "title": "Agencies request comment on proposals to modernize the regulatory capital framework and maintain the strength of the banking system",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260319a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+          "risk_category": "Regulatory Risk",
           "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
             "regulatory",
-            "ban"
+            "regulator"
           ]
         },
         {
@@ -259,12 +276,12 @@
           "title": "Federal Reserve Board issues enforcement actions with former employee of Equity Bank and former employee of First State Bank of Dongola",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260313a.htm",
           "source": "federal_reserve",
-          "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+          "risk_category": "Regulatory Risk",
           "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "equity",
-            "ban"
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -272,11 +289,13 @@
           "title": "Federal Reserve Board announces termination of enforcement actions with Industrial and Commercial Bank of China Ltd., Industrial and Commercial Bank of China Ltd., New York Branch, Standard Chartered PLC, and Standard Chartered Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260310a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 30,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "un",
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -284,11 +303,13 @@
           "title": "Federal Reserve Board issues enforcement actions with former employee of East Cambridge Savings Bank and former employee of United Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260303a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 30,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "un",
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -296,20 +317,24 @@
           "title": "Minutes of the Board's discount rate meetings on January 20 and 28, 2026",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260224a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Political Risk",
+          "risk_score": 10,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "un"
+          ]
         },
         {
           "date": "2026-02-24",
           "title": "Federal Reserve Board issues enforcement action with former employee of First Financial Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260224a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -317,12 +342,12 @@
           "title": "Following earlier actions to remove reputation risk from its supervision of banks, Federal Reserve Board requests comment on proposal to codify that removal",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260223a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+          "risk_category": "Regulatory Risk",
           "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban",
-            "reputation"
+            "federal reserve",
+            "reputation risk"
           ]
         },
         {
@@ -330,22 +355,29 @@
           "title": "Federal Reserve Board announces approval of application by Fulton Financial Corporation",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260219a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Political Risk",
+          "risk_score": 20,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "un",
+            "federal reserve"
+          ]
         },
         {
           "date": "2026-02-19",
           "title": "Federal Reserve Board announces it will hold a hybrid public outreach meeting on Thursday, March 26, as part of its review of regulations under the Economic Growth and Regulatory Paperwork Reduction Act (EGRPRA)",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260219a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 30,
-          "risk_level": "Low",
+          "risk_category": "Regulatory Risk",
+          "risk_score": 60,
+          "risk_level": "High",
           "matched_keywords": [
-            "regulatory",
+            "ach",
+            "un",
             "regulation",
-            "public"
+            "regulatory",
+            "regulator",
+            "federal reserve"
           ]
         },
         {
@@ -353,11 +385,12 @@
           "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260212a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "enforcement",
+            "federal reserve"
           ]
         },
         {
@@ -365,11 +398,12 @@
           "title": "Federal Reserve Board announces the designation of the Chairs and Deputy Chairs of the 12 Federal Reserve Banks for 2026",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260109a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Political Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "un",
+            "federal reserve"
           ]
         },
         {
@@ -377,41 +411,50 @@
           "title": "Federal Reserve Financial Services to take new actions to support penny circulation",
           "link": "https://www.frbservices.org/news/press-releases/01082026-penny-deposits-update",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Process Risk",
+          "risk_score": 20,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "port",
+            "federal reserve"
+          ]
         },
         {
           "date": "2026-01-06",
           "title": "Minutes of the Board's discount rate meeting on December 10, 2025",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260106a.htm",
           "source": "federal_reserve",
-          "risk_score": 0,
-          "risk_level": "None",
-          "matched_keywords": []
+          "risk_category": "Political Risk",
+          "risk_score": 10,
+          "risk_level": "Low",
+          "matched_keywords": [
+            "un"
+          ]
         },
         {
           "date": "2026-01-06",
           "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
           "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260106a.htm",
           "source": "federal_reserve",
-          "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-          "risk_score": 10,
+          "risk_category": "Regulatory Risk",
+          "risk_score": 20,
           "risk_level": "Low",
           "matched_keywords": [
-            "ban"
+            "enforcement",
+            "federal reserve"
           ]
         }
       ],
       "distribution": {
-        "None": 7,
-        "Low": 15
+        "Low": 20,
+        "Medium": 1,
+        "High": 1
       }
     },
     "database": {
       "status": "success",
       "inserted": 22,
-      "path": "shared_storage/raw/pipeline_db_insert_20260414_160000.json"
+      "path": "shared_storage/raw/pipeline_db_insert_20260415_101952.json"
     },
     "analysis": {
       "status": "success",
@@ -419,24 +462,50 @@
         "total_items": 22,
         "scored_items": [
           {
-            "date": "2026-04-08",
-            "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260408a.htm",
+            "date": "2026-04-09",
+            "title": "Federal Reserve Board announces termination of enforcement actions with Crédit Agricole S.A. and Crédit Agricole Corporate and Investment Bank, Mega International Commercial Bank Co., Ltd, and the Goldman Sachs Group, Inc.",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260409a.htm",
             "source": "federal_reserve",
-            "risk_category": "FINANCIAL_RISK::CREDIT_RISK",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 40,
+            "risk_level": "Medium",
+            "matched_keywords": [
+              "ach",
+              "un",
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Termination of enforcement actions can occasionally lead to market adjustments.",
+            "impact": 3,
+            "impact_label": "Moderate",
+            "impact_reasoning": "The termination could influence credit perceptions, affecting liquidity risk.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-04-03",
+            "title": "Federal Reserve Board issues enforcement action with former employee of United Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260403a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
             "risk_score": 30,
             "risk_level": "Low",
             "matched_keywords": [
-              "credit",
-              "ban",
-              "public"
+              "un",
+              "enforcement",
+              "federal reserve"
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Proposals involving FedNow Service could occasionally lead to operational changes.",
-            "impact": 3,
-            "impact_label": "Moderate",
-            "impact_reasoning": "Potential changes in fund transfer processes could moderately impact operations.",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
             "matrix_level": "Medium",
             "matrix_color": "#ffc107",
             "matrix_text_color": "#212529",
@@ -444,23 +513,24 @@
             "llm_scored": true
           },
           {
-            "date": "2026-03-19",
-            "title": "Agencies request comment on proposals to modernize the regulatory capital framework and maintain the strength of the banking system",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260319a.htm",
+            "date": "2026-03-26",
+            "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 20,
+            "risk_category": "Market Risk",
+            "risk_score": 30,
             "risk_level": "Low",
             "matched_keywords": [
-              "regulatory",
-              "ban"
+              "currency",
+              "un",
+              "federal reserve"
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Proposals to modernize regulatory frameworks can occasionally lead to changes.",
+            "probability_reasoning": "Exemptions under section 23A can occasionally affect market dynamics.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential regulatory changes could moderately impact treasury operations.",
+            "impact_reasoning": "This could influence liquidity management and short-term funding lines.",
             "matrix_level": "Medium",
             "matrix_color": "#ffc107",
             "matrix_text_color": "#212529",
@@ -468,23 +538,121 @@
             "llm_scored": true
           },
           {
-            "date": "2026-02-23",
-            "title": "Following earlier actions to remove reputation risk from its supervision of banks, Federal Reserve Board requests comment on proposal to codify that removal",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260223a.htm",
+            "date": "2026-03-20",
+            "title": "Federal Reserve Board issues enforcement actions with former employee of Ally Bank and former employee of Regions Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260320a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+            "risk_category": "Regulatory Risk",
             "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban",
-              "reputation"
+              "enforcement",
+              "federal reserve"
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Proposals to codify changes can occasionally lead to regulatory shifts.",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-03-13",
+            "title": "Federal Reserve Board issues enforcement actions with former employee of Equity Bank and former employee of First State Bank of Dongola",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260313a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-03-10",
+            "title": "Federal Reserve Board announces termination of enforcement actions with Industrial and Commercial Bank of China Ltd., Industrial and Commercial Bank of China Ltd., New York Branch, Standard Chartered PLC, and Standard Chartered Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260310a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 30,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "un",
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Termination of enforcement actions can occasionally lead to market adjustments.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential regulatory changes could moderately impact treasury operations.",
+            "impact_reasoning": "The termination could influence credit perceptions, affecting liquidity risk.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-03-03",
+            "title": "Federal Reserve Board issues enforcement actions with former employee of East Cambridge Savings Bank and former employee of United Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260303a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 30,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "un",
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-02-24",
+            "title": "Federal Reserve Board issues enforcement action with former employee of First Financial Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260224a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
             "matrix_level": "Medium",
             "matrix_color": "#ffc107",
             "matrix_text_color": "#212529",
@@ -496,20 +664,71 @@
             "title": "Federal Reserve Board announces it will hold a hybrid public outreach meeting on Thursday, March 26, as part of its review of regulations under the Economic Growth and Regulatory Paperwork Reduction Act (EGRPRA)",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260219a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 30,
-            "risk_level": "Low",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 60,
+            "risk_level": "High",
             "matched_keywords": [
-              "regulatory",
+              "ach",
+              "un",
               "regulation",
-              "public"
+              "regulatory",
+              "regulator",
+              "federal reserve"
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Public outreach meetings can occasionally lead to regulatory discussions.",
+            "probability_reasoning": "Public outreach meetings can occasionally lead to regulatory changes.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential regulatory discussions could moderately impact treasury operations.",
+            "impact_reasoning": "Potential regulatory changes could moderately impact liquidity management.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-02-12",
+            "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260212a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+            "matrix_level": "Medium",
+            "matrix_color": "#ffc107",
+            "matrix_text_color": "#212529",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-01-06",
+            "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260106a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "enforcement",
+              "federal reserve"
+            ],
+            "probability": 3,
+            "probability_label": "Occasional",
+            "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
             "matrix_level": "Medium",
             "matrix_color": "#ffc107",
             "matrix_text_color": "#212529",
@@ -521,16 +740,18 @@
             "title": "Minutes of the Board’s discount rate meetings on February 9 and March 18, 2026",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260414a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
+            "risk_category": "Political Risk",
+            "risk_score": 10,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "un"
+            ],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
+            "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
+            "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -542,86 +763,43 @@
             "title": "Federal Reserve Board announces approval of application by Burke & Herbert Financial Services Corp.",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260410a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
-            "probability": 1,
-            "probability_label": "Unlikely",
-            "probability_reasoning": "Approval of applications is a routine process with low risk of triggering events.",
-            "impact": 1,
-            "impact_label": "Negligible",
-            "impact_reasoning": "Such approvals are standard and do not affect liquidity or operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-04-09",
-            "title": "Federal Reserve Board announces termination of enforcement actions with Crédit Agricole S.A. and Crédit Agricole Corporate and Investment Bank, Mega International Commercial Bank Co., Ltd, and the Goldman Sachs Group, Inc.",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260409a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Termination of enforcement actions is generally positive but seldom triggers events.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "While positive, it has limited impact on liquidity or operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-04-03",
-            "title": "Federal Reserve Board issues enforcement action with former employee of United Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260403a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-03-26",
-            "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
-            "source": "federal_reserve",
-            "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+            "risk_category": "Political Risk",
             "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "currency",
-              "ban"
+              "un",
+              "federal reserve"
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Exemptions under section 23A are seldom impactful in the short term.",
+            "probability_reasoning": "Approval of applications is a common occurrence with limited immediate risk.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Exemptions may affect specific transactions but have minor overall impact.",
+            "impact_reasoning": "This event is unlikely to disrupt liquidity or funding lines significantly.",
+            "matrix_level": "Low",
+            "matrix_color": "#28a745",
+            "matrix_text_color": "#fff",
+            "matrix_score": 0,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-04-08",
+            "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260408a.htm",
+            "source": "federal_reserve",
+            "risk_category": "Political Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "un",
+              "federal reserve"
+            ],
+            "probability": 2,
+            "probability_label": "Seldom",
+            "probability_reasoning": "The proposal is in the comment stage and unlikely to have immediate effects.",
+            "impact": 2,
+            "impact_label": "Minor",
+            "impact_reasoning": "Potential changes in fund transfer methods have a minor immediate impact.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -633,63 +811,19 @@
             "title": "Federal Reserve Board releases annual audited financial statements",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260325a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
-            "probability": 1,
-            "probability_label": "Unlikely",
-            "probability_reasoning": "Annual financial statements are routine and unlikely to trigger events.",
-            "impact": 1,
-            "impact_label": "Negligible",
-            "impact_reasoning": "Routine disclosures have negligible impact on operations or liquidity.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-03-20",
-            "title": "Federal Reserve Board issues enforcement actions with former employee of Ally Bank and former employee of Regions Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260320a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-03-13",
-            "title": "Federal Reserve Board issues enforcement actions with former employee of Equity Bank and former employee of First State Bank of Dongola",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260313a.htm",
-            "source": "federal_reserve",
-            "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+            "risk_category": "Market Risk",
             "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "equity",
-              "ban"
+              "aud",
+              "federal reserve"
             ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+            "probability": 1,
+            "probability_label": "Unlikely",
+            "probability_reasoning": "Annual financial statements are routine and unlikely to trigger immediate events.",
+            "impact": 1,
+            "impact_label": "Negligible",
+            "impact_reasoning": "The release of financial statements typically has negligible impact on liquidity.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -697,45 +831,23 @@
             "llm_scored": true
           },
           {
-            "date": "2026-03-10",
-            "title": "Federal Reserve Board announces termination of enforcement actions with Industrial and Commercial Bank of China Ltd., Industrial and Commercial Bank of China Ltd., New York Branch, Standard Chartered PLC, and Standard Chartered Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260310a.htm",
+            "date": "2026-03-19",
+            "title": "Agencies request comment on proposals to modernize the regulatory capital framework and maintain the strength of the banking system",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260319a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban"
+              "regulatory",
+              "regulator"
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Termination of enforcement actions is generally positive but seldom triggers events.",
+            "probability_reasoning": "Proposals to modernize frameworks are in early stages and seldom trigger immediate effects.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "While positive, it has limited impact on liquidity or operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-03-03",
-            "title": "Federal Reserve Board issues enforcement actions with former employee of East Cambridge Savings Bank and former employee of United Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260303a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+            "impact_reasoning": "Potential regulatory changes have a minor immediate impact on liquidity.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -747,16 +859,18 @@
             "title": "Minutes of the Board's discount rate meetings on January 20 and 28, 2026",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260224a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
+            "risk_category": "Political Risk",
+            "risk_score": 10,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "un"
+            ],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
+            "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
+            "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -764,22 +878,23 @@
             "llm_scored": true
           },
           {
-            "date": "2026-02-24",
-            "title": "Federal Reserve Board issues enforcement action with former employee of First Financial Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260224a.htm",
+            "date": "2026-02-23",
+            "title": "Following earlier actions to remove reputation risk from its supervision of banks, Federal Reserve Board requests comment on proposal to codify that removal",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260223a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
+            "risk_category": "Regulatory Risk",
+            "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban"
+              "federal reserve",
+              "reputation risk"
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
+            "probability_reasoning": "The proposal is in the comment stage and unlikely to have immediate effects.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+            "impact_reasoning": "Potential changes in regulatory focus have a minor immediate impact.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -791,39 +906,19 @@
             "title": "Federal Reserve Board announces approval of application by Fulton Financial Corporation",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260219a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
-            "probability": 1,
-            "probability_label": "Unlikely",
-            "probability_reasoning": "Approval of applications is a routine process with low risk of triggering events.",
-            "impact": 1,
-            "impact_label": "Negligible",
-            "impact_reasoning": "Such approvals are standard and do not affect liquidity or operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-02-12",
-            "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260212a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
+            "risk_category": "Political Risk",
+            "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban"
+              "un",
+              "federal reserve"
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
+            "probability_reasoning": "Approval of applications is a common occurrence with limited immediate risk.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+            "impact_reasoning": "This event is unlikely to disrupt liquidity or funding lines significantly.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -835,18 +930,19 @@
             "title": "Federal Reserve Board announces the designation of the Chairs and Deputy Chairs of the 12 Federal Reserve Banks for 2026",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260109a.htm",
             "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
+            "risk_category": "Political Risk",
+            "risk_score": 20,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban"
+              "un",
+              "federal reserve"
             ],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Designation of chairs is a routine process with low risk of triggering events.",
+            "probability_reasoning": "Designation of chairs is a routine administrative action with minimal risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such designations are standard and do not affect liquidity or operations.",
+            "impact_reasoning": "This event is unlikely to affect liquidity or treasury operations.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -858,16 +954,19 @@
             "title": "Federal Reserve Financial Services to take new actions to support penny circulation",
             "link": "https://www.frbservices.org/news/press-releases/01082026-penny-deposits-update",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
-            "probability": 1,
-            "probability_label": "Unlikely",
+            "risk_category": "Process Risk",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "port",
+              "federal reserve"
+            ],
+            "probability": 2,
+            "probability_label": "Seldom",
             "probability_reasoning": "Actions to support penny circulation are unlikely to trigger significant events.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such actions have negligible impact on liquidity or operations.",
+            "impact_reasoning": "Such actions have negligible impact on liquidity or funding lines.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -879,39 +978,18 @@
             "title": "Minutes of the Board's discount rate meeting on December 10, 2025",
             "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260106a.htm",
             "source": "federal_reserve",
-            "risk_category": {},
-            "risk_score": 0,
-            "risk_level": "None",
-            "matched_keywords": [],
-            "probability": 1,
-            "probability_label": "Unlikely",
-            "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
-            "impact": 1,
-            "impact_label": "Negligible",
-            "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#28a745",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-01-06",
-            "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260106a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+            "risk_category": "Political Risk",
             "risk_score": 10,
             "risk_level": "Low",
             "matched_keywords": [
-              "ban"
+              "un"
             ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+            "probability": 1,
+            "probability_label": "Unlikely",
+            "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
+            "impact": 1,
+            "impact_label": "Negligible",
+            "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#28a745",
             "matrix_text_color": "#fff",
@@ -926,24 +1004,50 @@
           "high": [],
           "medium": [
             {
-              "date": "2026-04-08",
-              "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260408a.htm",
+              "date": "2026-04-09",
+              "title": "Federal Reserve Board announces termination of enforcement actions with Crédit Agricole S.A. and Crédit Agricole Corporate and Investment Bank, Mega International Commercial Bank Co., Ltd, and the Goldman Sachs Group, Inc.",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260409a.htm",
               "source": "federal_reserve",
-              "risk_category": "FINANCIAL_RISK::CREDIT_RISK",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 40,
+              "risk_level": "Medium",
+              "matched_keywords": [
+                "ach",
+                "un",
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Termination of enforcement actions can occasionally lead to market adjustments.",
+              "impact": 3,
+              "impact_label": "Moderate",
+              "impact_reasoning": "The termination could influence credit perceptions, affecting liquidity risk.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-04-03",
+              "title": "Federal Reserve Board issues enforcement action with former employee of United Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260403a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
               "risk_score": 30,
               "risk_level": "Low",
               "matched_keywords": [
-                "credit",
-                "ban",
-                "public"
+                "un",
+                "enforcement",
+                "federal reserve"
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Proposals involving FedNow Service could occasionally lead to operational changes.",
-              "impact": 3,
-              "impact_label": "Moderate",
-              "impact_reasoning": "Potential changes in fund transfer processes could moderately impact operations.",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
               "matrix_level": "Medium",
               "matrix_color": "#ffc107",
               "matrix_text_color": "#212529",
@@ -951,23 +1055,24 @@
               "llm_scored": true
             },
             {
-              "date": "2026-03-19",
-              "title": "Agencies request comment on proposals to modernize the regulatory capital framework and maintain the strength of the banking system",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260319a.htm",
+              "date": "2026-03-26",
+              "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 20,
+              "risk_category": "Market Risk",
+              "risk_score": 30,
               "risk_level": "Low",
               "matched_keywords": [
-                "regulatory",
-                "ban"
+                "currency",
+                "un",
+                "federal reserve"
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Proposals to modernize regulatory frameworks can occasionally lead to changes.",
+              "probability_reasoning": "Exemptions under section 23A can occasionally affect market dynamics.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential regulatory changes could moderately impact treasury operations.",
+              "impact_reasoning": "This could influence liquidity management and short-term funding lines.",
               "matrix_level": "Medium",
               "matrix_color": "#ffc107",
               "matrix_text_color": "#212529",
@@ -975,23 +1080,121 @@
               "llm_scored": true
             },
             {
-              "date": "2026-02-23",
-              "title": "Following earlier actions to remove reputation risk from its supervision of banks, Federal Reserve Board requests comment on proposal to codify that removal",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260223a.htm",
+              "date": "2026-03-20",
+              "title": "Federal Reserve Board issues enforcement actions with former employee of Ally Bank and former employee of Regions Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260320a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+              "risk_category": "Regulatory Risk",
               "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban",
-                "reputation"
+                "enforcement",
+                "federal reserve"
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Proposals to codify changes can occasionally lead to regulatory shifts.",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-03-13",
+              "title": "Federal Reserve Board issues enforcement actions with former employee of Equity Bank and former employee of First State Bank of Dongola",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260313a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-03-10",
+              "title": "Federal Reserve Board announces termination of enforcement actions with Industrial and Commercial Bank of China Ltd., Industrial and Commercial Bank of China Ltd., New York Branch, Standard Chartered PLC, and Standard Chartered Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260310a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 30,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "un",
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Termination of enforcement actions can occasionally lead to market adjustments.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential regulatory changes could moderately impact treasury operations.",
+              "impact_reasoning": "The termination could influence credit perceptions, affecting liquidity risk.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-03-03",
+              "title": "Federal Reserve Board issues enforcement actions with former employee of East Cambridge Savings Bank and former employee of United Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260303a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 30,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "un",
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-02-24",
+              "title": "Federal Reserve Board issues enforcement action with former employee of First Financial Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260224a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
               "matrix_level": "Medium",
               "matrix_color": "#ffc107",
               "matrix_text_color": "#212529",
@@ -1003,20 +1206,71 @@
               "title": "Federal Reserve Board announces it will hold a hybrid public outreach meeting on Thursday, March 26, as part of its review of regulations under the Economic Growth and Regulatory Paperwork Reduction Act (EGRPRA)",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260219a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 30,
-              "risk_level": "Low",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 60,
+              "risk_level": "High",
               "matched_keywords": [
-                "regulatory",
+                "ach",
+                "un",
                 "regulation",
-                "public"
+                "regulatory",
+                "regulator",
+                "federal reserve"
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Public outreach meetings can occasionally lead to regulatory discussions.",
+              "probability_reasoning": "Public outreach meetings can occasionally lead to regulatory changes.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential regulatory discussions could moderately impact treasury operations.",
+              "impact_reasoning": "Potential regulatory changes could moderately impact liquidity management.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-02-12",
+              "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260212a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
+              "matrix_level": "Medium",
+              "matrix_color": "#ffc107",
+              "matrix_text_color": "#212529",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-01-06",
+              "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260106a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "enforcement",
+                "federal reserve"
+              ],
+              "probability": 3,
+              "probability_label": "Occasional",
+              "probability_reasoning": "Enforcement actions against individuals can occasionally affect perceptions.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Such actions typically have limited impact on overall liquidity or operations.",
               "matrix_level": "Medium",
               "matrix_color": "#ffc107",
               "matrix_text_color": "#212529",
@@ -1030,16 +1284,18 @@
               "title": "Minutes of the Board’s discount rate meetings on February 9 and March 18, 2026",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260414a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
+              "risk_category": "Political Risk",
+              "risk_score": 10,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "un"
+              ],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
+              "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
+              "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1051,86 +1307,43 @@
               "title": "Federal Reserve Board announces approval of application by Burke & Herbert Financial Services Corp.",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260410a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
-              "probability": 1,
-              "probability_label": "Unlikely",
-              "probability_reasoning": "Approval of applications is a routine process with low risk of triggering events.",
-              "impact": 1,
-              "impact_label": "Negligible",
-              "impact_reasoning": "Such approvals are standard and do not affect liquidity or operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-04-09",
-              "title": "Federal Reserve Board announces termination of enforcement actions with Crédit Agricole S.A. and Crédit Agricole Corporate and Investment Bank, Mega International Commercial Bank Co., Ltd, and the Goldman Sachs Group, Inc.",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260409a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Termination of enforcement actions is generally positive but seldom triggers events.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "While positive, it has limited impact on liquidity or operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-04-03",
-              "title": "Federal Reserve Board issues enforcement action with former employee of United Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260403a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-03-26",
-              "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
-              "source": "federal_reserve",
-              "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+              "risk_category": "Political Risk",
               "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "currency",
-                "ban"
+                "un",
+                "federal reserve"
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Exemptions under section 23A are seldom impactful in the short term.",
+              "probability_reasoning": "Approval of applications is a common occurrence with limited immediate risk.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Exemptions may affect specific transactions but have minor overall impact.",
+              "impact_reasoning": "This event is unlikely to disrupt liquidity or funding lines significantly.",
+              "matrix_level": "Low",
+              "matrix_color": "#28a745",
+              "matrix_text_color": "#fff",
+              "matrix_score": 0,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-04-08",
+              "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260408a.htm",
+              "source": "federal_reserve",
+              "risk_category": "Political Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "un",
+                "federal reserve"
+              ],
+              "probability": 2,
+              "probability_label": "Seldom",
+              "probability_reasoning": "The proposal is in the comment stage and unlikely to have immediate effects.",
+              "impact": 2,
+              "impact_label": "Minor",
+              "impact_reasoning": "Potential changes in fund transfer methods have a minor immediate impact.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1142,63 +1355,19 @@
               "title": "Federal Reserve Board releases annual audited financial statements",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260325a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
-              "probability": 1,
-              "probability_label": "Unlikely",
-              "probability_reasoning": "Annual financial statements are routine and unlikely to trigger events.",
-              "impact": 1,
-              "impact_label": "Negligible",
-              "impact_reasoning": "Routine disclosures have negligible impact on operations or liquidity.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-03-20",
-              "title": "Federal Reserve Board issues enforcement actions with former employee of Ally Bank and former employee of Regions Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260320a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-03-13",
-              "title": "Federal Reserve Board issues enforcement actions with former employee of Equity Bank and former employee of First State Bank of Dongola",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260313a.htm",
-              "source": "federal_reserve",
-              "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+              "risk_category": "Market Risk",
               "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "equity",
-                "ban"
+                "aud",
+                "federal reserve"
               ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+              "probability": 1,
+              "probability_label": "Unlikely",
+              "probability_reasoning": "Annual financial statements are routine and unlikely to trigger immediate events.",
+              "impact": 1,
+              "impact_label": "Negligible",
+              "impact_reasoning": "The release of financial statements typically has negligible impact on liquidity.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1206,45 +1375,23 @@
               "llm_scored": true
             },
             {
-              "date": "2026-03-10",
-              "title": "Federal Reserve Board announces termination of enforcement actions with Industrial and Commercial Bank of China Ltd., Industrial and Commercial Bank of China Ltd., New York Branch, Standard Chartered PLC, and Standard Chartered Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260310a.htm",
+              "date": "2026-03-19",
+              "title": "Agencies request comment on proposals to modernize the regulatory capital framework and maintain the strength of the banking system",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260319a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban"
+                "regulatory",
+                "regulator"
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Termination of enforcement actions is generally positive but seldom triggers events.",
+              "probability_reasoning": "Proposals to modernize frameworks are in early stages and seldom trigger immediate effects.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "While positive, it has limited impact on liquidity or operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-03-03",
-              "title": "Federal Reserve Board issues enforcement actions with former employee of East Cambridge Savings Bank and former employee of United Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260303a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+              "impact_reasoning": "Potential regulatory changes have a minor immediate impact on liquidity.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1256,16 +1403,18 @@
               "title": "Minutes of the Board's discount rate meetings on January 20 and 28, 2026",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260224a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
+              "risk_category": "Political Risk",
+              "risk_score": 10,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "un"
+              ],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
+              "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
+              "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1273,22 +1422,23 @@
               "llm_scored": true
             },
             {
-              "date": "2026-02-24",
-              "title": "Federal Reserve Board issues enforcement action with former employee of First Financial Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260224a.htm",
+              "date": "2026-02-23",
+              "title": "Following earlier actions to remove reputation risk from its supervision of banks, Federal Reserve Board requests comment on proposal to codify that removal",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260223a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
+              "risk_category": "Regulatory Risk",
+              "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban"
+                "federal reserve",
+                "reputation risk"
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
+              "probability_reasoning": "The proposal is in the comment stage and unlikely to have immediate effects.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+              "impact_reasoning": "Potential changes in regulatory focus have a minor immediate impact.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1300,39 +1450,19 @@
               "title": "Federal Reserve Board announces approval of application by Fulton Financial Corporation",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260219a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
-              "probability": 1,
-              "probability_label": "Unlikely",
-              "probability_reasoning": "Approval of applications is a routine process with low risk of triggering events.",
-              "impact": 1,
-              "impact_label": "Negligible",
-              "impact_reasoning": "Such approvals are standard and do not affect liquidity or operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-02-12",
-              "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260212a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
+              "risk_category": "Political Risk",
+              "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban"
+                "un",
+                "federal reserve"
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
+              "probability_reasoning": "Approval of applications is a common occurrence with limited immediate risk.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+              "impact_reasoning": "This event is unlikely to disrupt liquidity or funding lines significantly.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1344,18 +1474,19 @@
               "title": "Federal Reserve Board announces the designation of the Chairs and Deputy Chairs of the 12 Federal Reserve Banks for 2026",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/other20260109a.htm",
               "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
+              "risk_category": "Political Risk",
+              "risk_score": 20,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban"
+                "un",
+                "federal reserve"
               ],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Designation of chairs is a routine process with low risk of triggering events.",
+              "probability_reasoning": "Designation of chairs is a routine administrative action with minimal risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such designations are standard and do not affect liquidity or operations.",
+              "impact_reasoning": "This event is unlikely to affect liquidity or treasury operations.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1367,16 +1498,19 @@
               "title": "Federal Reserve Financial Services to take new actions to support penny circulation",
               "link": "https://www.frbservices.org/news/press-releases/01082026-penny-deposits-update",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
-              "probability": 1,
-              "probability_label": "Unlikely",
+              "risk_category": "Process Risk",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "port",
+                "federal reserve"
+              ],
+              "probability": 2,
+              "probability_label": "Seldom",
               "probability_reasoning": "Actions to support penny circulation are unlikely to trigger significant events.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such actions have negligible impact on liquidity or operations.",
+              "impact_reasoning": "Such actions have negligible impact on liquidity or funding lines.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1388,39 +1522,18 @@
               "title": "Minutes of the Board's discount rate meeting on December 10, 2025",
               "link": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260106a.htm",
               "source": "federal_reserve",
-              "risk_category": {},
-              "risk_score": 0,
-              "risk_level": "None",
-              "matched_keywords": [],
-              "probability": 1,
-              "probability_label": "Unlikely",
-              "probability_reasoning": "Minutes of past meetings typically do not trigger immediate events.",
-              "impact": 1,
-              "impact_label": "Negligible",
-              "impact_reasoning": "Historical meeting minutes have no direct impact on current operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#28a745",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-01-06",
-              "title": "Federal Reserve Board issues enforcement action with former employee of Regions Bank",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260106a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+              "risk_category": "Political Risk",
               "risk_score": 10,
               "risk_level": "Low",
               "matched_keywords": [
-                "ban"
+                "un"
               ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are seldom impactful on a systemic level.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such actions are unlikely to disrupt liquidity or operations significantly.",
+              "probability": 1,
+              "probability_label": "Unlikely",
+              "probability_reasoning": "The minutes of discount rate meetings typically do not trigger immediate market reactions.",
+              "impact": 1,
+              "impact_label": "Negligible",
+              "impact_reasoning": "Such minutes are routine and unlikely to affect liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#28a745",
               "matrix_text_color": "#fff",
@@ -1430,39 +1543,41 @@
           ]
         },
         "by_category": {
-          "FINANCIAL_RISK::CREDIT_RISK": 1,
-          "NON_COMMERCIAL_RISK::REGULATORY_RISK": 12,
-          "Unknown": 7,
-          "FINANCIAL_RISK::MARKET_RISK": 2
+          "Regulatory Risk": 12,
+          "Market Risk": 2,
+          "Political Risk": 7,
+          "Process Risk": 1
         },
         "top_keywords": [
-          "ban",
-          "public",
+          "federal reserve",
+          "un",
+          "enforcement",
+          "ach",
           "regulatory",
-          "credit",
+          "regulator",
           "currency",
-          "equity",
-          "reputation",
+          "aud",
+          "reputation risk",
           "regulation"
         ],
         "matrix_summary": [
           [
-            8,
+            5,
             0,
             0,
             0,
             0
           ],
           [
-            0,
-            10,
+            1,
+            5,
             0,
             0,
             0
           ],
           [
             0,
-            0,
+            7,
             4,
             0,
             0
@@ -1487,35 +1602,37 @@
     "reporting": {
       "status": "success",
       "report": {
-        "timestamp": "2026-04-14T16:00:21.672805",
+        "timestamp": "2026-04-15T10:20:10.650489",
         "title": "Federal Reserve News Risk Analysis Report",
         "summary": {
           "total_items": 22,
           "extreme_count": 0,
           "high_count": 0,
-          "medium_count": 4,
-          "low_count": 18,
+          "medium_count": 11,
+          "low_count": 11,
           "llm_scored": true
         },
         "recommendations": [
-          "Monitor NON_COMMERCIAL_RISK::REGULATORY_RISK closely: 12 items flagged.",
-          "Monitor Unknown closely: 7 items flagged."
+          "Monitor Regulatory Risk closely: 12 items flagged.",
+          "Monitor Political Risk closely: 7 items flagged."
         ],
         "top_keywords": [
-          "ban",
-          "public",
+          "federal reserve",
+          "un",
+          "enforcement",
+          "ach",
           "regulatory",
-          "credit",
+          "regulator",
           "currency",
-          "equity",
-          "reputation",
+          "aud",
+          "reputation risk",
           "regulation"
         ],
         "category_distribution": {
-          "FINANCIAL_RISK::CREDIT_RISK": 1,
-          "NON_COMMERCIAL_RISK::REGULATORY_RISK": 12,
-          "Unknown": 7,
-          "FINANCIAL_RISK::MARKET_RISK": 2
+          "Regulatory Risk": 12,
+          "Market Risk": 2,
+          "Political Risk": 7,
+          "Process Risk": 1
         }
       }
     },
@@ -1531,11 +1648,629 @@
     },
     "regulatory_classification": {
       "status": "success",
-      "processed": 23,
+      "processed": 15,
       "regulatory": 0,
       "errors": 0,
-      "total": 23
+      "total": 15
+    },
+    "actions_generation": {
+      "status": "success",
+      "settings_used": {
+        "min_score": 40.0,
+        "exclude": [
+          "weather",
+          "disaster"
+        ],
+        "sources": [
+          "guardian",
+          "data",
+          "matrix"
+        ]
+      },
+      "posture": "CRITICAL",
+      "summary": "In the current critical risk posture, immediate focus should be on managing liquidity and ensuring payment continuity, particularly in the US where rapid CPI acceleration poses significant inflation risks. Short-term funding strategies must be reassessed in Canada due to elevated overnight rates, while cash mobility risks are heightened in China, Germany, and France due to volatile FX reference rates impacting market stability. Proactive measures are essential to mitigate these risks and maintain operational treasury stability.",
+      "country_groups": [
+        {
+          "country": "USA",
+          "flag": "🇺🇸",
+          "max_score": 75.0,
+          "category_cards": [
+            {
+              "category": "Inflation",
+              "severity": "HIGH",
+              "effective_score": 75.0,
+              "alert_count": 1,
+              "top_alert_title": "US CPI Rapid Acceleration",
+              "action": {
+                "recommended_action": "Increase cash reserves by liquidating non-essential short-term investments.",
+                "why": "With rapid inflation acceleration, maintaining liquidity is crucial to meet rising operational costs and unexpected expenses. Liquidating non-essential investments ensures immediate access to cash without relying on potentially volatile credit markets.",
+                "expected_outcome": "The company will have sufficient liquidity to manage increased costs and maintain payment continuity without disruption.",
+                "pros": [
+                  "Ensures immediate liquidity availability.",
+                  "Reduces reliance on external short-term funding."
+                ],
+                "cons": [
+                  "Potential loss of investment income.",
+                  "May incur transaction costs or penalties for early liquidation."
+                ],
+                "alternatives": [
+                  "Secure a short-term credit line for liquidity backup.",
+                  "Implement cost-cutting measures to preserve cash flow."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "US CPI Rapid Acceleration",
+                  "effective_score": 75.0,
+                  "source": "data_alert",
+                  "score": 75.0,
+                  "weight_applied": 1.0
+                }
+              ]
+            },
+            {
+              "category": "FX Risk",
+              "severity": "MEDIUM",
+              "effective_score": 50.0,
+              "alert_count": 1,
+              "top_alert_title": "USD Strength Extreme",
+              "action": {
+                "recommended_action": "Implement a hedging strategy using forward contracts to lock in current exchange rates for future transactions.",
+                "why": "The USD is experiencing extreme strength, which could negatively impact the value of future foreign currency transactions. Locking in current rates will mitigate the risk of adverse currency fluctuations.",
+                "expected_outcome": "By securing exchange rates now, the company will protect itself from potential losses due to further USD appreciation.",
+                "pros": [
+                  "Reduces uncertainty in cash flow forecasting",
+                  "Protects profit margins from currency volatility"
+                ],
+                "cons": [
+                  "Potential opportunity cost if USD weakens",
+                  "Requires upfront costs for hedging instruments"
+                ],
+                "alternatives": [
+                  "Use options contracts for more flexibility",
+                  "Increase natural hedging by balancing currency inflows and outflows"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "USD Strength Extreme",
+                  "effective_score": 50.0,
+                  "source": "data_alert",
+                  "score": 50.0,
+                  "weight_applied": 1.0
+                }
+              ]
+            },
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.178",
+              "action": {
+                "recommended_action": "Increase USD cash reserves by converting EUR to USD at current rates.",
+                "why": "The USD/EUR rate indicates a favorable position for USD, and increasing USD reserves can mitigate potential adverse market movements. This action ensures liquidity and payment continuity in USD, which is crucial for operations.",
+                "expected_outcome": "Enhanced USD liquidity and reduced exposure to potential adverse FX movements, ensuring smoother operational cash flow management.",
+                "pros": [
+                  "Improves USD liquidity position.",
+                  "Reduces FX exposure risk."
+                ],
+                "cons": [
+                  "Potential opportunity cost if EUR strengthens.",
+                  "Transaction costs associated with currency conversion."
+                ],
+                "alternatives": [
+                  "Hedge EUR exposure using forward contracts.",
+                  "Diversify currency holdings to balance FX risk."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate USD/EUR: 1.178",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "China",
+          "flag": "🇨🇳",
+          "max_score": 56.6,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 56.6,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate CNY/EUR: 8.0353",
+              "action": {
+                "recommended_action": "Initiate a currency hedge for CNY exposure against EUR.",
+                "why": "The ECB FX reference rate indicates a significant market risk due to currency fluctuations. Hedging will mitigate potential adverse impacts on cash flows and financial statements.",
+                "expected_outcome": "Stabilized cash flow and reduced volatility in financial results due to currency rate fluctuations.",
+                "pros": [
+                  "Reduces financial uncertainty related to currency movements.",
+                  "Protects against potential losses from adverse currency shifts."
+                ],
+                "cons": [
+                  "Hedging can incur additional costs.",
+                  "Potential opportunity loss if the currency moves favorably."
+                ],
+                "alternatives": [
+                  "Increase cash reserves in EUR to naturally hedge against CNY exposure.",
+                  "Negotiate forward contracts with key suppliers to lock in current rates."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate CNY/EUR: 8.0353",
+                  "effective_score": 56.6,
+                  "source": "ecb",
+                  "score": 56.59,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Canada",
+          "flag": "🇨🇦",
+          "max_score": 50.0,
+          "category_cards": [
+            {
+              "category": "Monetary Policy",
+              "severity": "MEDIUM",
+              "effective_score": 50.0,
+              "alert_count": 1,
+              "top_alert_title": "Canada Overnight Rate Elevated",
+              "action": {
+                "recommended_action": "Increase the liquidity buffer by 10% to ensure sufficient cash reserves.",
+                "why": "With the elevated overnight rate, borrowing costs may rise, impacting short-term funding. A larger liquidity buffer will help maintain payment continuity and cash mobility.",
+                "expected_outcome": "The organization will have enough liquidity to manage higher borrowing costs and maintain operational stability.",
+                "pros": [
+                  "Ensures payment continuity despite higher rates",
+                  "Reduces reliance on short-term borrowing"
+                ],
+                "cons": [
+                  "Opportunity cost of holding more cash",
+                  "Potential lower returns on excess liquidity"
+                ],
+                "alternatives": [
+                  "Negotiate better terms with lenders",
+                  "Invest in short-term, high-liquidity instruments"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "Canada Overnight Rate Elevated",
+                  "effective_score": 50.0,
+                  "source": "data_alert",
+                  "score": 50.0,
+                  "weight_applied": 1.0
+                }
+              ]
+            },
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate CAD/EUR: 1.6235",
+              "action": {
+                "recommended_action": "Initiate a forward contract to hedge against potential adverse movements in the CAD/EUR exchange rate.",
+                "why": "The current ECB FX reference rate indicates a potential risk of currency volatility that could impact cash flow and financial stability. Hedging will protect against unfavorable exchange rate fluctuations.",
+                "expected_outcome": "The company will mitigate the risk of currency losses and ensure more predictable cash flows.",
+                "pros": [
+                  "Reduces exposure to currency volatility",
+                  "Provides more predictable financial planning"
+                ],
+                "cons": [
+                  "Potential opportunity cost if the exchange rate moves favorably",
+                  "Costs associated with setting up the hedge"
+                ],
+                "alternatives": [
+                  "Utilize options to provide more flexibility in hedging",
+                  "Increase cash reserves in EUR to naturally hedge against currency risk"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate CAD/EUR: 1.6235",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Germany",
+          "flag": "🇩🇪",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 9,
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.178",
+              "action": {
+                "recommended_action": "Initiate a currency hedging strategy using forward contracts for USD/EUR and GBP/EUR.",
+                "why": "The current FX rates indicate potential volatility and market risk exposure in USD and GBP against EUR. Hedging will protect against unfavorable currency movements.",
+                "expected_outcome": "The company will mitigate potential losses from adverse currency fluctuations, ensuring more predictable cash flows.",
+                "pros": [
+                  "Reduces financial uncertainty",
+                  "Protects against unfavorable currency movements"
+                ],
+                "cons": [
+                  "Potential opportunity cost if rates move favorably",
+                  "Costs associated with hedging instruments"
+                ],
+                "alternatives": [
+                  "Use options for more flexible hedging",
+                  "Increase cash reserves in foreign currencies"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate USD/EUR: 1.178",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate GBP/EUR: 0.86935",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate JPY/EUR: 187.41",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate CAD/EUR: 1.6235",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate AUD/EUR: 1.6507",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "France",
+          "flag": "🇫🇷",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 9,
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.178",
+              "action": {
+                "recommended_action": "Implement a currency hedging strategy using forward contracts for USD, GBP, and JPY exposures.",
+                "why": "The current FX rates indicate significant market volatility, which could impact cash flow and financial stability. Hedging will mitigate potential adverse effects of currency fluctuations on the company's financials.",
+                "expected_outcome": "The company will stabilize its cash flows and protect its financial performance from adverse currency movements.",
+                "pros": [
+                  "Reduces exposure to currency risk.",
+                  "Provides certainty over future cash flows."
+                ],
+                "cons": [
+                  "Potential opportunity cost if the market moves favorably.",
+                  "Requires upfront cost and resources to implement."
+                ],
+                "alternatives": [
+                  "Use options instead of forwards for more flexibility.",
+                  "Increase cash reserves in foreign currencies to naturally hedge exposures."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate USD/EUR: 1.178",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate GBP/EUR: 0.86935",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate JPY/EUR: 187.41",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate CAD/EUR: 1.6235",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                },
+                {
+                  "title": "ECB FX reference rate AUD/EUR: 1.6507",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "UK",
+          "flag": "🇬🇧",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate GBP/EUR: 0.86935",
+              "action": {
+                "recommended_action": "Increase GBP cash reserves by converting EUR holdings at current favorable rates.",
+                "why": "The current ECB FX reference rate indicates a favorable exchange rate for converting EUR to GBP, which can enhance liquidity in GBP. This is crucial for maintaining payment continuity and managing short-term funding needs in the UK market.",
+                "expected_outcome": "Enhanced GBP liquidity, ensuring smoother payment operations and reduced short-term funding pressure.",
+                "pros": [
+                  "Improved GBP liquidity position.",
+                  "Potential cost savings from favorable exchange rates."
+                ],
+                "cons": [
+                  "Exchange rate volatility risk.",
+                  "Potential opportunity cost if rates improve further."
+                ],
+                "alternatives": [
+                  "Hedge against further GBP/EUR fluctuations using forward contracts.",
+                  "Diversify currency holdings to mitigate exchange rate risks."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate GBP/EUR: 0.86935",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Japan",
+          "flag": "🇯🇵",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate JPY/EUR: 187.41",
+              "action": {
+                "recommended_action": "Initiate a foreign exchange hedge for JPY/EUR exposure.",
+                "why": "The ECB FX reference rate indicates a significant market movement that could affect cash flow and financial stability. Hedging will mitigate potential adverse impacts from currency fluctuations.",
+                "expected_outcome": "The company's exposure to unfavorable currency movements is reduced, stabilizing cash flows and preserving liquidity.",
+                "pros": [
+                  "Reduces currency risk exposure",
+                  "Stabilizes cash flow projections"
+                ],
+                "cons": [
+                  "Potential cost of hedging instruments",
+                  "May limit upside potential from favorable currency movements"
+                ],
+                "alternatives": [
+                  "Monitor the FX rate closely and adjust hedging strategy as needed",
+                  "Increase cash reserves to buffer against potential currency volatility"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate JPY/EUR: 187.41",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Australia",
+          "flag": "🇦🇺",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate AUD/EUR: 1.6507",
+              "action": {
+                "recommended_action": "Initiate a currency hedge for AUD/EUR exposure to mitigate potential adverse movements.",
+                "why": "The current ECB FX reference rate indicates a significant market movement that could impact cash flows. Hedging will protect against unfavorable currency fluctuations.",
+                "expected_outcome": "The treasury will stabilize cash flow projections and protect the company's financial position against currency volatility.",
+                "pros": [
+                  "Reduces exposure to currency volatility",
+                  "Stabilizes cash flow projections"
+                ],
+                "cons": [
+                  "Potential cost of hedging instruments",
+                  "Opportunity cost if the currency moves favorably"
+                ],
+                "alternatives": [
+                  "Increase cash reserves in EUR to naturally hedge against AUD depreciation",
+                  "Delay major AUD/EUR transactions until the market stabilizes"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate AUD/EUR: 1.6507",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Brazil",
+          "flag": "🇧🇷",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate BRL/EUR: 5.8878",
+              "action": {
+                "recommended_action": "Increase hedging on BRL/EUR currency exposure.",
+                "why": "The ECB FX reference rate indicates a significant market movement, suggesting potential volatility in the BRL/EUR exchange rate. Hedging can mitigate the risk of adverse currency fluctuations impacting cash flows.",
+                "expected_outcome": "By increasing hedging, the company can stabilize its cash flows and protect against potential losses from unfavorable exchange rate movements.",
+                "pros": [
+                  "Reduces exposure to currency volatility.",
+                  "Provides more predictable financial outcomes."
+                ],
+                "cons": [
+                  "Potentially higher hedging costs.",
+                  "May limit upside potential if the currency moves favorably."
+                ],
+                "alternatives": [
+                  "Monitor the market closely and adjust hedging strategies as needed.",
+                  "Diversify currency exposure to reduce reliance on BRL/EUR movements."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate BRL/EUR: 5.8878",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Mexico",
+          "flag": "🇲🇽",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate MXN/EUR: 20.3859",
+              "action": {
+                "recommended_action": "Engage in a currency swap to hedge against MXN/EUR volatility.",
+                "why": "The ECB FX reference rate indicates potential volatility in the MXN/EUR exchange rate, which could impact cash flow and liquidity. Hedging will mitigate the risk of unfavorable currency movements affecting financial stability.",
+                "expected_outcome": "The action will stabilize cash flows by locking in exchange rates, reducing exposure to currency fluctuations.",
+                "pros": [
+                  "Reduces exposure to currency volatility.",
+                  "Stabilizes cash flow projections."
+                ],
+                "cons": [
+                  "Potential costs associated with swap agreements.",
+                  "May limit upside potential if the MXN strengthens."
+                ],
+                "alternatives": [
+                  "Increase cash reserves in EUR to naturally hedge against MXN depreciation.",
+                  "Utilize forward contracts to lock in future exchange rates."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate MXN/EUR: 20.3859",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "India",
+          "flag": "🇮🇳",
+          "max_score": 47.2,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.2,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate INR/EUR: 110.0695",
+              "action": {
+                "recommended_action": "Hedge the INR/EUR exposure using forward contracts or options.",
+                "why": "The ECB FX reference rate indicates a significant movement in the INR/EUR exchange rate, which could impact cash flows and financial statements. Hedging will protect against unfavorable currency fluctuations.",
+                "expected_outcome": "The company will mitigate potential losses from adverse currency movements, ensuring more predictable cash flows.",
+                "pros": [
+                  "Reduces the impact of currency volatility on financial performance.",
+                  "Provides certainty in cash flow projections."
+                ],
+                "cons": [
+                  "Potential costs associated with hedging instruments.",
+                  "May limit potential gains from favorable currency movements."
+                ],
+                "alternatives": [
+                  "Increase cash reserves in EUR to naturally hedge exposure.",
+                  "Implement a dynamic hedging strategy to adjust positions based on market conditions."
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate INR/EUR: 110.0695",
+                  "effective_score": 47.2,
+                  "source": "ecb",
+                  "score": 47.16,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "total_alerts": 30,
+      "generated_at": "2026-04-15 17:21 UTC",
+      "persona": "cash_manager",
+      "weights_used": false
     }
   },
-  "completion_time": "2026-04-14T16:01:59.559947"
+  "completion_time": "2026-04-15T10:21:29.315454"
 }

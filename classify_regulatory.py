@@ -31,6 +31,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ── Config ────────────────────────────────────────────────────────────────
 DB_PATH       = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))

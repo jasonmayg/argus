@@ -54,6 +54,10 @@
         <a class="nav-item" onclick="showPage('chat', this)">
             <span class="nav-icon">◎</span><span class="nav-text">Guardian Chat</span>
         </a>
+        <!-- ★ Actions entry added -->
+        <a class="nav-item" onclick="showPage('actions', this)">
+            <span class="nav-icon">▶</span><span class="nav-text">Actions</span>
+        </a>
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span><span class="nav-text">Data Source</span>
         </a>
@@ -531,6 +535,46 @@
 
 
         <!-- ─────────────────────────────────────────────────
+             PAGE: ACTIONS  ← ★ ADDED
+        ───────────────────────────────────────────────── -->
+        <div class="page" id="page-actions">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="font-size:16px;font-weight:700;color:var(--text-main);">▶ Treasury Actions</div>
+                        <span id="actionsPostureBadge" style="font-size:11px;font-weight:700;padding:3px 10px;
+                              border-radius:12px;border:1px solid var(--border);font-family:var(--font-mono);">—</span>
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:3px;"
+                         id="actionsMeta">—</div>
+                </div>
+                <button class="btn btn-sm" id="actionsRegenBtn" onclick="regenerateActions()"
+                    style="transition:all 0.2s;">↻ Re-generate</button>
+            </div>
+            <div id="actionsStaleBanner"
+                 style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;
+                        padding:8px 14px;margin-bottom:12px;font-size:11px;color:#92400E;">
+                ⚠ Persona or weights changed — recommendations may be outdated.
+            </div>
+            <div class="card" style="padding:14px 18px;margin-bottom:16px;">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                            color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">Executive Summary</div>
+                <div id="actionsSummary" style="font-size:13px;line-height:1.7;color:var(--text-secondary);">—</div>
+            </div>
+            <div id="actionsContainer">
+                <div style="text-align:center;padding:48px;color:var(--text-muted);">
+                    <div style="font-size:24px;margin-bottom:12px;">▶</div>
+                    <div>Loading recommendations…</div>
+                </div>
+            </div>
+            <div style="text-align:center;padding:20px;font-size:10px;color:var(--text-muted);
+                        border-top:1px solid var(--border);margin-top:16px;">
+                AI-generated recommendations. Always apply professional judgment before taking action.
+            </div>
+        </div><!-- /page-actions -->
+
+
+        <!-- ─────────────────────────────────────────────────
              PAGE: DATA SOURCE
         ───────────────────────────────────────────────── -->
         <div class="page" id="page-data">
@@ -697,6 +741,8 @@
 <script src="/static/js/tune-modal.js"></script>
 <script src="/static/js/geomap.js"></script>
 <script src="/static/js/app.js"></script>
+<!-- ★ Actions module added -->
+<script src="/static/js/actions.js"></script>
 
 </body>
 </html>

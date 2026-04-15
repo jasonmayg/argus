@@ -8,6 +8,7 @@ const PAGE_TITLES = {
     chat:     'Guardian Chat',
     cash:     'Cash Position',
     news:     'Regulatory',
+    actions:  'Actions',
     data:     'Data Source',
     settings: 'Persona Settings',
 };
@@ -30,6 +31,7 @@ function showPage(pageId, navEl) {
         }).catch(() => {});
     }
     if (pageId === 'news')     loadRegulatory();
+    if (pageId === 'actions')  loadActions();
     if (pageId === 'chat')     renderChatHistory();
     if (pageId === 'cash')     renderCashPage();
     if (pageId === 'settings') loadPersonaSettings();

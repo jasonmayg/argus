@@ -125,6 +125,7 @@ function tuneRenderPersonaBar() {
             bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
             pill.classList.add('active');
             tuneRenderSliders(p.key, tsRegion);
+            if (typeof markActionsStale === 'function') markActionsStale();
         };
         bar.appendChild(pill);
     });
@@ -226,6 +227,7 @@ function tuneRenderSliders(personaKey, regionKey) {
             tsDraft[dk].risk_weights[cat.key] = v;
             cancelAnimationFrame(_tuneRafId);
             _tuneRafId = requestAnimationFrame(tunePreviewLive);
+            if (typeof markActionsStale === 'function') markActionsStale();
         });
 
         target.appendChild(row);
@@ -360,6 +362,7 @@ async function tuneLoadProfile() {
         tuneRenderPersonaBar();
         tuneRenderRegionBar();
         tuneRenderSliders(pKey, rKey);
+        if (typeof markActionsStale === 'function') markActionsStale();
 
         if (d.rescored) {
             renderRiskMatrix(d.rescored);

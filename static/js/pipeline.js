@@ -47,6 +47,8 @@ function startStatusPolling() {
                 if (lastRunKpi) lastRunKpi.textContent = 'Just now';
                 await generateBrief();
                 loadRiskCategories();
+                // Wait for Stage 9 to finish writing latest_actions.json
+setTimeout(() => loadActions(), 30000);
             }
         } catch(e) {
             clearInterval(itv);

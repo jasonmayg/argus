@@ -373,6 +373,39 @@ class RegulatoryClassificationAgent(Agent):
             return {"status": "failed", "error": str(e)}
 
 
+# ── ★ Stage 9: Actions Generation Agent ──
+class ActionsGenerationAgent(Agent):
+    """Generates AI-powered treasury action recommendations."""
+
+    def __init__(self):
+        super().__init__("ActionsGenerator")
+
+    async def execute(self, persona: str = "cash_manager", **kwargs):
+        self.status = "running"
+        self.log(f"Generating action recommendations for persona={persona}...")
+        try:
+            from generate_actions import generate_actions
+            result = await generate_actions(persona=persona, weights={})
+            if result.get("status") == "success":
+                self.status = "success"
+                posture = result.get("posture", "UNKNOWN")
+                countries = len(result.get("country_groups", []))
+                self.log(f"Actions generated: posture={posture}, countries={countries}")
+            else:
+                self.status = "failed"
+                self.log(f"Actions generation failed: {result.get('message','')}", "ERROR")
+            return result
+        except ImportError:
+            msg = "generate_actions.py not found — skipping"
+            self.log(msg, "WARNING")
+            self.status = "success"
+            return {"status": "skipped", "message": msg}
+        except Exception as e:
+            self.log(f"Actions generation error: {e}", "ERROR")
+            self.status = "failed"
+            return {"status": "failed", "error": str(e)}
+
+
 class AgentOrchestrator:
     """Master orchestrator for coordinating all agents"""
 
@@ -385,6 +418,7 @@ class AgentOrchestrator:
         self.ai_classifier      = AIClassificationAgent()   # ← new
         self.guardian_agent     = GuardianAgent()              # ← new
         self.regulatory_agent   = RegulatoryClassificationAgent() # ← new
+        self.actions_agent      = ActionsGenerationAgent()        # ← new
         self.execution_log      = []
 
     async def execute_pipeline(self, **kwargs) -> Dict:
@@ -454,6 +488,13 @@ class AgentOrchestrator:
             print("\n[STAGE 8] Regulatory Changes Classification...")
             reg_result = await self.regulatory_agent.execute()
             result['stages']['regulatory_classification'] = reg_result
+
+            # ── Stage 9: Actions Generation ──────────────────────
+            print("\n[STAGE 9] Treasury Actions Generation...")
+            actions_result = await self.actions_agent.execute(
+                persona=kwargs.get("persona", "cash_manager")
+            )
+            result['stages']['actions_generation'] = actions_result
 
             return self._finalize_result(result, 'success')
 

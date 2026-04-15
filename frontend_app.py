@@ -18,10 +18,11 @@ from core.json_utils import SafeJSONEncoder
 from data_dashboard import data_dashboard_bp
 from routes.guardian_routes import guardian_bp
 from routes.pipeline_routes import pipeline_bp
-from routes.ai_routes import ai_bp          #  新增
-from routes.cash_routes import cash_bp      #  新增
-from routes.data_alert_routes import data_alert_bp  #  新增
-from routes.regulatory_routes import regulatory_bp      #  新增
+from routes.ai_routes import ai_bp          # ← 新增
+from routes.cash_routes import cash_bp      # ← 新增
+from routes.data_alert_routes import data_alert_bp  # ← 新增
+from routes.regulatory_routes import regulatory_bp
+from routes.actions_routes import actions_bp      # ← 新增
 
 
 def create_app() -> Flask:
@@ -37,6 +38,7 @@ def create_app() -> Flask:
     app.register_blueprint(cash_bp)          # ← 新增
     app.register_blueprint(data_alert_bp)      # ← 新增
     app.register_blueprint(regulatory_bp)        # ← 新增
+    app.register_blueprint(actions_bp)            # ← 新增
 
     return app
 
