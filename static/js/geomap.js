@@ -99,8 +99,9 @@ let _mapRendered    = false;
 // ── Compute initial pan+zoom so all 8 focus countries fit in view ─
 // Returns { zoom, panX, panY } given the container's W and H.
 function _initialView(W, H) {
-    // Mercator project helper (same formula as _drawMap)
+    // Mercator project helper (same formula as _drawMap, with same lat clamp)
     function proj(lon, lat) {
+        lat = Math.max(-80, Math.min(80, lat));
         const x      = (lon + 180) / 360 * W;
         const latRad = lat * Math.PI / 180;
         const mercN  = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
@@ -116,7 +117,7 @@ function _initialView(W, H) {
     const minY = Math.min(...ys), maxY = Math.max(...ys);
 
     // Add generous padding (countries are bigger than their centroids)
-    const padX = 70, padY = 55;
+    const padX = 70, padY = 80;
     const bboxW = (maxX - minX) + padX * 2;
     const bboxH = (maxY - minY) + padY * 2;
 
@@ -186,8 +187,9 @@ async function _drawMap(container) {
     const W = container.clientWidth  || 720;
     const H = container.clientHeight || 280;
 
-    // Mercator projection
+    // Mercator projection — clamp lat to ±80° to avoid blowup near poles
     function project(lon, lat) {
+        lat = Math.max(-80, Math.min(80, lat));
         const x      = (lon + 180) / 360 * W;
         const latRad = lat * Math.PI / 180;
         const mercN  = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
@@ -213,8 +215,6 @@ async function _drawMap(container) {
     svg.setAttribute('width',    '100%');
     svg.setAttribute('height',   '100%');
     svg.setAttribute('viewBox',  `0 0 ${W} ${H}`);
-    // Allow map content to render outside the viewBox; container CSS clips it
-    svg.setAttribute('overflow', 'visible');
     svg.style.display = 'block';
     svg.style.cursor  = 'grab';
 
