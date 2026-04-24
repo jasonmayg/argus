@@ -49,7 +49,7 @@ if __name__ == "__main__":
     print(f"""
     ╔════════════════════════════════════════════════════════════════╗
     ║         ARGUS Multi-Agent System — Web Frontend                ║
-    ║  Listening on http://127.0.0.1:{API_PORT}/                     ║
+    ║  Listening on http://0.0.0.0:{API_PORT}/                     ║
     ╚════════════════════════════════════════════════════════════════╝
     """)
-    app.run(debug=True, port=API_PORT)
+    app.run(debug=True, host='0.0.0.0', port=API_PORT)
