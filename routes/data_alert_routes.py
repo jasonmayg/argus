@@ -34,6 +34,9 @@ CACHE_TTL       = int(os.getenv("DATA_ALERT_CACHE_TTL", "300"))  # 5 min
 
 _cache: Dict[str, Any] = {"ts": 0.0, "alerts": None, "rules": None}
 _cache_lock = threading.Lock()
+LOCAL_GCS_HISTORY_CANDIDATES = [
+    Path("guardian_poc/models/google_downside_gcs_features_demo.csv"),
+]
 
 
 # ═══════════════════════════════════════════════════════════
@@ -118,6 +121,115 @@ def _fetch_series(bucket, prefix: str, country: str, indicator: str) -> Optional
     text = _read_gcs_csv_text(bucket, target_blob.name)
     meta = _build_series_from_text(Path(target_blob.name).name, text)
     return meta.get("values") or []
+
+
+def _fetch_series_points(bucket, prefix: str, country: str, indicator: str) -> Optional[List[Tuple[str, float]]]:
+    """
+    Find and download CSV for (country, indicator), return [(date, value)] ordered oldest→newest.
+    Returns None if not found.
+    """
+    try:
+        from data_dashboard import (
+            _list_gcs_csv_blobs,
+            _read_gcs_csv_text,
+            _build_series_from_text,
+            _infer_country_from_filename,
+            _infer_indicator_from_filename,
+            DEFAULT_COUNTRY_NAME_MAP,
+        )
+    except ImportError:
+        return None
+
+    blobs = _list_gcs_csv_blobs(bucket, prefix)
+    target_blob = None
+    for b in blobs:
+        stem = Path(b.name).stem.lower()
+        blob_country = _infer_country_from_filename(stem)
+        blob_indicator = _infer_indicator_from_filename(stem)
+        if country.lower() == "global" and blob_indicator == indicator.lower():
+            target_blob = b
+            break
+        if blob_country and blob_country.lower() == country.lower() and blob_indicator == indicator.lower():
+            target_blob = b
+            break
+
+    if not target_blob:
+        return None
+
+    text = _read_gcs_csv_text(bucket, target_blob.name)
+    meta = _build_series_from_text(Path(target_blob.name).name, text)
+    dates = meta.get("dates") or []
+    values = meta.get("values") or []
+    points: List[Tuple[str, float]] = []
+    for d, v in zip(dates, values):
+        try:
+            points.append((str(d), float(v)))
+        except Exception:
+            continue
+    return points or None
+
+
+def _load_local_history_frame():
+    if not HAS_PANDAS:
+        return None
+    for path in LOCAL_GCS_HISTORY_CANDIDATES:
+        if path.exists():
+            try:
+                df = pd.read_csv(path)
+                if "date" in df.columns and not df.empty:
+                    return df
+            except Exception:
+                continue
+    return None
+
+
+def _match_local_history_column(df, indicator: str) -> Optional[str]:
+    base_prefixes = [
+        f"gcs_macro_{indicator}",
+        f"gcs_risk_{indicator}",
+    ]
+    best_col = None
+    best_rank = None
+    for col in df.columns:
+        if col == "date" or col.endswith("_chg_1") or col.endswith("_roll_5"):
+            continue
+        rank = None
+        for idx, prefix in enumerate(base_prefixes):
+            if col == prefix:
+                return col
+            if col.startswith(prefix + "_"):
+                # Prefer unsuffixed exact matches, then stable prefixed variants.
+                rank = 10 + idx
+                break
+        if rank is None:
+            continue
+        if best_rank is None or rank < best_rank:
+            best_rank = rank
+            best_col = col
+    return best_col
+
+
+def _fetch_local_series_points(country: str, indicator: str) -> Optional[List[Tuple[str, float]]]:
+    """
+    Local fallback for historical threshold evaluation based on cached demo GCS features.
+    The cache is already date-aligned and gives us a stable source even when live GCS
+    credentials are unavailable in the local UI runtime.
+    """
+    df = _load_local_history_frame()
+    if df is None:
+        return None
+
+    col = _match_local_history_column(df, indicator)
+    if not col:
+        return None
+
+    out: List[Tuple[str, float]] = []
+    for _, row in df[["date", col]].dropna().iterrows():
+        try:
+            out.append((str(row["date"]), float(row[col])))
+        except Exception:
+            continue
+    return out or None
 
 
 # ═══════════════════════════════════════════════════════════
@@ -260,6 +372,212 @@ def _run_all_rules() -> List[Dict]:
     return alerts
 
 
+def _evaluate_rule_history(rule: Dict, bucket, prefix: str, limit: int = 10) -> List[Dict]:
+    """
+    Evaluate one rule across its available history and return most recent triggered points.
+    """
+    country = rule["country"]
+    indicator = rule["indicator"]
+    rule_type = rule["type"]
+    operator = rule["operator"]
+    threshold = float(rule["threshold"])
+
+    points = _fetch_series_points(bucket, prefix, country, indicator)
+    if not points:
+        return []
+
+    out: List[Dict] = []
+    if rule_type == "absolute":
+        for date_str, latest in points:
+            if _compare(latest, operator, threshold):
+                out.append({
+                    "rule_id": rule["id"],
+                    "name": rule["name"],
+                    "country": country,
+                    "indicator": indicator,
+                    "category": rule.get("category", "General"),
+                    "severity": rule.get("severity", "Medium"),
+                    "type": rule_type,
+                    "operator": operator,
+                    "threshold": threshold,
+                    "actual_value": round(latest, 4),
+                    "display_value": f"{latest:.4f}",
+                    "latest_raw": round(latest, 4),
+                    "description": rule.get("description", ""),
+                    "triggered_at": date_str,
+                    "source": "GCS Macro Data",
+                    "historical": True,
+                })
+    elif rule_type == "change":
+        for idx in range(1, len(points)):
+            prev = points[idx - 1][1]
+            latest = points[idx][1]
+            if prev == 0:
+                continue
+            pct_change = (latest - prev) / abs(prev) * 100
+            if _compare(abs(pct_change), operator, threshold):
+                out.append({
+                    "rule_id": rule["id"],
+                    "name": rule["name"],
+                    "country": country,
+                    "indicator": indicator,
+                    "category": rule.get("category", "General"),
+                    "severity": rule.get("severity", "Medium"),
+                    "type": rule_type,
+                    "operator": operator,
+                    "threshold": threshold,
+                    "actual_value": round(pct_change, 4),
+                    "display_value": f"{pct_change:+.2f}%",
+                    "latest_raw": round(latest, 4),
+                    "description": rule.get("description", ""),
+                    "triggered_at": points[idx][0],
+                    "source": "GCS Macro Data",
+                    "historical": True,
+                })
+
+    out.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
+    return out[:limit]
+
+
+def _evaluate_rule_history_from_points(rule: Dict, points: List[Tuple[str, float]], limit: int = 10, source: str = "Local GCS Demo Cache") -> List[Dict]:
+    """
+    Shared historical trigger builder for local fallback points.
+    """
+    rule_type = rule["type"]
+    operator = rule["operator"]
+    threshold = float(rule["threshold"])
+    country = rule["country"]
+    indicator = rule["indicator"]
+
+    out: List[Dict] = []
+    if rule_type == "absolute":
+        for date_str, latest in points:
+            if _compare(latest, operator, threshold):
+                out.append({
+                    "rule_id": rule["id"],
+                    "name": rule["name"],
+                    "country": country,
+                    "indicator": indicator,
+                    "category": rule.get("category", "General"),
+                    "severity": rule.get("severity", "Medium"),
+                    "type": rule_type,
+                    "operator": operator,
+                    "threshold": threshold,
+                    "actual_value": round(latest, 4),
+                    "display_value": f"{latest:.4f}",
+                    "latest_raw": round(latest, 4),
+                    "description": rule.get("description", ""),
+                    "triggered_at": date_str,
+                    "source": source,
+                    "historical": True,
+                })
+    elif rule_type == "change":
+        for idx in range(1, len(points)):
+            prev = points[idx - 1][1]
+            latest = points[idx][1]
+            if prev == 0:
+                continue
+            pct_change = (latest - prev) / abs(prev) * 100
+            if _compare(abs(pct_change), operator, threshold):
+                out.append({
+                    "rule_id": rule["id"],
+                    "name": rule["name"],
+                    "country": country,
+                    "indicator": indicator,
+                    "category": rule.get("category", "General"),
+                    "severity": rule.get("severity", "Medium"),
+                    "type": rule_type,
+                    "operator": operator,
+                    "threshold": threshold,
+                    "actual_value": round(pct_change, 4),
+                    "display_value": f"{pct_change:+.2f}%",
+                    "latest_raw": round(latest, 4),
+                    "description": rule.get("description", ""),
+                    "triggered_at": points[idx][0],
+                    "source": source,
+                    "historical": True,
+                })
+
+    out.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
+    return out[:limit]
+
+
+def _load_recent_historical_triggers(limit: int = 10) -> List[Dict]:
+    """Return the most recent historical rule triggers across all enabled rules."""
+    rules = _load_rules()
+    if not rules:
+        return []
+    bucket = _get_gcs_bucket()
+    all_hits: List[Dict] = []
+    if bucket is not None:
+        prefix = _get_latest_prefix(bucket)
+        for rule in rules:
+            try:
+                all_hits.extend(_evaluate_rule_history(rule, bucket, prefix, limit=limit))
+            except Exception:
+                continue
+
+    if not all_hits:
+        for rule in rules:
+            try:
+                points = _fetch_local_series_points(rule["country"], rule["indicator"])
+                if not points:
+                    continue
+                all_hits.extend(
+                    _evaluate_rule_history_from_points(
+                        rule,
+                        points,
+                        limit=limit,
+                        source="Local GCS Demo Cache",
+                    )
+                )
+            except Exception:
+                continue
+
+    all_hits.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
+    seen = set()
+    out = []
+    for item in all_hits:
+        key = (item.get("rule_id"), item.get("triggered_at"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _build_recent_trigger_feed(current_alerts: List[Dict], limit: int = 10) -> List[Dict]:
+    """
+    Always return a recent trigger feed. Current triggers are included first when present,
+    then older historical triggers fill the remainder up to the requested limit.
+    """
+    real_current = [a for a in current_alerts if not a.get("_error")]
+    historical = _load_recent_historical_triggers(limit=max(limit * 3, 20))
+
+    merged: List[Dict] = []
+    seen = set()
+    for item in sorted(real_current, key=lambda a: str(a.get("triggered_at", "")), reverse=True):
+        key = (item.get("rule_id"), item.get("triggered_at"), item.get("name"))
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+
+    for item in historical:
+        key = (item.get("rule_id"), item.get("triggered_at"), item.get("name"))
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+        if len(merged) >= limit:
+            break
+
+    merged.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
+    return merged[:limit]
+
+
 def _make_config_error(msg: str) -> Dict:
     return {
         "rule_id":      "config_error",
@@ -331,16 +649,28 @@ def api_data_alerts():
     medium_count = sum(1 for a in alerts if a.get("severity") == "Medium" and not a.get("_error"))
     low_count    = sum(1 for a in alerts if a.get("severity") == "Low" and not a.get("_error"))
 
+    recent_alerts = _build_recent_trigger_feed(filtered, limit=10)
+    has_current = bool([a for a in filtered if not a.get("_error")])
+    recent_message = ""
+    if recent_alerts:
+        if has_current:
+            recent_message = "Showing the 10 most recent triggered data alerts, including current triggers."
+        else:
+            recent_source = recent_alerts[0].get("source", "historical cache")
+            recent_message = f"No current threshold breaches; showing the 10 most recent triggered data alerts from {recent_source}."
+
     return jsonify({
         "status":        "success",
         "generated_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "total_triggered": len([a for a in alerts if not a.get("_error")]),
+        "historical_fallback": not has_current,
+        "historical_message": recent_message,
         "summary": {
             "high":   high_count,
             "medium": medium_count,
             "low":    low_count,
         },
-        "alerts": filtered,
+        "alerts": recent_alerts or filtered,
     })
 
 

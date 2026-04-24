@@ -3,6 +3,8 @@
    ============================================================ */
 
 let guardianTopAlerts      = [];
+let guardianBaseAlerts     = [];
+let guardianAdjustedActive = false;
 let _guardianCountryFilter = null;   // country name string or null = show all
 
 // Called from the map when a country is clicked
@@ -107,7 +109,7 @@ async function loadGuardianDashboard() {
 
         // Filter out GCS raw entries and deduplicate
         const seen = new Set();
-        guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
+        guardianBaseAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
             const src   = (a.source || '').toLowerCase();
             const title = (a.title  || '').trim();
             if (src === 'gcs_raw' || src === 'gcs_data') return false;
@@ -117,10 +119,13 @@ async function loadGuardianDashboard() {
             seen.add(key);
             return true;
         });
+        if (!guardianAdjustedActive) {
+            guardianTopAlerts = guardianBaseAlerts.slice();
+        }
 
         const newsCountBadge = document.getElementById('newsAlertCount');
         if (newsCountBadge) {
-            const nc = guardianTopAlerts.length;
+            const nc = (guardianAdjustedActive ? guardianTopAlerts : guardianBaseAlerts).length;
             newsCountBadge.textContent  = nc + ' Alert' + (nc !== 1 ? 's' : '');
             newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
             newsCountBadge.style.color      = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
@@ -128,7 +133,7 @@ async function loadGuardianDashboard() {
 
         if (_guardianCountryFilter) {
             _applyCountryFilter(_guardianCountryFilter);
-        } else {
+        } else if (!guardianAdjustedActive) {
             renderGuardianAlerts(guardianTopAlerts);
         }
     } catch(e) {

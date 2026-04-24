@@ -34,6 +34,7 @@ from core.agents import (
     build_cash_manager_dashboard,
     build_generic_persona_dashboard,
 )
+from core.newsalerts import build_rescored_newsalerts_payload
 from core.guardian_loader import (
     GUARDIAN_SOURCE_WHITELIST,
     _load_guardian_snapshot_from_gcs,
@@ -252,6 +253,15 @@ def get_guardian_dashboard():
         "alerts": alert_rows,
     }
     return jsonify(sanitize_for_json(dashboard_data))
+
+
+@guardian_bp.route("/api/guardian/news-alerts/rescore", methods=["POST"])
+def rescore_guardian_newsalerts():
+    """Server-side rescore of Guardian News Alerts using current tuner weights."""
+    body = request.get_json(force=True, silent=True) or {}
+    payload = build_rescored_newsalerts_payload(body.get("weights") or {})
+    status_code = 200 if payload.get("status") == "success" else 404 if payload.get("status") == "missing" else 500
+    return jsonify(sanitize_for_json(payload)), status_code
 
 
 @guardian_bp.route("/api/personas")
