@@ -6,6 +6,31 @@
 
 ---
 
+## Quick Start
+
+Run the app locally in 4 steps:
+
+```bash
+# 1. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure API keys
+cp .env.example .env       # then edit .env and set OPENAI_API_KEY / ANTHROPIC_API_KEY
+
+# 4. Start the server
+python frontend_app.py
+```
+
+Then open http://localhost:5050 in your browser.
+
+> **Production:** `gunicorn --bind 0.0.0.0:5050 "frontend_app:create_app()"` — see [Section 9](#9-deployment-guidelines) for full deployment setup.
+
+---
+
 ## Table of Contents
 
 1. [System Architecture Overview](#1-system-architecture-overview)
