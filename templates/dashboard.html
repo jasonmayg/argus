@@ -156,27 +156,11 @@
                     <div class="brief-signals" id="briefSignals"></div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Risk Level</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiRisk">—</div>
-                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Overall</div>
-                    </div>
-                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Countries</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiCountries">—</div>
-                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Monitored</div>
-                    </div>
-                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Signals</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiSignals">—</div>
-                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Last run</div>
-                    </div>
-                    <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:3px;">Trend</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);" id="kpiTrend">—</div>
-                        <div style="font-size:9px;color:var(--text-muted);margin-top:1px;">Direction</div>
-                    </div>
+                <!-- ★ Risk Level card: full-width with dynamic explanation (populated by results.js) -->
+                <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:14px 16px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                                color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;">Risk Level</div>
+                    <div id="kpiRisk">—</div>
                 </div>
             </div>
 
