@@ -1,14 +1,15 @@
 /* ============================================================
    ARGUS — Geospatial Risk Map
    Renders an SVG world map on the home page with:
-     • Country fill colour keyed to risk level
-     • 8 focus countries always highlighted with border + label
+     • Country fill colour keyed to risk level (High/Medium/Low)
+     • 11 focus countries always highlighted with border + label
      • Circular badge showing alert count per country
+     • Hover tooltip: country name, risk level, top news headline
    Uses TopoJSON world-110m (loaded from CDN) + a minimal
    Mercator projection implemented without D3.
    ============================================================ */
 
-// ── 8 always-highlighted focus countries (ISO-3 → display label)
+// ── 11 always-highlighted focus countries (ISO-3 → display label)
 const _FOCUS = {
     USA: 'US',
     CHN: 'China',
@@ -18,7 +19,14 @@ const _FOCUS = {
     MEX: 'Mexico',
     IND: 'India',
     KOR: 'Korea',
+    BRA: 'Brazil',
+    AUS: 'Australia',
+    FRA: 'France',
 };
+
+// ── Initial view only zooms to original 8 core countries (not BRA/AUS/FRA
+//    which are geographically far and would shrink the map too small)
+const _INIT_VIEW_KEYS = ['USA','CHN','CAN','GBR','JPN','MEX','IND','KOR'];
 
 // ── Country name → ISO-3166 alpha-3 lookup
 const _ISO3 = {
@@ -75,25 +83,37 @@ const _CENTROIDS = {
     VEN:[-66.6,8.0],VNM:[107.8,16.5],YEM:[47.6,15.6],ZWE:[29.9,-20.1],
 };
 
-// ── Risk colour palette
+// ── Risk colour palette (3 levels: High = red, Medium = amber, Low = green)
 const _RISK_FILL = {
-    Extreme:'#FCA5A5', High:'#FCD34D', Medium:'#86EFAC', Low:'#BAE6FD',
-    // Focus-country tint when no risk data
-    Focus:  '#DBEAFE',   // blue-100
-    None:   '#E2E8F0',
+    High:   '#FEE2E2',   // red-100   — danger
+    Medium: '#FEF9C3',   // yellow-100 — caution
+    Low:    '#DCFCE7',   // green-100  — safe
+    Focus:  '#DBEAFE',   // blue-100   — monitored, no data yet
+    None:   '#F1F5F9',   // slate-100  — not a focus country
 };
 const _RISK_STROKE = {
-    Extreme:'#EF4444', High:'#F59E0B', Medium:'#22C55E', Low:'#38BDF8',
-    Focus:  '#3B82F6',   // blue-500 — focus border
-    None:   '#CBD5E1',
+    High:   '#EF4444',   // red-500
+    Medium: '#EAB308',   // yellow-500
+    Low:    '#22C55E',   // green-500
+    Focus:  '#3B82F6',   // blue-500 — monitored border
+    None:   '#CBD5E1',   // slate-300
 };
 const _BADGE_BG = {
-    Extreme:'#EF4444', High:'#F59E0B', Medium:'#16A34A', Low:'#0284C7',
-    Focus:  '#3B82F6', None:'#94A3B8',
+    High:   '#DC2626',   // red-600
+    Medium: '#CA8A04',   // yellow-600
+    Low:    '#16A34A',   // green-600
+    Focus:  '#3B82F6',   // blue-500
+    None:   '#94A3B8',   // slate-400
 };
+
+// Normalise legacy "Extreme" level → "High" so old data still renders correctly
+function _normalizeLevel(level) {
+    return level === 'Extreme' ? 'High' : level;
+}
 
 // ── Module state
 let _mapCountryData = {};
+let _mapTopNews     = {};   // iso3 → { title, score } of top-scored alert
 let _mapRendered    = false;
 
 // ── Compute initial pan+zoom so all 8 focus countries fit in view ─
@@ -108,8 +128,9 @@ function _initialView(W, H) {
         return [x, y];
     }
 
-    // Collect projected centroids of focus countries
-    const pts = Object.keys(_FOCUS).map(iso3 => proj(..._CENTROIDS[iso3]));
+    // Collect projected centroids of core 8 countries (BRA/AUS/FRA excluded so
+    // the initial zoom stays tight on the primary risk corridor)
+    const pts = _INIT_VIEW_KEYS.map(iso3 => proj(..._CENTROIDS[iso3]));
     const xs  = pts.map(p => p[0]);
     const ys  = pts.map(p => p[1]);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -156,6 +177,19 @@ async function loadRiskMap() {
             const name = row.country || '';
             const iso3 = _ISO3[name] || _nameSearch(name);
             if (iso3) _mapCountryData[iso3] = row;
+        });
+
+        // Build top-news index: iso3 → highest-scored alert title
+        _mapTopNews = {};
+        (d.alerts || []).forEach(alert => {
+            const name = alert.country || '';
+            const iso3 = _ISO3[name] || _nameSearch(name);
+            if (!iso3 || !alert.title) return;
+            const score = parseFloat(alert.score) || 0;
+            const existing = _mapTopNews[iso3];
+            if (!existing || score > existing.score) {
+                _mapTopNews[iso3] = { title: alert.title, score };
+            }
         });
 
         await _drawMap(container);
@@ -347,7 +381,7 @@ async function _drawMap(container) {
         const iso3   = NUM_TO_ISO3[numId];
         const data   = iso3 ? _mapCountryData[iso3] : null;
         const isFocus = iso3 && (iso3 in _FOCUS);
-        const level  = data ? (data.risk_level || 'None')
+        const level  = data ? _normalizeLevel(data.risk_level || 'None')
                              : isFocus ? 'Focus' : 'None';
 
         const fill   = _RISK_FILL[level]   || _RISK_FILL.None;
@@ -372,12 +406,13 @@ async function _drawMap(container) {
                 if (_moved) return;
                 path.style.filter = 'brightness(0.88)';
                 tooltip.style.display = 'block';
+                const topNews = _mapTopNews[iso3];
                 tooltip.innerHTML =
                     `<strong>${tooltipData.country}</strong><br>` +
                     (data
-                        ? `${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''} · ${data.risk_level}<br>` +
-                          `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''}</span>`
-                        : `<span style="font-size:9px;color:#3B82F6;">Click to view events</span>`
+                        ? `Risk: <b>${_normalizeLevel(data.risk_level)}</b> · ${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''}<br>` +
+                          `<span style="font-size:9px;color:#64748B;">Top news: ${topNews ? topNews.title : (data.top_category || '—')}</span>`
+                        : `<span style="font-size:9px;color:#3B82F6;">Monitored — click to view events</span>`
                     );
             });
             path.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
@@ -438,7 +473,7 @@ async function _drawMap(container) {
         if (!centroid) return;
         const [cx, cy] = project(centroid[0], centroid[1]);
 
-        const level  = data.risk_level || 'None';
+        const level  = _normalizeLevel(data.risk_level || 'None');
         const count  = data.alert_count || 0;
         const bgCol  = _BADGE_BG[level] || _BADGE_BG.None;
         const label  = count > 99 ? '99+' : String(count);
@@ -455,8 +490,8 @@ async function _drawMap(container) {
         circle.setAttribute('stroke',       'white');
         circle.setAttribute('stroke-width', '1.5');
 
-        // Pulse ring for Extreme/High
-        if (level === 'Extreme' || level === 'High') {
+        // Pulse ring for High-risk countries
+        if (level === 'High') {
             const pulse = document.createElementNS(ns, 'circle');
             pulse.setAttribute('cx',   cx.toFixed(1));
             pulse.setAttribute('cy',   cy.toFixed(1));
@@ -487,10 +522,11 @@ async function _drawMap(container) {
             if (_moved) return;
             circle.setAttribute('r', r + 2);
             tooltip.style.display = 'block';
+            const topNews = _mapTopNews[iso3];
             tooltip.innerHTML =
                 `<strong>${data.country}</strong><br>` +
-                `${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''} · ${data.risk_level}<br>` +
-                `<span style="font-size:9px;color:#94A3B8;">${data.top_category || ''} — click to view events</span>`;
+                `Risk: <b>${_normalizeLevel(data.risk_level)}</b> · ${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''}<br>` +
+                `<span style="font-size:9px;color:#64748B;">Top news: ${topNews ? topNews.title : (data.top_category || '—')}</span>`;
         });
         g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
         g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });
@@ -532,7 +568,7 @@ async function _drawMap(container) {
         text.setAttribute('fill',           'white');
         text.setAttribute('font-family',    'IBM Plex Mono, monospace');
         text.setAttribute('pointer-events', 'none');
-        text.textContent = '0';
+        text.textContent = '–';   // dash = monitored but no data source yet
 
         g.appendChild(circle);
         g.appendChild(text);
@@ -543,7 +579,7 @@ async function _drawMap(container) {
             tooltip.style.display = 'block';
             tooltip.innerHTML =
                 `<strong>${displayName}</strong><br>` +
-                `<span style="font-size:9px;color:#3B82F6;">No active alerts — click to view events</span>`;
+                `<span style="font-size:9px;color:#3B82F6;">Monitored — data source pending</span>`;
         });
         g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
         g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });

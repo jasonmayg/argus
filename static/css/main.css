@@ -1162,10 +1162,9 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
     border-radius: 2px;
     flex-shrink: 0;
 }
-.map-legend-item[data-level="Extreme"]::before { background: #FCA5A5; border: 1px solid #EF4444; }
-.map-legend-item[data-level="High"]::before    { background: #FCD34D; border: 1px solid #F59E0B; }
-.map-legend-item[data-level="Medium"]::before  { background: #86EFAC; border: 1px solid #22C55E; }
-.map-legend-item[data-level="Low"]::before     { background: #BAE6FD; border: 1px solid #38BDF8; }
+.map-legend-item[data-level="High"]::before    { background: #FEE2E2; border: 1px solid #EF4444; }
+.map-legend-item[data-level="Medium"]::before  { background: #FEF9C3; border: 1px solid #EAB308; }
+.map-legend-item[data-level="Low"]::before     { background: #DCFCE7; border: 1px solid #22C55E; }
 .map-legend-item[data-level="Focus"]::before   { background: #DBEAFE; border: 1px solid #3B82F6; }
 
 /* Country filter banner inside News Alerts card */
