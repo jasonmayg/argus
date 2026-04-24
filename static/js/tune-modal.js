@@ -75,12 +75,13 @@ async function openTuneModal() {
     await tuneRefreshProfileList();
 
     document.getElementById('tuneOverlay').classList.add('open');
+    cancelAnimationFrame(_tuneRafId);
+    _tuneRafId = requestAnimationFrame(() => { void tunePreviewLive(); });
 }
 
 function closeTuneModal() {
     document.getElementById('tuneOverlay').classList.remove('open');
     cancelAnimationFrame(_tuneRafId);
-    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
 }
 
 function handleTuneOverlayClick(e) {
@@ -125,6 +126,8 @@ function tuneRenderPersonaBar() {
             bar.querySelectorAll('.tune-pill').forEach(b => b.classList.remove('active'));
             pill.classList.add('active');
             tuneRenderSliders(p.key, tsRegion);
+            cancelAnimationFrame(_tuneRafId);
+            _tuneRafId = requestAnimationFrame(() => { void tunePreviewLive(); });
             if (typeof markActionsStale === 'function') markActionsStale();
         };
         bar.appendChild(pill);
@@ -147,6 +150,8 @@ function tuneRenderRegionBar() {
             bar.querySelectorAll('.tune-region-pill').forEach(b => b.classList.remove('active'));
             pill.classList.add('active');
             tuneRenderSliders(tsPersona, tsRegion);
+            cancelAnimationFrame(_tuneRafId);
+            _tuneRafId = requestAnimationFrame(() => { void tunePreviewLive(); });
         };
         bar.appendChild(pill);
     });
@@ -173,6 +178,8 @@ function tuneRenderSliders(personaKey, regionKey) {
         if (!tsDraft[dk]) tsDraft[dk] = {};
         tsDraft[dk].alert_threshold = v;
         thSlider.className = 'tune-range tune-thresh-range' + (v !== defThresh ? ' modified' : '');
+        cancelAnimationFrame(_tuneRafId);
+        _tuneRafId = requestAnimationFrame(() => { void tunePreviewLive(); });
     };
 
     const leftEl  = document.getElementById('tuneColLeft');
@@ -226,7 +233,7 @@ function tuneRenderSliders(personaKey, regionKey) {
             if (!tsDraft[dk].risk_weights) tsDraft[dk].risk_weights = {};
             tsDraft[dk].risk_weights[cat.key] = v;
             cancelAnimationFrame(_tuneRafId);
-            _tuneRafId = requestAnimationFrame(tunePreviewLive);
+            _tuneRafId = requestAnimationFrame(() => { void tunePreviewLive(); });
             if (typeof markActionsStale === 'function') markActionsStale();
         });
 
@@ -236,20 +243,41 @@ function tuneRenderSliders(personaKey, regionKey) {
 
 // ── Live preview ──────────────────────────────────────────────
 
-function tunePreviewLive() {
-    const weights = (tsDraft[_tuneKey(tsPersona, tsRegion)] || {}).risk_weights || {};
+async function tunePreviewLive() {
+    const cfg = tsDraft[_tuneKey(tsPersona, tsRegion)] || {};
 
-    if (guardianTopAlerts && guardianTopAlerts.length) {
-        const rescored = guardianTopAlerts.map(a => {
-            const wKey = TUNE_CAT_MAP[(a.category || '').toLowerCase().trim()] || '';
-            const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
-            return { ...a, _eff: Math.min(100, parseFloat(a.score || 0) * w) };
-        });
-        rescored.sort((a, b) => b._eff - a._eff);
-        renderGuardianAlerts(rescored, true);
+    if (guardianBaseAlerts && guardianBaseAlerts.length) {
+        try {
+            const r = await fetch(`${API_BASE}/guardian/news-alerts/rescore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    persona_key: tsPersona,
+                    region_key: tsRegion,
+                    weights: cfg,
+                }),
+            });
+            const d = await r.json();
+            if (d.status === 'success') {
+                guardianAdjustedActive = true;
+                guardianTopAlerts = d.alerts || d.critical_alerts_top5 || [];
+                const newsCountBadge = document.getElementById('newsAlertCount');
+                if (newsCountBadge) {
+                    const nc = guardianTopAlerts.length;
+                    newsCountBadge.textContent  = nc + ' Alert' + (nc !== 1 ? 's' : '');
+                    newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
+                    newsCountBadge.style.color      = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
+                }
+                if (_guardianCountryFilter) _applyCountryFilter(_guardianCountryFilter);
+                else renderGuardianAlerts(guardianTopAlerts, true);
+            }
+        } catch(e) {
+            console.warn('tunePreviewLive guardian rescore error:', e);
+        }
     }
 
     if (window._lastScoredItems && window._lastScoredItems.length) {
+        const weights = cfg.risk_weights || {};
         const recolored = window._lastScoredItems.map(item => {
             const wKey = TUNE_CAT_MAP[(item.risk_category || '').toLowerCase().trim()] || '';
             const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
@@ -379,7 +407,17 @@ function tuneReset() {
     const def = tsDefaults[dk];
     if (def) tsDraft[dk] = JSON.parse(JSON.stringify(def));
     tuneRenderSliders(tsPersona, tsRegion);
-    if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
+    guardianAdjustedActive = false;
+    guardianTopAlerts = guardianBaseAlerts.slice();
+    const newsCountBadge = document.getElementById('newsAlertCount');
+    if (newsCountBadge) {
+        const nc = guardianTopAlerts.length;
+        newsCountBadge.textContent  = nc + ' Alert' + (nc !== 1 ? 's' : '');
+        newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
+        newsCountBadge.style.color      = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
+    }
+    if (_guardianCountryFilter) _applyCountryFilter(_guardianCountryFilter);
+    else if (guardianTopAlerts.length) renderGuardianAlerts(guardianTopAlerts);
     tuneFeedback('Sliders reset to AI defaults.', 'success');
 }
 

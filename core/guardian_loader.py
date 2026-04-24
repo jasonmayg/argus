@@ -10,6 +10,8 @@ import json
 import os
 import re
 import subprocess
+import argparse
+import importlib.util
 from collections import Counter
 from datetime import datetime
 from functools import lru_cache
@@ -845,11 +847,92 @@ def _num_series(df, col):
     return pd.to_numeric(df[col], errors="coerce")
 
 
+def _get_google_downside_demo_snapshot() -> dict[str, Any]:
+    """
+    Fallback reader for the local demo downside model in the current repo.
+    Uses guardian_poc/src/modeltrainingdemo.py so worktree-based development
+    still surfaces a usable Downside Risk Index even without the legacy
+    Alphabet desktop folder layout.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    demo_path = repo_root / "guardian_poc" / "src" / "modeltrainingdemo.py"
+    demo_model_path = repo_root / "guardian_poc" / "models" / "google_downside_risk_model_demo.joblib"
+    demo_metrics_path = repo_root / "guardian_poc" / "models" / "google_downside_risk_metrics_demo.json"
+    if not demo_path.exists():
+        return {"status": "unavailable", "reason": "demo modeltrainingdemo.py not found"}
+    if not demo_model_path.exists():
+        return {"status": "unavailable", "reason": "demo downside model artifact not found"}
+
+    try:
+        spec = importlib.util.spec_from_file_location("modeltrainingdemo", str(demo_path))
+        if spec is None or spec.loader is None:
+            return {"status": "unavailable", "reason": "unable to load demo downside module"}
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        args = argparse.Namespace(
+            prices="Dataset/googl_daily_prices.csv",
+            news="Dataset/Google_Daily_News.csv",
+            balance="Dataset/googl_balance_sheet.csv",
+            cashflow="Dataset/googl_cash_flow_statement.csv",
+            income="Dataset/googl_income_statement.csv",
+            keywords_config="guardian_poc/config/risk_keywords.yaml",
+            horizon_days=3,
+            target_quantile=0.15,
+            cv_splits=5,
+            model_path=str(repo_root / "guardian_poc" / "models" / "google_downside_risk_model.joblib"),
+            metrics_path=str(repo_root / "guardian_poc" / "models" / "google_downside_risk_metrics.json"),
+            output_model=str(demo_model_path),
+            output_metrics=str(demo_metrics_path),
+            no_gcs=False,
+            check_gcs=False,
+            refresh_gcs_cache=False,
+            recent_years=2,
+            select_k=40,
+            logistic_c=0.05,
+            score_latest=True,
+            score_live=False,
+            symbol="GOOGL",
+            sec_cik="0001652044",
+            alpha_vantage_key=None,
+            sec_user_agent=None,
+            skip_train=False,
+        )
+        payload = mod.score_latest_demo_row(args)
+        metrics = {}
+        if demo_metrics_path.exists():
+            try:
+                metrics = json.loads(demo_metrics_path.read_text(encoding="utf-8"))
+            except Exception:
+                metrics = {}
+        return {
+            "status": "success",
+            "probability": payload.get("probability"),
+            "percent": payload.get("percent"),
+            "level": payload.get("level"),
+            "model_name": "demo_logistic_regression",
+            "threshold": payload.get("decision_threshold"),
+            "as_of_date": payload.get("as_of_date"),
+            "test_auc": metrics.get("test_auc"),
+            "top_signals": payload.get("feature_sample", [])[:5],
+            "is_stale": False,
+            "staleness_days": None,
+            "model_source": "local_demo",
+            "gcs_meta": payload.get("gcs_meta", {}),
+        }
+    except Exception as e:
+        return {"status": "unavailable", "reason": f"demo inference failed: {str(e)}"}
+
+
 def _get_google_downside_snapshot():
     """
     Infer Google downside-risk probability from trained artifact + latest dataset row.
     Returns a dict suitable for dashboard rendering; never raises.
     """
+    demo_payload = _get_google_downside_demo_snapshot()
+    if demo_payload.get("status") == "success":
+        return demo_payload
+
     alphabet_root = _resolve_alphabet_root()
     if not alphabet_root:
         return {"status": "unavailable", "reason": "Alphabet project folder not found"}
