@@ -105,8 +105,17 @@ def _get_gcs_bucket():
         return storage.Client(project=project).bucket(bucket_name)
 
     here = Path(__file__).resolve().parent
-    for key_path in [here / "keys" / "treasury-reader.json",
-                     here / "keys" / "service-account.json"]:
+    extra_key_paths = [
+        os.getenv("ARGUS_GCS_KEY_PATH", "").strip(),
+        os.getenv("GUARDIAN_GCS_KEY_PATH", "").strip(),
+        str(Path.home() / "Desktop" / "argus-main" / "keys" / "treasury-reader.json"),
+        str(Path.home() / "Desktop" / "argus-main" / "keys" / "service-account.json"),
+    ]
+    for key_path in [
+        here / "keys" / "treasury-reader.json",
+        here / "keys" / "service-account.json",
+        *[Path(p) for p in extra_key_paths if p],
+    ]:
         if key_path.exists():
             return storage.Client.from_service_account_json(
                 str(key_path), project=project

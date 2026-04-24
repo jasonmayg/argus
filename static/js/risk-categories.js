@@ -142,8 +142,12 @@ async function loadDataAlerts(fresh = false) {
         const totalBadge = document.getElementById('dataAlertTotalCount');
         const highBadge  = document.getElementById('dataAlertHighCount');
         if (totalBadge) {
-            const genAt = d.generated_at ? ' · ' + d.generated_at : '';
-            totalBadge.textContent = total + ' Triggered' + genAt;
+            if ((d.alerts || []).length) {
+                totalBadge.textContent = 'Recent trigger feed · 10 items';
+            } else {
+                const genAt = d.generated_at ? ' · ' + d.generated_at : '';
+                totalBadge.textContent = total + ' Triggered' + genAt;
+            }
         }
         if (highBadge) {
             highBadge.style.display = high > 0 ? '' : 'none';
@@ -158,7 +162,11 @@ async function loadDataAlerts(fresh = false) {
         const sevColor = s => s === 'High' ? 'var(--danger-text)'  : s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
         const sevBg    = s => s === 'High' ? 'var(--danger-bg)'    : s === 'Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
 
-        body.innerHTML = alerts.filter(a => !a._error).map(a => `
+        const intro = d.historical_message
+            ? `<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:#F8FAFC;color:var(--text-secondary);font-size:11px;font-family:var(--font-mono);">${escapeHtml(d.historical_message)}</div>`
+            : '';
+
+        body.innerHTML = intro + alerts.filter(a => !a._error).map(a => `
             <div style="padding:10px 16px;border-bottom:1px solid var(--border);border-left:3px solid ${sevColor(a.severity)};">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                     <div style="font-weight:700;font-size:12px;">${escapeHtml(a.name)}</div>
