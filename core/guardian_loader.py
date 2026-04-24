@@ -34,6 +34,7 @@ GUARDIAN_SOURCE_WHITELIST = {
     "us_treasury_auction",
     "bank_of_canada",
     "ofac_sls",
+    "ecb",           # European Central Bank — needed for EU/global country coverage
 }
 
 DEFAULT_GUARDIAN_GCS_BUCKET = "your-gcs-bucket"
