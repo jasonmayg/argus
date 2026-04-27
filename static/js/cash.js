@@ -7,17 +7,21 @@ let CASH_HISTORY      = [];
 let cashCurrentFilter = 'all';
 let cashHistoryChart  = null;
 
+// ── Display: magnitude only (no exact figures) ────────────
 function fmtUSD(n) {
-    if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
-    if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
-    return '$' + Math.round(n).toLocaleString();
+    const abs = Math.abs(n);
+    if (abs >= 1e9)  return 'Large';
+    if (abs >= 1e8)  return 'Medium';
+    if (abs >= 1e7)  return 'Small';
+    return 'Minimal';
 }
 
 function fmtLocal(n, currency) {
-    if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + 'T ' + currency;
-    if (Math.abs(n) >= 1e9)  return (n / 1e9).toFixed(2)  + 'B ' + currency;
-    if (Math.abs(n) >= 1e6)  return (n / 1e6).toFixed(1)  + 'M ' + currency;
-    return Math.round(n).toLocaleString() + ' ' + currency;
+    const abs = Math.abs(n);
+    if (abs >= 1e9)  return 'Large';
+    if (abs >= 1e8)  return 'Medium';
+    if (abs >= 1e7)  return 'Small';
+    return 'Minimal';
 }
 
 function riskBadgeStyle(level) {
@@ -64,27 +68,9 @@ async function renderCashPage() {
 }
 
 function renderCashKPIs(posData) {
-    const totalUSD    = posData.total_usd || 0;
-    const regions     = posData.regional_totals || {};
-    const highRisk    = posData.high_risk_usd || 0;
-    const entityCount = posData.entity_count || 0;
-    const americas = regions['Americas'] || 0;
-    const europe   = regions['Europe']   || 0;
-    const apac     = regions['APAC']     || 0;
-
-    const kpiCard = (label, value, sub, accent = '') => `
-        <div style="background:white;border:1px solid var(--border);border-radius:6px;padding:12px 16px;${accent ? 'border-left:3px solid ' + accent + ';' : ''}">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">${label}</div>
-            <div style="font-size:20px;font-weight:700;color:${accent === 'var(--danger-text)' ? accent : 'var(--text-main)'};font-family:var(--font-mono);">${value}</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${sub}</div>
-        </div>`;
-
-    document.getElementById('cashKpiRow').innerHTML =
-        kpiCard('Total Global Cash', fmtUSD(totalUSD), entityCount + ' entities', 'var(--primary)') +
-        kpiCard('Americas', fmtUSD(americas), (totalUSD ? (americas / totalUSD * 100).toFixed(1) : 0) + '% of total') +
-        kpiCard('Europe',   fmtUSD(europe),   (totalUSD ? (europe   / totalUSD * 100).toFixed(1) : 0) + '% of total') +
-        kpiCard('Asia Pacific', fmtUSD(apac), (totalUSD ? (apac     / totalUSD * 100).toFixed(1) : 0) + '% of total') +
-        kpiCard('High-Risk Exposure', fmtUSD(highRisk), (totalUSD ? (highRisk / totalUSD * 100).toFixed(1) : 0) + '% of total', 'var(--danger-text)');
+    // KPI cards removed
+    const el = document.getElementById('cashKpiRow');
+    if (el) el.style.display = 'none';
 }
 
 function renderCashTable() {
@@ -112,7 +98,6 @@ function renderCashTable() {
             </td>
             <td style="font-family:var(--font-mono);font-weight:600;">${row.currency || ''}</td>
             <td style="text-align:right;font-family:var(--font-mono);">${fmtLocal(row.local_balance || 0, row.currency || '')}</td>
-            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${fmtUSD(usd)}</td>
             <td style="text-align:right;">
                 <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">
                     <div style="width:48px;background:#F1F5F9;border-radius:2px;height:4px;overflow:hidden;">
@@ -121,9 +106,7 @@ function renderCashTable() {
                     <span style="font-family:var(--font-mono);font-size:11px;">${pct}%</span>
                 </div>
             </td>
-            <td style="text-align:right;font-family:var(--font-mono);color:${chgColor};font-weight:600;">${chgSign}${chg.toFixed(1)}%</td>
             <td><span class="status-badge" style="${riskBadgeStyle(risk)}">${risk}</span></td>
-            <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${(row.fx_rate || 0).toFixed(4)}</td>
             <td style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${row.notes || '—'}</td>
         </tr>`;
     }).join('');
@@ -131,9 +114,8 @@ function renderCashTable() {
     const filteredUSD = filtered.reduce((s, r) => s + (r.usd_equivalent || 0), 0);
     if (tfoot) tfoot.innerHTML = `<tr style="background:#F8FAFC;border-top:2px solid var(--border);">
         <td colspan="3" style="font-weight:700;font-size:12px;padding:10px 12px;">Subtotal (${filtered.length} entities)</td>
-        <td style="text-align:right;font-family:var(--font-mono);font-weight:700;font-size:13px;padding:10px 12px;">${fmtUSD(filteredUSD)}</td>
         <td style="text-align:right;font-family:var(--font-mono);font-size:11px;padding:10px 12px;">${totalUSD ? (filteredUSD / totalUSD * 100).toFixed(1) : 0}%</td>
-        <td colspan="4"></td>
+        <td colspan="2"></td>
     </tr>`;
 }
 
