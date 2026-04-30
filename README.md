@@ -14,6 +14,8 @@ Run the app locally in 4 steps:
 # 1. Create and activate a virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
+# If you are in Windows, use command below instead
+.\.venv\Scripts\activate
 
 # 2. Install dependencies
 pip install -r requirements.txt
