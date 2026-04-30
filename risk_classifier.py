@@ -121,11 +121,9 @@ class RiskClassifier:
             score: Risk score (0-100)
 
         Returns:
-            Risk level: Low, Medium, High, Critical
+            Risk level: Low, Medium, High
         """
-        if score >= 80:
-            return "Critical"
-        elif score >= 60:
+        if score >= 60:
             return "High"
         elif score >= 40:
             return "Medium"
@@ -247,7 +245,7 @@ async def example_usage():
         risk_distribution[level] += 1
 
     print("Risk level distribution:")
-    for level in ["Critical", "High", "Medium", "Low", "None"]:
+    for level in ["High", "Medium", "Low", "None"]:
         count = risk_distribution.get(level, 0)
         print(f"  • {level}: {count} items")
 

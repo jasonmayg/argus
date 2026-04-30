@@ -204,10 +204,16 @@ async function loadGuardianDashboard() {
         document.getElementById('countryBoardGrid').innerHTML = top5.map(c => {
             const riskColor = c.risk_level === 'High'   ? 'var(--danger-text)'  :
                               c.risk_level === 'Medium' ? 'var(--warning-text)' : 'var(--text-muted)';
+            const riskTip   = c.risk_level === 'High'
+                ? 'High Risk (score 60–100): This jurisdiction has signals indicating significant probability of material impact.'
+                : c.risk_level === 'Medium'
+                ? 'Medium Risk (score 30–59): Moderate exposure detected for this jurisdiction. Monitor closely.'
+                : 'Low Risk (score 0–29): Within acceptable bounds for this jurisdiction.';
             return `<div class="card" style="padding:14px;">
                 <div style="font-weight:700;font-size:13px;">${escapeHtml(c.country)}</div>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:var(--font-mono);">${c.alert_count} Alerts</div>
-                <div style="font-size:10px;margin-top:4px;color:${riskColor};font-weight:600;">${c.top_category || ''}</div>
+                <div style="font-size:10px;margin-top:4px;color:${riskColor};font-weight:600;cursor:default;"
+                     title="${riskTip}">${c.top_category || ''} · ${c.risk_level || ''}</div>
             </div>`;
         }).join('');
 
@@ -252,13 +258,20 @@ function renderGuardianAlerts(alerts, flash = false) {
     if (!tbody) return;
     tbody.innerHTML = alerts.map((a, idx) => {
         const score      = a._eff !== undefined ? a._eff : parseFloat(a.score || 0);
-        const scoreBg    = score >= 70 ? 'var(--danger-bg)'   : score >= 40 ? 'var(--warning-bg)'  : 'var(--idle-bg)';
-        const scoreColor = score >= 70 ? 'var(--danger-text)' : score >= 40 ? 'var(--warning-text)' : 'var(--idle-text)';
+        const riskLvl    = score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low';
+        const scoreBg    = riskLvl === 'High'   ? 'var(--danger-bg)'   : riskLvl === 'Medium' ? 'var(--warning-bg)'  : 'var(--idle-bg)';
+        const scoreColor = riskLvl === 'High'   ? 'var(--danger-text)' : riskLvl === 'Medium' ? 'var(--warning-text)' : 'var(--idle-text)';
+        const riskTip    = riskLvl === 'High'
+            ? `High Risk (score 60–100): ${escapeHtml(a.rationale || a.title || 'Significant probability of material treasury impact.')}`
+            : riskLvl === 'Medium'
+            ? `Medium Risk (score 30–59): ${escapeHtml(a.rationale || a.title || 'Moderate exposure detected. Monitor closely.')}`
+            : `Low Risk (score 0–29): ${escapeHtml(a.rationale || a.title || 'Within acceptable bounds.')}`;
         const cls = flash && idx < 5 ? ' class="tune-live-flash"' : '';
         return `<tr${cls}>
             <td style="font-weight:700;white-space:nowrap;">${escapeHtml(a.country || '')}</td>
             <td style="color:var(--text-secondary);white-space:nowrap;">${escapeHtml(a.category || 'Unclassified')}</td>
-            <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};">${Math.round(score)}</span></td>
+            <td><span class="status-badge" style="background:${scoreBg};color:${scoreColor};"
+                      title="${riskTip}">${Math.round(score)} · ${riskLvl}</span></td>
             <td style="font-size:11px;max-width:200px;">
                 ${a.url
                     ? `<a href="${escapeHtml(a.url)}" target="_blank"

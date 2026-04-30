@@ -229,17 +229,10 @@ class ReportingAgent(Agent):
         recommendations = []
         by_level = analysis.get("by_risk_level", {})
 
-        extreme_count = len(by_level.get("extreme", []))
-        if extreme_count > 0:
-            recommendations.append(
-                f"URGENT: {extreme_count} Extreme-risk item(s) detected. "
-                f"Immediate management review required."
-            )
-
         high_count = len(by_level.get("high", []))
-        if high_count > 3:
+        if high_count > 0:
             recommendations.append(
-                f"{high_count} High-risk items. Escalate to treasury risk committee."
+                f"{high_count} High-risk item(s) detected. Escalate to treasury risk committee."
             )
 
         for category, count in analysis.get("by_category", {}).items():

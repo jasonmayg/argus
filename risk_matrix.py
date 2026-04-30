@@ -36,31 +36,29 @@ IMPACT_LABELS: Dict[int, str] = {
 # Cols: I = 1 (Negligible) … 5 (Catastrophic)
 
 _MATRIX: List[List[str]] = [
-    ["Low",    "Low",    "Low",    "Medium", "Medium"],   # P=1  Unlikely
-    ["Low",    "Low",    "Medium", "Medium", "High"  ],   # P=2  Seldom
-    ["Low",    "Medium", "Medium", "High",   "High"  ],   # P=3  Occasional
-    ["Medium", "Medium", "High",   "High",   "Extreme"],  # P=4  Likely
-    ["Medium", "High",   "High",   "Extreme","Extreme"],  # P=5  Frequent
+    ["Low",    "Low",    "Low",    "Medium", "Medium"],  # P=1  Unlikely
+    ["Low",    "Low",    "Medium", "Medium", "High"  ],  # P=2  Seldom
+    ["Low",    "Medium", "Medium", "High",   "High"  ],  # P=3  Occasional
+    ["Medium", "Medium", "High",   "High",   "High"  ],  # P=4  Likely
+    ["Medium", "High",   "High",   "High",   "High"  ],  # P=5  Frequent
 ]
 
 # ── Visual styling ────────────────────────────────────────────────────────────
 
 RISK_LEVEL_COLORS: Dict[str, str] = {
-    "Low":     "#28a745",   # green
-    "Medium":  "#ffc107",   # amber
-    "High":    "#fd7e14",   # orange
-    "Extreme": "#dc3545",   # red
+    "Low":    "#22C55E",   # green
+    "Medium": "#F59E0B",   # amber
+    "High":   "#EF4444",   # red
 }
 
 RISK_LEVEL_TEXT_COLORS: Dict[str, str] = {
-    "Low":     "#fff",
-    "Medium":  "#212529",
-    "High":    "#fff",
-    "Extreme": "#fff",
+    "Low":    "#fff",
+    "Medium": "#fff",
+    "High":   "#fff",
 }
 
 # Ordinal rank for sorting (0 = lowest risk)
-_LEVEL_ORDER: List[str] = ["Low", "Medium", "High", "Extreme"]
+_LEVEL_ORDER: List[str] = ["Low", "Medium", "High"]
 
 
 # ── Core function ─────────────────────────────────────────────────────────────
@@ -75,7 +73,7 @@ def calculate_risk_level(probability: int, impact: int) -> Dict:
 
     Returns:
         dict with keys:
-            level            – "Low" | "Medium" | "High" | "Extreme"
+            level            – "Low" | "Medium" | "High"
             color            – hex background colour for the cell
             text_color       – hex foreground colour for the cell
             probability      – clamped int (1–5)

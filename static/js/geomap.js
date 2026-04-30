@@ -93,7 +93,7 @@ const _RISK_FILL = {
 };
 const _RISK_STROKE = {
     High:   '#EF4444',   // red-500
-    Medium: '#EAB308',   // yellow-500
+    Medium: '#F59E0B',   // amber-500
     Low:    '#22C55E',   // green-500
     Focus:  '#3B82F6',   // blue-500 — monitored border
     None:   '#CBD5E1',   // slate-300

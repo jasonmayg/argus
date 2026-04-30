@@ -24,12 +24,12 @@ const THREAT_TEMPLATES = {
 };
 const DEFAULT_THREAT = 'Broader macroeconomic deterioration may exacerbate this risk category.';
 
-// ── Softened posture labels ───────────────────────────────
+// ── Posture display labels (standardized to High/Medium/Low) ─
 const POSTURE_LABELS = {
-    'CRITICAL':  'Requires Immediate Attention',
-    'ELEVATED':  'Elevated Priority',
-    'MODERATE':  'Monitor Closely',
-    'CONTAINED': 'Stable',
+    'CRITICAL':  'High',
+    'ELEVATED':  'Medium',
+    'MODERATE':  'Medium',
+    'CONTAINED': 'Low',
 };
 
 // ── Severity → Risk Monitor aligned labels ────────────────
@@ -79,10 +79,10 @@ function calcPosture(items) {
 
 function postureStyle(posture) {
     const map = {
-        'CRITICAL':  { bg:'var(--danger-bg)',  color:'var(--danger-text)',  border:'var(--danger-text)' },
-        'ELEVATED':  { bg:'var(--warning-bg)', color:'var(--warning-text)', border:'var(--warning-text)' },
-        'MODERATE':  { bg:'#FEF9C3',           color:'#854D0E',             border:'#CA8A04' },
-        'CONTAINED': { bg:'var(--success-bg)', color:'var(--success-text)', border:'var(--success-text)' },
+        'CRITICAL':  { bg:'#FEE2E2', color:'#991B1B', border:'#EF4444' },
+        'ELEVATED':  { bg:'#FEF3C7', color:'#92400E', border:'#F59E0B' },
+        'MODERATE':  { bg:'#FEF3C7', color:'#92400E', border:'#F59E0B' },
+        'CONTAINED': { bg:'#DCFCE7', color:'#166534', border:'#22C55E' },
     };
     return map[posture] || map['CONTAINED'];
 }
@@ -415,7 +415,8 @@ function _categoryCard(item) {
                   padding:10px 14px;background:#FAFAFA;cursor:pointer;"
            onclick="toggleCategoryCard('${catId}')">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="status-badge" style="background:${sevBg};color:${sevColor};font-size:10px;">${severity}</span>
+          <span class="status-badge" style="background:${sevBg};color:${sevColor};font-size:10px;"
+                title="${severity === 'High' ? 'High Risk (score 60–100): Immediate review recommended. Signals indicate significant probability of material impact.' : severity === 'Medium' ? 'Medium Risk (score 30–59): Monitor closely. Moderate exposure detected across signals.' : 'Low Risk (score 0–29): Within acceptable bounds. Standard monitoring applies.'}">${severity}</span>
           <span style="font-size:12px;font-weight:600;color:var(--text-main);">${escapeHtml(category)}</span>
           <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
               — ${escapeHtml((item.top_title||'').substring(0,50))}${(item.top_title||'').length>50?'…':''}
