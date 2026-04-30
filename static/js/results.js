@@ -314,6 +314,70 @@ const _levelStyle = {
     'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
 };
 
+
+// ── Extract country from scored item ─────────────────────
+// Uses source field + title keyword matching (mirrors risk_categories.json)
+const _COUNTRY_KEYWORDS = {
+    'USA':         ['federal reserve','fed ','u.s.','united states','america','treasury','sofr','fomc','powell','washington','fednow','new york fed'],
+    'Canada':      ['canada','bank of canada','boc','canadian','ottawa','cad','corra'],
+    'UK':          ['bank of england','boe','united kingdom','britain','london','gbp','sterling'],
+    'Germany':     ['germany','deutsche','berlin','bundesbank','german'],
+    'France':      ['france','french','paris','banque de france'],
+    'EU':          ['ecb','european central bank','eurozone','euro area',' eu ','european union','lagarde','brussels'],
+    'Japan':       ['bank of japan','boj','japan','yen','jpy','tokyo'],
+    'China':       ['china','pboc','renminbi','yuan','cny','beijing','chinese'],
+    'Brazil':      ['brazil','bcb','brl','real','brasilia'],
+    'India':       ['india','rbi','reserve bank of india','rupee','inr','mumbai'],
+    'Australia':   ['australia','rba','aud','sydney'],
+    'Mexico':      ['mexico','banxico','mxn','peso'],
+    'South Korea': ['korea','bank of korea','krw','won','seoul'],
+    'Hong Kong':   ['hong kong','hkma','hkd'],
+    'Singapore':   ['singapore','mas','sgd'],
+};
+
+const _SOURCE_COUNTRY = {
+    'federal_reserve': 'USA',
+    'bank_of_canada':  'Canada',
+    'ecb':             'EU',
+    'bank_of_england': 'UK',
+    'bank_of_japan':   'Japan',
+};
+
+// GCS Data Alert titles often contain country name — extract from title
+// e.g. "US CPI Rapid Acceleration — USA CPI" → USA
+const _TITLE_COUNTRY_PATTERNS = [
+    [/USA?|U\.S\.|United States/i, 'USA'],
+    [/Canada|CAD/i,                'Canada'],
+    [/UK|United Kingdom|Britain|GBP/i, 'UK'],
+    [/ECB|Eurozone|Euro/i,    'EU'],
+    [/Japan|JPY|Yen/i,        'Japan'],
+    [/China|CNY|Yuan/i,       'China'],
+    [/Canada|CORRA/i,             'Canada'],
+    [/Australia|AUD/i,            'Australia'],
+    [/India|INR/i,                'India'],
+    [/Brazil|BRL/i,               'Brazil'],
+    [/Mexico|MXN/i,               'Mexico'],
+];
+
+function _extractCountry(item) {
+    // 1. Direct source mapping
+    const srcKey = (item.source || '').toLowerCase();
+    if (_SOURCE_COUNTRY[srcKey]) return _SOURCE_COUNTRY[srcKey];
+
+    // 2. Title regex patterns (fast, handles "USA CPI", "US DXY" etc.)
+    const title = item.title || '';
+    for (const [pattern, country] of _TITLE_COUNTRY_PATTERNS) {
+        if (pattern.test(title)) return country;
+    }
+
+    // 3. Title + rationale keyword match (fallback)
+    const text = (title + ' ' + (item.impact_reasoning || '')).toLowerCase();
+    for (const [country, keywords] of Object.entries(_COUNTRY_KEYWORDS)) {
+        if (keywords.some(kw => text.includes(kw))) return country;
+    }
+    return null;  // no match — don't show link
+}
+
 function _renderScoredItems(items, newsCount, dataCount, filter) {
     const itemsEl = document.getElementById('riskMatrixItems');
     const header  = document.getElementById('riskMatrixItemsHeader');
@@ -357,6 +421,14 @@ function _renderScoredItems(items, newsCount, dataCount, filter) {
                         color:var(--primary);text-decoration:none;font-family:var(--font-mono);">
                  Read source →</a>`
             : '';
+        const _itemCountry = _extractCountry(item);
+        const actionsLink = _itemCountry
+            ? `<a onclick="viewActionsForCountry('${escapeHtml(_itemCountry)}')"
+                 style="display:inline-flex;align-items:center;gap:4px;margin-top:10px;margin-left:12px;
+                        font-size:11px;color:var(--primary);text-decoration:none;
+                        font-family:var(--font-mono);cursor:pointer;">
+                 View suggested actions (${escapeHtml(_itemCountry)}) →</a>`
+            : '';
         return `
         <div class="card" data-item-idx="${idx}"
              style="border-left:3px solid ${style.border};background:${style.bg};transition:border-color 0.25s,background 0.25s;">
@@ -382,7 +454,10 @@ function _renderScoredItems(items, newsCount, dataCount, filter) {
                 <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:3px;">Rationale</span>
                 ${escapeHtml(item.impact_reasoning || '—')}
             </div>
-            ${newsLink}
+            <div style="display:flex;flex-wrap:wrap;">
+                ${newsLink}
+                ${actionsLink}
+            </div>
         </div>`;
     }).join('');
 }
@@ -391,4 +466,12 @@ function matrixClearFilter() {
     _matrixFilter = null;
     _clearMatrixCellSelection();
     _renderScoredItems(window._lastScoredItems || []);
+}
+
+
+// ── Risk Monitor → Actions deep-link ─────────────────────
+function viewActionsForCountry(country) {
+    localStorage.setItem('argusActionsFilter', JSON.stringify({ country }));
+    const navEl = document.querySelector('.nav-item[onclick*="actions"]');
+    if (typeof showPage === 'function') showPage('actions', navEl);
 }

@@ -3,17 +3,13 @@
    ============================================================ */
 
 let guardianTopAlerts      = [];
-let guardianBaseAlerts     = [];
-let guardianAdjustedActive = false;
 let _guardianCountryFilter = null;   // country name string or null = show all
+let _guardianCategoryFilter = null;  // ★ category filter from Home cards
 
 // Called from the map when a country is clicked
 function showCountryEvents(countryName) {
-    // Navigate to Risk Monitor
     const riskNav = document.querySelector('.nav-item[onclick*="risk"]');
     showPage('risk', riskNav);
-
-    // Wait one tick for loadGuardianDashboard to fire, then apply filter
     _guardianCountryFilter = countryName;
     setTimeout(() => _applyCountryFilter(countryName), 400);
 }
@@ -25,8 +21,97 @@ function _applyCountryFilter(countryName) {
     _renderAlertsWithFilter(filtered, countryName);
 }
 
+function _applyCategoryFilter(categoryName) {
+    // Normalize: strip " Risk" suffix for broader matching
+    const norm = categoryName.toLowerCase().replace(/ risk$/i, '').trim();
+
+    // 1. Filter News Alerts
+    const filtered = guardianTopAlerts.filter(a => {
+        const cat = (a.category || '').toLowerCase();
+        return cat.includes(norm) || norm.includes(cat.replace(/ risk$/i,'').trim());
+    });
+    _renderAlertsWithCategoryBanner(filtered, categoryName);
+
+    // 2. Filter Data Alerts — highlight matching rows on the right side
+    _highlightDataAlertsByCategory(norm, categoryName);
+}
+
+function _highlightDataAlertsByCategory(norm, categoryName) {
+    const body = document.getElementById('dataAlertsBody');
+    if (!body) return;
+
+    // Find all data alert rows and highlight matching ones
+    const rows = body.querySelectorAll('div[style*="border-left"]');
+    let firstMatch = null;
+    let matchCount = 0;
+
+    rows.forEach(row => {
+        const catTag = row.querySelector('span[style*="border-radius"]');
+        const catText = (catTag?.textContent || row.textContent || '').toLowerCase();
+        const matches = catText.includes(norm);
+
+        if (matches) {
+            row.style.outline      = '2px solid var(--primary)';
+            row.style.outlineOffset = '-2px';
+            if (!firstMatch) firstMatch = row;
+            matchCount++;
+        } else {
+            row.style.opacity = '0.35';
+            row.style.outline = '';
+        }
+    });
+
+    // Scroll to first match in Data Alerts
+    if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // If no news alerts but data alerts exist, show a note in the banner
+    if (matchCount > 0) {
+        const banner = document.getElementById('newsAlertsFilterBanner');
+        if (banner) {
+            const note = banner.querySelector('.data-note');
+            if (!note) {
+                const span = document.createElement('span');
+                span.className = 'data-note';
+                span.style.cssText = 'margin-left:8px;color:#1D4ED8;font-size:10px;';
+                span.textContent = `· ${matchCount} match${matchCount!==1?'es':''} in Data Alerts →`;
+                banner.querySelector('span')?.appendChild(span);
+            }
+        }
+    }
+
+    // Reset highlights when filter is cleared (patch clearCountryFilter)
+    window._lastDataHighlightNorm = norm;
+}
+
+function _renderAlertsWithCategoryBanner(alerts, categoryName) {
+    let banner = document.getElementById('newsAlertsFilterBanner');
+    if (!banner) {
+        const header = document.querySelector('#criticalAlertsTableBody')
+            ?.closest('.card')
+            ?.querySelector('div[style*="border-bottom"]');
+        if (header) {
+            banner = document.createElement('div');
+            banner.id = 'newsAlertsFilterBanner';
+            banner.style.cssText =
+                'display:flex;align-items:center;justify-content:space-between;' +
+                'padding:6px 16px;background:#EFF6FF;border-bottom:1px solid #BFDBFE;' +
+                'font-size:10px;font-family:var(--font-mono);color:#1D4ED8;';
+            header.insertAdjacentElement('afterend', banner);
+        }
+    }
+    if (banner) {
+        banner.style.display = 'flex';
+        banner.innerHTML =
+            `<span>Category: <strong>${escapeHtml(categoryName)}</strong> · ${alerts.length} alert${alerts.length !== 1 ? 's' : ''}</span>` +
+            `<button onclick="clearCountryFilter()" style="font-size:10px;padding:1px 8px;border:1px solid #BFDBFE;` +
+            `border-radius:3px;background:white;cursor:pointer;color:#1D4ED8;">✕ Show all</button>`;
+    }
+    renderGuardianAlerts(alerts);
+}
+
 function _renderAlertsWithFilter(alerts, countryName) {
-    // Show/update the filter banner inside the News Alerts card header
     let banner = document.getElementById('newsAlertsFilterBanner');
     if (!banner) {
         const header = document.querySelector('#criticalAlertsTableBody')
@@ -53,13 +138,32 @@ function _renderAlertsWithFilter(alerts, countryName) {
 }
 
 function clearCountryFilter() {
-    _guardianCountryFilter = null;
+    _guardianCountryFilter  = null;
+    _guardianCategoryFilter = null;
     const banner = document.getElementById('newsAlertsFilterBanner');
     if (banner) banner.style.display = 'none';
     renderGuardianAlerts(guardianTopAlerts);
+
+    // Reset Data Alerts highlights
+    const body = document.getElementById('dataAlertsBody');
+    if (body) {
+        body.querySelectorAll('div[style*="border-left"]').forEach(row => {
+            row.style.opacity = '';
+            row.style.outline = '';
+            row.style.outlineOffset = '';
+        });
+    }
+    window._lastDataHighlightNorm = null;
 }
 
 async function loadGuardianDashboard() {
+    // ★ Check for category filter from Home cards
+    const catFilter = localStorage.getItem('argusRiskCategoryFilter');
+    if (catFilter) {
+        localStorage.removeItem('argusRiskCategoryFilter');
+        _guardianCategoryFilter = catFilter;
+    }
+
     try {
         const r = await fetch(`${API_BASE}/guardian/dashboard`);
         const d = await r.json();
@@ -109,7 +213,7 @@ async function loadGuardianDashboard() {
 
         // Filter out GCS raw entries and deduplicate
         const seen = new Set();
-        guardianBaseAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
+        guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
             const src   = (a.source || '').toLowerCase();
             const title = (a.title  || '').trim();
             if (src === 'gcs_raw' || src === 'gcs_data') return false;
@@ -119,21 +223,22 @@ async function loadGuardianDashboard() {
             seen.add(key);
             return true;
         });
-        if (!guardianAdjustedActive) {
-            guardianTopAlerts = guardianBaseAlerts.slice();
-        }
 
         const newsCountBadge = document.getElementById('newsAlertCount');
         if (newsCountBadge) {
-            const nc = (guardianAdjustedActive ? guardianTopAlerts : guardianBaseAlerts).length;
+            const nc = guardianTopAlerts.length;
             newsCountBadge.textContent  = nc + ' Alert' + (nc !== 1 ? 's' : '');
             newsCountBadge.style.background = nc > 0 ? 'var(--warning-bg)' : 'var(--idle-bg)';
             newsCountBadge.style.color      = nc > 0 ? 'var(--warning-text)' : 'var(--idle-text)';
         }
 
-        if (_guardianCountryFilter) {
+        // ★ Apply filter: category takes priority, then country, then show all
+        if (_guardianCategoryFilter) {
+            _applyCategoryFilter(_guardianCategoryFilter);
+            _guardianCategoryFilter = null;
+        } else if (_guardianCountryFilter) {
             _applyCountryFilter(_guardianCountryFilter);
-        } else if (!guardianAdjustedActive) {
+        } else {
             renderGuardianAlerts(guardianTopAlerts);
         }
     } catch(e) {

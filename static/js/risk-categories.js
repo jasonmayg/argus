@@ -8,13 +8,29 @@ const CATEGORY_ICONS = {
     'Payment & Disbursement Risk': '💳',
     'Cash Concentration':          '🏦',
     'Regulatory':                  '⚖️',
+    'Regulatory Risk':             '⚖️',
     'Geopolitical':                '🌍',
     'Macroeconomic':               '📊',
     'Inflation':                   '🔥',
     'FX Risk':                     '💱',
+    'Market Risk':                 '📉',
     'Monetary Policy':             '🏛️',
     'Natural Disaster':            '🌋',
+    'Disaster Risk':               '🌋',
+    'Credit Risk':                 '⚠️',
+    'Operational Risk':            '🔧',
+    'Systematic Risk':             '🌐',
+    'Political Risk':              '🏛',
+    'Reputation Risk':             '📢',
 };
+
+// ── Navigate to Risk Monitor and filter by category ───────
+function navigateToRiskCategory(categoryName) {
+    // Store filter for Risk Monitor to pick up
+    localStorage.setItem('argusRiskCategoryFilter', categoryName);
+    const navEl = document.querySelector('.nav-item[onclick*="risk"]');
+    if (typeof showPage === 'function') showPage('risk', navEl);
+}
 
 async function loadRiskCategories() {
     const container = document.getElementById('riskCategoryCards');
@@ -41,7 +57,7 @@ async function loadRiskCategories() {
                                 dataCount  >= 1 ? 'var(--primary)' : 'var(--border)';
             const countColor  = totalCount >= 5 ? 'var(--danger-text)' :
                                 totalCount >= 2 ? 'var(--warning-text)' : 'var(--text-main)';
-            const topTitle    = (cat.top_title || '—').substring(0, 55) +
+            const topTitle    = (cat.risk_category || '—').substring(0, 55) +
                                 ((cat.top_title || '').length > 55 ? '…' : '');
 
             const newsBadge = newsCount > 0
@@ -49,21 +65,23 @@ async function loadRiskCategories() {
             const dataBadge = dataCount > 0
                 ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#EFF6FF;color:var(--primary);font-family:var(--font-mono);">${dataCount} data</span>` : '';
 
+            const catName = cat.risk_category || '';
+
             return `<div style="background:white;border:1px solid var(--border);
                                 border-top:3px solid ${borderColor};border-radius:6px;padding:12px 14px;
                                 cursor:pointer;transition:all 0.15s;"
                          onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'"
                          onmouseout="this.style.boxShadow=''"
-                         onclick="showPage('risk', document.querySelector('.nav-item[onclick*=risk]'))">
+                         onclick="navigateToRiskCategory('${escapeHtml(catName)}')">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);font-family:var(--font-mono);">${escapeHtml(cat.risk_category)}</div>
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);font-family:var(--font-mono);">${escapeHtml(catName)}</div>
                     <span style="font-size:13px;">${icon}</span>
                 </div>
                 <div style="font-size:22px;font-weight:700;color:${countColor};font-family:var(--font-mono);line-height:1;margin-bottom:6px;">
                     ${totalCount}<span style="font-size:11px;font-weight:500;color:var(--text-muted);"> signals</span>
                 </div>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">${newsBadge}${dataBadge}</div>
-                <div style="font-size:10px;color:var(--text-muted);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(topTitle)}</div>
+                <div style="font-size:10px;color:var(--text-muted);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml((cat.top_title||'—').substring(0,55))}</div>
             </div>`;
         }).join('');
     } catch(e) {
@@ -79,20 +97,21 @@ async function loadDataAlerts(fresh = false) {
 
     try {
         const url = '/api/data/alerts' + (fresh ? '?fresh=1' : '');
-        const r   = await fetch(url);
+
+        // ★ Fetch both sources in parallel
+        const [r, gr] = await Promise.all([
+            fetch(url),
+            fetch(`${API_BASE}/guardian/dashboard`).catch(() => null),
+        ]);
         const d   = await r.json();
         if (d.status !== 'success') throw new Error(d.message || 'Failed');
 
-        // Threshold-based alerts (already deduped by backend per country+indicator)
         const thresholdAlerts = d.alerts || [];
 
-        // ── Merge GCS data update entries from Guardian ──────────────
         let gcsDataAlerts = [];
         try {
-            const gr = await fetch(`${API_BASE}/guardian/dashboard`);
-            const gd = await gr.json();
+            const gd = gr ? await gr.json() : { status: 'error' };
             if (gd.status === 'success') {
-                // Dedup GCS entries by title — keep highest score per unique title
                 const seenTitles = new Map();
                 (gd.alerts || [])
                     .filter(a => {
@@ -123,31 +142,25 @@ async function loadDataAlerts(fresh = false) {
                     threshold:     40,
                 }));
             }
-        } catch(e) { /* Guardian unavailable */ }
+        } catch(e) { /* Guardian data unavailable */ }
 
-        // ── Final merge: dedup across both sources by name ──────────
         const seenNames = new Set();
         const alerts = [...thresholdAlerts, ...gcsDataAlerts].filter(a => {
-            if (a._error) return true; // keep errors
+            if (a._error) return true;
             const key = (a.name || '').trim().toLowerCase();
             if (seenNames.has(key)) return false;
             seenNames.add(key);
             return true;
         });
 
-        // ── Update badges ────────────────────────────────────────────
         const total = d.total_triggered || 0;
         const high  = d.summary?.high   || 0;
 
         const totalBadge = document.getElementById('dataAlertTotalCount');
         const highBadge  = document.getElementById('dataAlertHighCount');
         if (totalBadge) {
-            if ((d.alerts || []).length) {
-                totalBadge.textContent = 'Recent trigger feed · 10 items';
-            } else {
-                const genAt = d.generated_at ? ' · ' + d.generated_at : '';
-                totalBadge.textContent = total + ' Triggered' + genAt;
-            }
+            const genAt = d.generated_at ? ' · ' + d.generated_at : '';
+            totalBadge.textContent = total + ' Triggered' + genAt;
         }
         if (highBadge) {
             highBadge.style.display = high > 0 ? '' : 'none';
@@ -162,11 +175,7 @@ async function loadDataAlerts(fresh = false) {
         const sevColor = s => s === 'High' ? 'var(--danger-text)'  : s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
         const sevBg    = s => s === 'High' ? 'var(--danger-bg)'    : s === 'Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
 
-        const intro = d.historical_message
-            ? `<div style="padding:10px 16px;border-bottom:1px solid var(--border);background:#F8FAFC;color:var(--text-secondary);font-size:11px;font-family:var(--font-mono);">${escapeHtml(d.historical_message)}</div>`
-            : '';
-
-        body.innerHTML = intro + alerts.filter(a => !a._error).map(a => `
+        body.innerHTML = alerts.filter(a => !a._error).map(a => `
             <div style="padding:10px 16px;border-bottom:1px solid var(--border);border-left:3px solid ${sevColor(a.severity)};">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                     <div style="font-weight:700;font-size:12px;">${escapeHtml(a.name)}</div>
