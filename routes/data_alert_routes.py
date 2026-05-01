@@ -720,8 +720,8 @@ def api_data_alerts_matrix_items():
             ['Low','Low','Low','Medium','Medium'],
             ['Low','Low','Medium','Medium','High'],
             ['Low','Medium','Medium','High','High'],
-            ['Medium','Medium','High','High','Extreme'],
-            ['Medium','High','High','Extreme','Extreme'],
+            ['Medium','Medium','High','High','High'],
+            ['Medium','High','High','High','High'],
         ]
 
         for a in alerts:

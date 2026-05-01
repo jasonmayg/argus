@@ -172,8 +172,13 @@ async function loadDataAlerts(fresh = false) {
             return;
         }
 
-        const sevColor = s => s === 'High' ? 'var(--danger-text)'  : s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
-        const sevBg    = s => s === 'High' ? 'var(--danger-bg)'    : s === 'Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
+        const sevColor   = s => s === 'High' ? 'var(--danger-text)'  : s === 'Medium' ? 'var(--warning-text)'  : 'var(--text-muted)';
+        const sevBg      = s => s === 'High' ? 'var(--danger-bg)'    : s === 'Medium' ? 'var(--warning-bg)'    : 'var(--idle-bg)';
+        const sevTooltip = s => s === 'High'
+            ? 'High Risk (score 60–100): Threshold significantly breached. Immediate review recommended.'
+            : s === 'Medium'
+            ? 'Medium Risk (score 30–59): Threshold breached moderately. Monitor closely.'
+            : 'Low Risk (score 0–29): Minor threshold deviation. Standard monitoring applies.';
 
         body.innerHTML = alerts.filter(a => !a._error).map(a => `
             <div style="padding:10px 16px;border-bottom:1px solid var(--border);border-left:3px solid ${sevColor(a.severity)};">
@@ -181,7 +186,8 @@ async function loadDataAlerts(fresh = false) {
                     <div style="font-weight:700;font-size:12px;">${escapeHtml(a.name)}</div>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(a.triggered_at || '')}</span>
-                        <span class="status-badge" style="background:${sevBg(a.severity)};color:${sevColor(a.severity)};">${escapeHtml(a.severity)}</span>
+                        <span class="status-badge" style="background:${sevBg(a.severity)};color:${sevColor(a.severity)};"
+                              title="${sevTooltip(a.severity)}">${escapeHtml(a.severity)}</span>
                     </div>
                 </div>
                 <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">${escapeHtml(a.description)}</div>

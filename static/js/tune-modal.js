@@ -283,8 +283,7 @@ async function tunePreviewLive() {
             const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
             const eff  = Math.min(100, parseFloat(item.risk_score || 0) * w);
             let lvl = 'Low';
-            if (eff >= 80) lvl = 'Extreme';
-            else if (eff >= 60) lvl = 'High';
+            if (eff >= 60) lvl = 'High';
             else if (eff >= 35) lvl = 'Medium';
             return { ...item, _effScore: eff, _effLevel: lvl };
         });
@@ -297,10 +296,9 @@ function tuneUpdateMatrixCards(items) {
     const container = document.getElementById('riskMatrixItems');
     if (!container) return;
     const levelStyle = {
-        'Extreme': { border: '#EF4444', badge: '#991B1B', badgeBg: '#FEE2E2' },
-        'High':    { border: '#F97316', badge: '#9A3412', badgeBg: '#FFEDD5' },
-        'Medium':  { border: '#EAB308', badge: '#854D0E', badgeBg: '#FEF9C3' },
-        'Low':     { border: '#E2E8F0', badge: '#166534', badgeBg: '#DCFCE7' },
+        'High':   { border: '#EF4444', badge: '#991B1B', badgeBg: '#FEE2E2' },
+        'Medium': { border: '#F59E0B', badge: '#92400E', badgeBg: '#FEF3C7' },
+        'Low':    { border: '#22C55E', badge: '#166534', badgeBg: '#DCFCE7' },
     };
     items.forEach((item, i) => {
         const card = container.querySelector(`[data-item-idx="${i}"]`);

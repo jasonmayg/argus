@@ -8,8 +8,8 @@ const MATRIX_LEVEL  = [
     ['Low','Low','Low','Medium','Medium'],
     ['Low','Low','Medium','Medium','High'],
     ['Low','Medium','Medium','High','High'],
-    ['Medium','Medium','High','High','Extreme'],
-    ['Medium','High','High','Extreme','Extreme'],
+    ['Medium','Medium','High','High','High'],
+    ['Medium','High','High','High','High'],
 ];
 
 // Active matrix cell filter: { p, i } (1-indexed) or null = show all
@@ -19,38 +19,156 @@ let _matrixFilter = null;
 
 const RISK_LEVELS = [
     {
-        label: 'CRITICAL',
-        color: 'var(--danger-text)',
-        bg:    'var(--danger-bg)',
+        label: 'HIGH',
+        color: '#991B1B',
+        bg:    '#FEE2E2',
         border:'#EF4444',
         rule:  'Any signal score ≥ 75, or 3+ High alerts',
         test:  (scores, highCount) => scores.some(s => s >= 75) || highCount >= 3,
     },
     {
-        label: 'ELEVATED',
+        label: 'MEDIUM',
         color: '#92400E',
         bg:    '#FEF3C7',
         border:'#F59E0B',
-        rule:  'Any signal score ≥ 55, or 1+ High alert',
-        test:  (scores, highCount) => scores.some(s => s >= 55) || highCount >= 1,
+        rule:  'Any signal score ≥ 40, or 1+ High alert, or 3+ Medium alerts',
+        test:  (scores, highCount, medCount) => scores.some(s => s >= 40) || highCount >= 1 || medCount >= 3,
     },
     {
-        label: 'MODERATE',
-        color: '#1E40AF',
-        bg:    '#EFF6FF',
-        border:'#3B82F6',
-        rule:  'Any signal score ≥ 40, or 3+ Medium alerts',
-        test:  (scores, highCount, medCount) => scores.some(s => s >= 40) || medCount >= 3,
-    },
-    {
-        label: 'CONTAINED',
-        color: 'var(--success-text)',
-        bg:    'var(--success-bg)',
+        label: 'LOW',
+        color: '#166534',
+        bg:    '#DCFCE7',
         border:'#22C55E',
         rule:  'No significant signals detected',
         test:  () => true,   // fallback
     },
 ];
+
+// ── Risk level tooltip text ───────────────────────────────
+function _riskLevelTooltip(level) {
+    const tips = {
+        'HIGH':   'High Risk (score 60–100): Signals indicate significant probability of material impact on treasury operations. Data sources: news alerts, guardian scores, market data thresholds. Immediate review recommended.',
+        'MEDIUM': 'Medium Risk (score 30–59): Moderate exposure detected across monitored signals. Data sources: news alerts, guardian scores, market data. Monitor closely and prepare contingency measures.',
+        'LOW':    'Low Risk (score 0–29): Risk signals within acceptable bounds. Data sources: news, guardian, market data. Standard monitoring applies.',
+        'High':   'High Risk (score 60–100): Significant probability of material impact. Sources: news analysis, market data, guardian alerts.',
+        'Medium': 'Medium Risk (score 30–59): Moderate risk exposure detected. Sources: news alerts and market data thresholds.',
+        'Low':    'Low Risk (score 0–29): Within acceptable parameters. Standard monitoring applies.',
+    };
+    return tips[level] || '';
+}
+
+// ── Risk explanation popup ────────────────────────────────
+function showRiskPopup(levelData) {
+    const existing = document.getElementById('riskExplainPopup');
+    if (existing) existing.remove();
+
+    const { label, color, bg, border, rule, triggers, topItem, maxScore, highCount, medCount } = levelData;
+    const analysis  = window._lastAnalysis  || {};
+    const scored    = analysis.scored_items || [];
+    const top3      = scored.slice(0, 3);
+    const weights   = window._lastPersonaWeights || {};
+
+    const sigCount  = scored.length;
+    const persona   = analysis.persona || 'cash_manager';
+
+    const weightsHtml = Object.keys(weights).length
+        ? Object.entries(weights).slice(0, 5).map(([k, v]) =>
+            `<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;
+                         border-radius:10px;background:#F8FAFC;border:1px solid var(--border);
+                         font-size:10px;font-family:var(--font-mono);">
+                ${k.replace(/_/g,' ')}: ×${parseFloat(v).toFixed(2)}</span>`).join('')
+        : `<span style="color:var(--text-muted);font-size:11px;">Default weights applied</span>`;
+
+    const top3Html = top3.length
+        ? top3.map((s, i) => `
+            <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
+                <span style="font-size:10px;font-weight:700;color:${color};min-width:16px;">${i+1}.</span>
+                <div>
+                    <div style="font-size:11px;font-weight:600;color:var(--text-main);line-height:1.4;">
+                        ${escapeHtml((s.title||'').substring(0,80))}${(s.title||'').length>80?'…':''}
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);">
+                        ${escapeHtml(s.risk_category||'')} · P:${s.probability||1} × I:${s.impact||1}
+                    </div>
+                </div>
+            </div>`).join('')
+        : `<div style="color:var(--text-muted);font-size:11px;">No scored signals available yet.</div>`;
+
+    const popup = document.createElement('div');
+    popup.id = 'riskExplainPopup';
+    popup.style.cssText = `position:fixed;inset:0;background:rgba(10,14,26,0.55);
+        display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;`;
+    popup.onclick = e => { if (e.target === popup) popup.remove(); };
+
+    popup.innerHTML = `
+    <div style="background:white;border-radius:10px;width:min(560px,95vw);max-height:85vh;
+                overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.15);">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:18px 22px 14px;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
+                      color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px;">
+              Overall Risk Level
+          </div>
+          <div style="font-size:22px;font-weight:700;color:${color};font-family:var(--font-mono);">
+              ${label}
+          </div>
+        </div>
+        <button onclick="document.getElementById('riskExplainPopup').remove()"
+            style="background:transparent;border:none;font-size:22px;color:var(--text-muted);
+                   cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Score summary -->
+        <div style="background:${bg};border:1px solid ${border};border-radius:6px;padding:12px 14px;">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                      color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;">
+              Risk Score Summary
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+              Max signal score: <strong>${maxScore.toFixed ? maxScore.toFixed(0) : maxScore}</strong> ·
+              ${highCount} High alert${highCount !== 1 ? 's' : ''} ·
+              ${medCount} Medium alert${medCount !== 1 ? 's' : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic;">${rule}</div>
+        </div>
+
+        <!-- Top 3 contributing signals -->
+        <div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                      color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">
+              Top Contributing Signals
+          </div>
+          ${top3Html}
+        </div>
+
+        <!-- Weights -->
+        <div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                      color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;">
+              Active Persona Weights (${persona})
+          </div>
+          <div>${weightsHtml}</div>
+        </div>
+
+        <!-- Explanation line -->
+        <div style="background:#F8FAFC;border-radius:6px;padding:10px 12px;
+                    font-size:11px;color:var(--text-secondary);line-height:1.6;
+                    border:1px solid var(--border);">
+            This score is calculated from <strong>${sigCount}</strong> news signal${sigCount!==1?'s':''}
+            weighted by <strong>${persona.replace(/_/g,' ')}</strong> persona weights,
+            combined with guardian news alerts and live market data thresholds.
+        </div>
+
+      </div>
+    </div>`;
+
+    document.body.appendChild(popup);
+}
 
 function _computeRiskLevel(analysis, guardianData) {
     // Collect all scores from pipeline scored items
@@ -80,7 +198,7 @@ function _computeRiskLevel(analysis, guardianData) {
             return { ...level, triggers, topItem, maxScore, highCount, medCount };
         }
     }
-    return { ...RISK_LEVELS[3], triggers: [], topItem: null, maxScore: 0, highCount: 0, medCount: 0 };
+    return { ...RISK_LEVELS[2], triggers: [], topItem: null, maxScore: 0, highCount: 0, medCount: 0 };
 }
 
 function _renderRiskLevelCard(levelData) {
@@ -123,10 +241,13 @@ function _renderRiskLevelCard(levelData) {
 
     // Replace kpiRisk content — card wrapper is in dashboard.html
     el.innerHTML = `
-        <!-- Level badge -->
-        <div style="font-size:20px;font-weight:700;color:${color};
+        <!-- Level badge (clickable → risk explanation popup) -->
+        <div onclick="showRiskPopup(window._lastRiskLevelData)"
+             title="${_riskLevelTooltip(label)} — Click for details."
+             style="font-size:20px;font-weight:700;color:${color};
                     font-family:var(--font-mono);letter-spacing:0.04em;
-                    margin-bottom:6px;">
+                    margin-bottom:6px;cursor:pointer;display:inline-block;
+                    border-bottom:2px dashed ${border};">
             ${label}
         </div>
 
@@ -193,7 +314,16 @@ async function loadResults() {
 
         // Compute and render risk level card
         const analysis   = d.stages.analysis?.analysis;
+        window._lastAnalysis = analysis;
+        // Snapshot active persona weights for the risk popup
+        try {
+            const _persona = typeof tsPersona !== 'undefined' ? tsPersona : 'cash_manager';
+            const _region  = typeof tsRegion  !== 'undefined' ? tsRegion  : 'global';
+            const _dk      = typeof _tuneKey  === 'function'  ? _tuneKey(_persona, _region) : _persona + '__global';
+            window._lastPersonaWeights = (typeof tsDraft !== 'undefined' ? tsDraft[_dk]?.risk_weights : null) || {};
+        } catch(_) { window._lastPersonaWeights = {}; }
         const levelData  = _computeRiskLevel(analysis, guardianData);
+        window._lastRiskLevelData = levelData;
         _renderRiskLevelCard(levelData);
 
         await renderRiskMatrix(analysis);
@@ -223,7 +353,7 @@ async function renderRiskMatrix(analysis) {
     const newsScored = analysis.scored_items || [];
     const allScored  = [...newsScored, ...gcsItems];
 
-    const _lvlOrder = { 'Extreme': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+    const _lvlOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
     allScored.sort((a, b) => {
         const la = _lvlOrder[a.matrix_level] ?? 9;
         const lb = _lvlOrder[b.matrix_level] ?? 9;
@@ -308,10 +438,9 @@ function _clearMatrixCellSelection() {
 // ── Render scored-item cards (unchanged) ──────────────────
 
 const _levelStyle = {
-    'Extreme': { bg:'#FEE2E2', border:'#EF4444', badge:'#991B1B', badgeBg:'#FEE2E2' },
-    'High':    { bg:'#FFF7ED', border:'#F97316', badge:'#9A3412', badgeBg:'#FFEDD5' },
-    'Medium':  { bg:'#FEFCE8', border:'#EAB308', badge:'#854D0E', badgeBg:'#FEF9C3' },
-    'Low':     { bg:'#F0FDF4', border:'#E2E8F0', badge:'#166534', badgeBg:'#DCFCE7' },
+    'High':   { bg:'#FEF2F2', border:'#EF4444', badge:'#991B1B', badgeBg:'#FEE2E2' },
+    'Medium': { bg:'#FFFBEB', border:'#F59E0B', badge:'#92400E', badgeBg:'#FEF3C7' },
+    'Low':    { bg:'#F0FDF4', border:'#22C55E', badge:'#166534', badgeBg:'#DCFCE7' },
 };
 
 
@@ -434,7 +563,8 @@ function _renderScoredItems(items, newsCount, dataCount, filter) {
              style="border-left:3px solid ${style.border};background:${style.bg};transition:border-color 0.25s,background 0.25s;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <span class="status-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;">${lvl}</span>
+                    <span class="status-badge" style="background:${style.badgeBg};color:${style.badge};font-size:10px;"
+                          title="${escapeHtml(_riskLevelTooltip(lvl))}\n\nRationale: ${escapeHtml(item.impact_reasoning||item.probability_reasoning||'Estimated from keyword risk score.')}">${lvl}</span>
                     ${srcTag}
                 </div>
                 <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">P:${prob} × I:${imp}</span>

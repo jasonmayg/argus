@@ -97,7 +97,7 @@ class AnalysisAgent(Agent):
     Scoring is LLM-powered when ``ANTHROPIC_API_KEY`` is set; otherwise a
     keyword-score heuristic is used as a transparent fallback.
 
-    The final risk level — Low / Medium / High / Extreme — is derived from the
+    The final risk level — Low / Medium / High — is derived from the
     5 × 5 matrix defined in ``risk_matrix.py``.
 
     Parameters
@@ -163,23 +163,21 @@ class AnalysisAgent(Agent):
             # Validate every item before storing — no NoneType values escape.
             scored_items = [self.validate_output(item) for item in raw_scored]
 
-            # Sort by severity: Extreme > High > Medium > Low
-            _level_order = {"Extreme": 0, "High": 1, "Medium": 2, "Low": 3}
+            # Sort by severity: High > Medium > Low
+            _level_order = {"High": 0, "Medium": 1, "Low": 2}
             scored_items.sort(key=lambda x: (
                 _level_order.get(x.get("matrix_level", "Low"), 9),
                 -(x.get("matrix_score", 0))
             ))
 
-            extreme_items = [n for n in scored_items if n.get("matrix_level") == "Extreme"]
-            high_items    = [n for n in scored_items if n.get("matrix_level") == "High"]
-            medium_items  = [n for n in scored_items if n.get("matrix_level") == "Medium"]
-            low_items     = [n for n in scored_items if n.get("matrix_level") == "Low"]
+            high_items   = [n for n in scored_items if n.get("matrix_level") == "High"]
+            medium_items = [n for n in scored_items if n.get("matrix_level") == "Medium"]
+            low_items    = [n for n in scored_items if n.get("matrix_level") == "Low"]
 
             llm_used = any(item.get("llm_scored") for item in scored_items)
             self.log(
                 f"Matrix (LLM={'yes' if llm_used else 'heuristic'}) — "
-                f"Extreme:{len(extreme_items)}  High:{len(high_items)}  "
-                f"Medium:{len(medium_items)}  Low:{len(low_items)}"
+                f"High:{len(high_items)}  Medium:{len(medium_items)}  Low:{len(low_items)}"
             )
 
             by_category: Dict[str, list] = {}
@@ -193,10 +191,9 @@ class AnalysisAgent(Agent):
                 "llm_scored":     llm_used,
                 "persona":        self.persona,
                 "by_risk_level": {
-                    "extreme": extreme_items,
-                    "high":    high_items,
-                    "medium":  medium_items,
-                    "low":     low_items,
+                    "high":   high_items,
+                    "medium": medium_items,
+                    "low":    low_items,
                 },
                 "by_category":    {cat: len(items) for cat, items in by_category.items()},
                 "top_keywords":   self._extract_top_keywords(classified_news),
@@ -243,7 +240,7 @@ class AnalysisAgent(Agent):
             cleaned.setdefault("impact_label",          IMPACT_LABELS[1])
             cleaned.setdefault("impact_reasoning",      "")
             cleaned.setdefault("matrix_level",          "Low")
-            cleaned.setdefault("matrix_color",          "#28a745")
+            cleaned.setdefault("matrix_color",          "#22C55E")
             cleaned.setdefault("matrix_text_color",     "#fff")
             cleaned.setdefault("matrix_score",          0)
             cleaned.setdefault("llm_scored",            False)

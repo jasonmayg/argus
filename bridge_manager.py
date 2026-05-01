@@ -30,9 +30,9 @@ Output (analyzed):
                             "impact_label": "Hazardous",
                             "impact_reasoning": "...",
                             "matrix_level": "High",
-                            "matrix_color": "#fd7e14",
+                            "matrix_color": "#EF4444",
                             "llm_scored": true }, ... ],
-        "summary":      { "extreme": 0, "high": 2, "medium": 5, "low": 3,
+        "summary":      { "high": 2, "medium": 5, "low": 3,
                           "llm_scored": true, "top_keywords": [...],
                           "matrix_summary": [[...], ...] },
         "analyzed_at":  "<ISO-8601 timestamp>",
@@ -286,8 +286,8 @@ def process_file(raw_path: Path) -> bool:
 
     summary = enriched.get("summary", {})
     log.info(
-        "  Matrix summary — Extreme:%d  High:%d  Medium:%d  Low:%d  (LLM:%s)",
-        summary.get("extreme", 0), summary.get("high", 0),
+        "  Matrix summary — High:%d  Medium:%d  Low:%d  (LLM:%s)",
+        summary.get("high", 0),
         summary.get("medium", 0), summary.get("low", 0),
         summary.get("llm_scored", False),
     )
