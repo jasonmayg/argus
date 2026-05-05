@@ -898,7 +898,13 @@ def _get_google_downside_demo_snapshot() -> dict[str, Any]:
             sec_user_agent=None,
             skip_train=False,
         )
-        payload = mod.score_latest_demo_row(args)
+        use_full_dataset = _env_bool("DOWNSIDE_INDEX_USE_FULL_DATASET", False)
+        if use_full_dataset:
+            payload = mod.score_latest_demo_row(args)
+            model_source = "local_demo"
+        else:
+            payload = mod.score_latest_gcs_demo_row(args)
+            model_source = "local_demo_gcs_daily_risk"
         metrics = {}
         if demo_metrics_path.exists():
             try:
@@ -917,7 +923,12 @@ def _get_google_downside_demo_snapshot() -> dict[str, Any]:
             "top_signals": payload.get("feature_sample", [])[:5],
             "is_stale": False,
             "staleness_days": None,
-            "model_source": "local_demo",
+            "model_source": model_source,
+            "score_mode": payload.get("score_mode", "full_feature_frame"),
+            "base_model_percent": payload.get("base_model_percent"),
+            "daily_risk_score_pressure_percent": payload.get("daily_risk_score_pressure_percent"),
+            "daily_risk_score_count": payload.get("daily_risk_score_count"),
+            "uses_daily_risk_score": payload.get("uses_daily_risk_score"),
             "gcs_meta": payload.get("gcs_meta", {}),
         }
     except Exception as e:

@@ -29,6 +29,8 @@ class TrainArtifacts:
     feature_columns: list[str]
     threshold: float
     metrics: dict[str, Any]
+    feature_means: dict[str, float]
+    feature_medians: dict[str, float]
 
 
 def load_yaml(path: str) -> dict[str, Any]:
@@ -298,7 +300,15 @@ def train_model(df: pd.DataFrame, horizon_days: int = 5, cv_splits: int = 5) -> 
         "test_period_start": str(df.iloc[split_idx]["date"].date()) if n > split_idx else None,
         "test_period_end": str(df.iloc[-1]["date"].date()) if n > 0 else None,
     }
-    return TrainArtifacts(model=best_model, model_name=best_name, feature_columns=feature_columns, threshold=0.5, metrics=metrics)
+    return TrainArtifacts(
+        model=best_model,
+        model_name=best_name,
+        feature_columns=feature_columns,
+        threshold=0.5,
+        metrics=metrics,
+        feature_means=X_train.apply(pd.to_numeric, errors="coerce").mean().fillna(0.0).to_dict(),
+        feature_medians=X_train.apply(pd.to_numeric, errors="coerce").median().fillna(0.0).to_dict(),
+    )
 
 
 def save_artifacts(art: TrainArtifacts, model_path: str, metrics_path: str) -> None:
@@ -307,6 +317,8 @@ def save_artifacts(art: TrainArtifacts, model_path: str, metrics_path: str) -> N
         "model_name": art.model_name,
         "feature_columns": art.feature_columns,
         "threshold": art.threshold,
+        "feature_means": art.feature_means,
+        "feature_medians": art.feature_medians,
     }
     joblib.dump(payload, model_path)
     with open(metrics_path, "w", encoding="utf-8") as fh:
