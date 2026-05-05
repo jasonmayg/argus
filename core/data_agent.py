@@ -235,14 +235,7 @@ GUARDIAN_API_SOURCES = {
 
 
 class DataAgent:
-    """Unified data agent: fetches from all sources, writes to shared_storage/raw/.
-
-    Usage
-    -----
-    agent = DataAgent()
-    result = await agent.fetch(sources=["federal_reserve", "gdelt"])
-    # result["paths"] lists the files written to shared_storage/raw/
-    """
+    """Unified data agent: fetches from all sources, writes to shared_storage/raw/."""
 
     async def fetch(
         self,
@@ -250,24 +243,6 @@ class DataAgent:
         url: Optional[str] = None,
         write_raw: bool = True,
     ) -> Dict:
-        """Fetch from the given sources and optionally write to shared_storage/raw/.
-
-        Args:
-            sources:   Source key list. Defaults to ["federal_reserve"].
-            url:       Custom URL to crawl (used when source key is a URL or
-                       to override the default Fed URL for "federal_reserve").
-            write_raw: When True (default) each source's items are written to
-                       shared_storage/raw/ as a separate JSON file.
-
-        Returns:
-            {
-                "status":  "success" | "partial" | "failed",
-                "total":   <int>,
-                "sources": {<key>: {"count": int, "status": str, "path"?: str}},
-                "paths":   [<Path>, ...],   # files written (when write_raw=True)
-                "items":   [...]            # all gathered items combined
-            }
-        """
         if not sources:
             if url and (url.startswith("http://") or url.startswith("https://")):
                 sources = [url]
@@ -281,6 +256,7 @@ class DataAgent:
         for source_key in sources:
             try:
                 if source_key == "federal_reserve":
+                    # ★ Restored: only crawl current year for daily pipeline speed
                     fed_url = url or (
                         f"https://www.federalreserve.gov/newsevents/pressreleases/"
                         f"{datetime.now().year}-press.htm"
@@ -295,7 +271,6 @@ class DataAgent:
 
                 elif source_key.startswith("http://") or source_key.startswith("https://"):
                     items = await _crawl_fed_url(source_key)
-                    # tag each item with the raw URL as source
                     for item in items:
                         item["source"] = source_key
 

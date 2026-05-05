@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import threading
 from datetime import datetime, timezone
@@ -37,6 +38,88 @@ _cache_lock = threading.Lock()
 LOCAL_GCS_HISTORY_CANDIDATES = [
     Path("guardian_poc/models/google_downside_gcs_features_demo.csv"),
 ]
+
+# ── ML Model B: Macro Scorer ──────────────────────────────
+_ML_DIR = Path(__file__).resolve().parent.parent / "ml"
+sys.path.insert(0, str(_ML_DIR))
+
+try:
+    from predict_macro import MacroScorer
+    _macro_scorer = MacroScorer(
+        model_path=str(_ML_DIR / "models" / "macro_scorer_model.pkl"),
+        features_path=str(_ML_DIR / "models" / "macro_scorer_features.pkl"),
+    )
+    _MACRO_AVAILABLE = True
+    print("[data_alerts] Model B (Macro Scorer) loaded successfully.")
+except Exception as _e:
+    print(f"[data_alerts] Model B not available, score will use severity rules: {_e}")
+    _macro_scorer    = None
+    _MACRO_AVAILABLE = False
+
+# ── Load macro snapshot for Model B ──────────────────────
+_MACRO_CSV           = Path(__file__).resolve().parent.parent / "argus_macro_indicators.csv"
+_macro_snapshot:      dict = {}
+_macro_prev_snapshot: dict = {}
+
+
+def _reload_macro_snapshot():
+    """Load the two most recent rows from argus_macro_indicators.csv."""
+    global _macro_snapshot, _macro_prev_snapshot
+    try:
+        if not _MACRO_CSV.exists():
+            print(f"[data_alerts] Macro CSV not found at {_MACRO_CSV}")
+            return
+        df = pd.read_csv(_MACRO_CSV, parse_dates=["snapshot_date"])
+        df = df.sort_values("snapshot_date").reset_index(drop=True)
+        cols = [c for c in df.columns if c != "snapshot_date"]
+        df[cols] = df[cols].ffill().bfill()
+        if len(df) >= 2:
+            _macro_snapshot      = df.iloc[-1].dropna().to_dict()
+            _macro_prev_snapshot = df.iloc[-2].dropna().to_dict()
+        elif len(df) == 1:
+            _macro_snapshot      = df.iloc[-1].dropna().to_dict()
+        print(f"[data_alerts] Macro snapshot loaded: "
+              f"{str(_macro_snapshot.get('snapshot_date', 'unknown'))[:10]}")
+    except Exception as _e:
+        print(f"[data_alerts] Macro snapshot load failed: {_e}")
+
+
+_reload_macro_snapshot()
+
+# Severity → score multiplier (adjusts ML score up/down by rule severity)
+_SEVERITY_MULT = {"High": 1.2, "Medium": 1.0, "Low": 0.8}
+
+# Severity → fallback score when ML is not available
+_SEVERITY_FALLBACK = {"High": 75.0, "Medium": 50.0, "Low": 25.0}
+
+
+def _compute_data_score(rule: Dict) -> float:
+    """
+    Compute a 0-100 numeric score for a triggered data alert.
+
+    Strategy:
+      - If Model B is available: use MacroScorer.predict_one() on the current
+        macro snapshot, then scale by the rule's severity multiplier.
+      - If Model B is not available: fall back to fixed scores per severity level.
+    """
+    sev  = rule.get("severity", "Medium")
+    mult = _SEVERITY_MULT.get(sev, 1.0)
+
+    if _MACRO_AVAILABLE and _macro_scorer and _macro_snapshot:
+        try:
+            # data_score 0-10 from macro indicators
+            raw = _macro_scorer.predict_one(
+                snapshot      = _macro_snapshot,
+                prev_snapshot = _macro_prev_snapshot or None,
+            )
+            # Scale to 0-100 and apply severity multiplier
+            score = min(100.0, raw * 10.0 * mult)
+            return round(score, 2)
+        except Exception as _e:
+            print(f"[data_alerts] Model B predict failed: {_e}")
+
+    # Fallback: fixed score per severity
+    return _SEVERITY_FALLBACK.get(sev, 50.0)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -92,7 +175,6 @@ def _fetch_series(bucket, prefix: str, country: str, indicator: str) -> Optional
 
     blobs = _list_gcs_csv_blobs(bucket, prefix)
 
-    # Reverse-lookup: country display name → prefix key
     country_key = None
     for k, v in DEFAULT_COUNTRY_NAME_MAP.items():
         if v.lower() == country.lower():
@@ -102,10 +184,9 @@ def _fetch_series(bucket, prefix: str, country: str, indicator: str) -> Optional
     target_blob = None
     for b in blobs:
         stem = Path(b.name).stem.lower()
-        blob_country  = _infer_country_from_filename(stem)
+        blob_country   = _infer_country_from_filename(stem)
         blob_indicator = _infer_indicator_from_filename(stem)
 
-        # Global indicators (no country prefix)
         if country.lower() == "global" and blob_indicator == indicator.lower():
             target_blob = b
             break
@@ -144,12 +225,13 @@ def _fetch_series_points(bucket, prefix: str, country: str, indicator: str) -> O
     target_blob = None
     for b in blobs:
         stem = Path(b.name).stem.lower()
-        blob_country = _infer_country_from_filename(stem)
+        blob_country   = _infer_country_from_filename(stem)
         blob_indicator = _infer_indicator_from_filename(stem)
         if country.lower() == "global" and blob_indicator == indicator.lower():
             target_blob = b
             break
-        if blob_country and blob_country.lower() == country.lower() and blob_indicator == indicator.lower():
+        if (blob_country and blob_country.lower() == country.lower()
+                and blob_indicator == indicator.lower()):
             target_blob = b
             break
 
@@ -158,7 +240,7 @@ def _fetch_series_points(bucket, prefix: str, country: str, indicator: str) -> O
 
     text = _read_gcs_csv_text(bucket, target_blob.name)
     meta = _build_series_from_text(Path(target_blob.name).name, text)
-    dates = meta.get("dates") or []
+    dates  = meta.get("dates")  or []
     values = meta.get("values") or []
     points: List[Tuple[str, float]] = []
     for d, v in zip(dates, values):
@@ -188,7 +270,7 @@ def _match_local_history_column(df, indicator: str) -> Optional[str]:
         f"gcs_macro_{indicator}",
         f"gcs_risk_{indicator}",
     ]
-    best_col = None
+    best_col  = None
     best_rank = None
     for col in df.columns:
         if col == "date" or col.endswith("_chg_1") or col.endswith("_roll_5"):
@@ -198,31 +280,23 @@ def _match_local_history_column(df, indicator: str) -> Optional[str]:
             if col == prefix:
                 return col
             if col.startswith(prefix + "_"):
-                # Prefer unsuffixed exact matches, then stable prefixed variants.
                 rank = 10 + idx
                 break
         if rank is None:
             continue
         if best_rank is None or rank < best_rank:
             best_rank = rank
-            best_col = col
+            best_col  = col
     return best_col
 
 
 def _fetch_local_series_points(country: str, indicator: str) -> Optional[List[Tuple[str, float]]]:
-    """
-    Local fallback for historical threshold evaluation based on cached demo GCS features.
-    The cache is already date-aligned and gives us a stable source even when live GCS
-    credentials are unavailable in the local UI runtime.
-    """
     df = _load_local_history_frame()
     if df is None:
         return None
-
     col = _match_local_history_column(df, indicator)
     if not col:
         return None
-
     out: List[Tuple[str, float]] = []
     for _, row in df[["date", col]].dropna().iterrows():
         try:
@@ -256,6 +330,7 @@ def _evaluate_rule(
     """
     Evaluate one rule against live GCS data.
     Returns alert dict if triggered, None otherwise.
+    Includes a numeric score (0-100) from Model B (MacroScorer).
     """
     country   = rule["country"]
     indicator = rule["indicator"]
@@ -270,8 +345,8 @@ def _evaluate_rule(
     latest = values[-1]
 
     if rule_type == "absolute":
-        triggered = _compare(latest, operator, threshold)
-        actual_value = latest
+        triggered     = _compare(latest, operator, threshold)
+        actual_value  = latest
         display_value = f"{latest:.4f}"
 
     elif rule_type == "change":
@@ -280,9 +355,9 @@ def _evaluate_rule(
         prev = values[-2]
         if prev == 0:
             return None
-        pct_change = (latest - prev) / abs(prev) * 100
-        triggered = _compare(abs(pct_change), operator, threshold)
-        actual_value = pct_change
+        pct_change    = (latest - prev) / abs(prev) * 100
+        triggered     = _compare(abs(pct_change), operator, threshold)
+        actual_value  = pct_change
         display_value = f"{pct_change:+.2f}%"
     else:
         return None
@@ -290,26 +365,30 @@ def _evaluate_rule(
     if not triggered:
         return None
 
+    # Compute numeric score via Model B
+    score = _compute_data_score(rule)
+
     return {
-        "rule_id":      rule["id"],
-        "name":         rule["name"],
-        "country":      country,
-        "indicator":    indicator,
-        "category":     rule.get("category", "General"),
-        "severity":     rule.get("severity", "Medium"),
-        "type":         rule_type,
-        "operator":     operator,
-        "threshold":    threshold,
-        "actual_value": round(actual_value, 4),
-        "display_value":display_value,
-        "latest_raw":   round(latest, 4),
-        "description":  rule.get("description", ""),
-        "triggered_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "source":       "GCS Macro Data",
+        "rule_id":       rule["id"],
+        "name":          rule["name"],
+        "country":       country,
+        "indicator":     indicator,
+        "category":      rule.get("category", "General"),
+        "severity":      rule.get("severity", "Medium"),
+        "score":         score,           # ← numeric score from Model B
+        "type":          rule_type,
+        "operator":      operator,
+        "threshold":     threshold,
+        "actual_value":  round(actual_value, 4),
+        "display_value": display_value,
+        "latest_raw":    round(latest, 4),
+        "description":   rule.get("description", ""),
+        "triggered_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "source":        "GCS Macro Data",
         # Matrix fields
-        "probability":  rule.get("probability", 3),
-        "impact":       rule.get("impact", 3),
-        "title":        rule.get("name", ""),
+        "probability":   rule.get("probability", 3),
+        "impact":        rule.get("impact", 3),
+        "title":         rule.get("name", ""),
     }
 
 
@@ -332,170 +411,180 @@ def _run_all_rules() -> List[Dict]:
             if alert:
                 alerts.append(alert)
         except Exception as e:
-            # Don't let one bad rule break all others
             alerts.append({
-                "rule_id":      rule.get("id", "unknown"),
-                "name":         rule.get("name", "Unknown Rule"),
-                "country":      rule.get("country", "—"),
-                "indicator":    rule.get("indicator", "—"),
-                "category":     "System",
-                "severity":     "Low",
-                "description":  f"Rule evaluation error: {str(e)[:100]}",
-                "display_value":"—",
-                "triggered_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-                "source":       "GCS Macro Data",
-                "_error":       True,
+                "rule_id":       rule.get("id", "unknown"),
+                "name":          rule.get("name", "Unknown Rule"),
+                "country":       rule.get("country", "—"),
+                "indicator":     rule.get("indicator", "—"),
+                "category":      "System",
+                "severity":      "Low",
+                "score":         0.0,
+                "description":   f"Rule evaluation error: {str(e)[:100]}",
+                "display_value": "—",
+                "triggered_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+                "source":        "GCS Macro Data",
+                "_error":        True,
             })
 
-    # ── Deduplicate: keep only highest severity per (country, indicator) ──
+    # Deduplicate: keep only highest severity per (country, indicator)
     severity_order = {"High": 0, "Medium": 1, "Low": 2}
     best: Dict[str, Dict] = {}
     for a in alerts:
         if a.get("_error"):
             continue
-        key = f"{a.get('country','')}__{a.get('indicator','')}"
+        key      = f"{a.get('country','')}__{a.get('indicator','')}"
         existing = best.get(key)
         if existing is None:
             best[key] = a
         else:
-            # Keep the one with higher severity (lower order number)
-            if severity_order.get(a.get("severity","Low"), 9) < severity_order.get(existing.get("severity","Low"), 9):
+            if (severity_order.get(a.get("severity", "Low"), 9)
+                    < severity_order.get(existing.get("severity", "Low"), 9)):
                 best[key] = a
 
-    # Rebuild alerts list: deduped real alerts + errors
     deduped = list(best.values())
     errors  = [a for a in alerts if a.get("_error")]
     alerts  = deduped + errors
 
-    # Sort: High → Medium → Low
-    alerts.sort(key=lambda a: severity_order.get(a.get("severity", "Low"), 9))
+    # Sort: High → Medium → Low, then by score descending within same severity
+    alerts.sort(key=lambda a: (
+        severity_order.get(a.get("severity", "Low"), 9),
+        -float(a.get("score", 0))
+    ))
     return alerts
 
 
 def _evaluate_rule_history(rule: Dict, bucket, prefix: str, limit: int = 10) -> List[Dict]:
-    """
-    Evaluate one rule across its available history and return most recent triggered points.
-    """
-    country = rule["country"]
+    """Evaluate one rule across its available history."""
+    country   = rule["country"]
     indicator = rule["indicator"]
     rule_type = rule["type"]
-    operator = rule["operator"]
+    operator  = rule["operator"]
     threshold = float(rule["threshold"])
 
     points = _fetch_series_points(bucket, prefix, country, indicator)
     if not points:
         return []
 
+    score = _compute_data_score(rule)
     out: List[Dict] = []
+
     if rule_type == "absolute":
         for date_str, latest in points:
             if _compare(latest, operator, threshold):
                 out.append({
-                    "rule_id": rule["id"],
-                    "name": rule["name"],
-                    "country": country,
-                    "indicator": indicator,
-                    "category": rule.get("category", "General"),
-                    "severity": rule.get("severity", "Medium"),
-                    "type": rule_type,
-                    "operator": operator,
-                    "threshold": threshold,
-                    "actual_value": round(latest, 4),
+                    "rule_id":       rule["id"],
+                    "name":          rule["name"],
+                    "country":       country,
+                    "indicator":     indicator,
+                    "category":      rule.get("category", "General"),
+                    "severity":      rule.get("severity", "Medium"),
+                    "score":         score,
+                    "type":          rule_type,
+                    "operator":      operator,
+                    "threshold":     threshold,
+                    "actual_value":  round(latest, 4),
                     "display_value": f"{latest:.4f}",
-                    "latest_raw": round(latest, 4),
-                    "description": rule.get("description", ""),
-                    "triggered_at": date_str,
-                    "source": "GCS Macro Data",
-                    "historical": True,
+                    "latest_raw":    round(latest, 4),
+                    "description":   rule.get("description", ""),
+                    "triggered_at":  date_str,
+                    "source":        "GCS Macro Data",
+                    "historical":    True,
                 })
     elif rule_type == "change":
         for idx in range(1, len(points)):
-            prev = points[idx - 1][1]
+            prev   = points[idx - 1][1]
             latest = points[idx][1]
             if prev == 0:
                 continue
             pct_change = (latest - prev) / abs(prev) * 100
             if _compare(abs(pct_change), operator, threshold):
                 out.append({
-                    "rule_id": rule["id"],
-                    "name": rule["name"],
-                    "country": country,
-                    "indicator": indicator,
-                    "category": rule.get("category", "General"),
-                    "severity": rule.get("severity", "Medium"),
-                    "type": rule_type,
-                    "operator": operator,
-                    "threshold": threshold,
-                    "actual_value": round(pct_change, 4),
+                    "rule_id":       rule["id"],
+                    "name":          rule["name"],
+                    "country":       country,
+                    "indicator":     indicator,
+                    "category":      rule.get("category", "General"),
+                    "severity":      rule.get("severity", "Medium"),
+                    "score":         score,
+                    "type":          rule_type,
+                    "operator":      operator,
+                    "threshold":     threshold,
+                    "actual_value":  round(pct_change, 4),
                     "display_value": f"{pct_change:+.2f}%",
-                    "latest_raw": round(latest, 4),
-                    "description": rule.get("description", ""),
-                    "triggered_at": points[idx][0],
-                    "source": "GCS Macro Data",
-                    "historical": True,
+                    "latest_raw":    round(latest, 4),
+                    "description":   rule.get("description", ""),
+                    "triggered_at":  points[idx][0],
+                    "source":        "GCS Macro Data",
+                    "historical":    True,
                 })
 
     out.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
     return out[:limit]
 
 
-def _evaluate_rule_history_from_points(rule: Dict, points: List[Tuple[str, float]], limit: int = 10, source: str = "Local GCS Demo Cache") -> List[Dict]:
-    """
-    Shared historical trigger builder for local fallback points.
-    """
+def _evaluate_rule_history_from_points(
+    rule: Dict,
+    points: List[Tuple[str, float]],
+    limit: int = 10,
+    source: str = "Local GCS Demo Cache",
+) -> List[Dict]:
+    """Shared historical trigger builder for local fallback points."""
     rule_type = rule["type"]
-    operator = rule["operator"]
+    operator  = rule["operator"]
     threshold = float(rule["threshold"])
-    country = rule["country"]
+    country   = rule["country"]
     indicator = rule["indicator"]
+    score     = _compute_data_score(rule)
 
     out: List[Dict] = []
     if rule_type == "absolute":
         for date_str, latest in points:
             if _compare(latest, operator, threshold):
                 out.append({
-                    "rule_id": rule["id"],
-                    "name": rule["name"],
-                    "country": country,
-                    "indicator": indicator,
-                    "category": rule.get("category", "General"),
-                    "severity": rule.get("severity", "Medium"),
-                    "type": rule_type,
-                    "operator": operator,
-                    "threshold": threshold,
-                    "actual_value": round(latest, 4),
+                    "rule_id":       rule["id"],
+                    "name":          rule["name"],
+                    "country":       country,
+                    "indicator":     indicator,
+                    "category":      rule.get("category", "General"),
+                    "severity":      rule.get("severity", "Medium"),
+                    "score":         score,
+                    "type":          rule_type,
+                    "operator":      operator,
+                    "threshold":     threshold,
+                    "actual_value":  round(latest, 4),
                     "display_value": f"{latest:.4f}",
-                    "latest_raw": round(latest, 4),
-                    "description": rule.get("description", ""),
-                    "triggered_at": date_str,
-                    "source": source,
-                    "historical": True,
+                    "latest_raw":    round(latest, 4),
+                    "description":   rule.get("description", ""),
+                    "triggered_at":  date_str,
+                    "source":        source,
+                    "historical":    True,
                 })
     elif rule_type == "change":
         for idx in range(1, len(points)):
-            prev = points[idx - 1][1]
+            prev   = points[idx - 1][1]
             latest = points[idx][1]
             if prev == 0:
                 continue
             pct_change = (latest - prev) / abs(prev) * 100
             if _compare(abs(pct_change), operator, threshold):
                 out.append({
-                    "rule_id": rule["id"],
-                    "name": rule["name"],
-                    "country": country,
-                    "indicator": indicator,
-                    "category": rule.get("category", "General"),
-                    "severity": rule.get("severity", "Medium"),
-                    "type": rule_type,
-                    "operator": operator,
-                    "threshold": threshold,
-                    "actual_value": round(pct_change, 4),
+                    "rule_id":       rule["id"],
+                    "name":          rule["name"],
+                    "country":       country,
+                    "indicator":     indicator,
+                    "category":      rule.get("category", "General"),
+                    "severity":      rule.get("severity", "Medium"),
+                    "score":         score,
+                    "type":          rule_type,
+                    "operator":      operator,
+                    "threshold":     threshold,
+                    "actual_value":  round(pct_change, 4),
                     "display_value": f"{pct_change:+.2f}%",
-                    "latest_raw": round(latest, 4),
-                    "description": rule.get("description", ""),
-                    "triggered_at": points[idx][0],
-                    "source": source,
-                    "historical": True,
+                    "latest_raw":    round(latest, 4),
+                    "description":   rule.get("description", ""),
+                    "triggered_at":  points[idx][0],
+                    "source":        source,
+                    "historical":    True,
                 })
 
     out.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
@@ -507,7 +596,7 @@ def _load_recent_historical_triggers(limit: int = 10) -> List[Dict]:
     rules = _load_rules()
     if not rules:
         return []
-    bucket = _get_gcs_bucket()
+    bucket   = _get_gcs_bucket()
     all_hits: List[Dict] = []
     if bucket is not None:
         prefix = _get_latest_prefix(bucket)
@@ -525,10 +614,7 @@ def _load_recent_historical_triggers(limit: int = 10) -> List[Dict]:
                     continue
                 all_hits.extend(
                     _evaluate_rule_history_from_points(
-                        rule,
-                        points,
-                        limit=limit,
-                        source="Local GCS Demo Cache",
+                        rule, points, limit=limit, source="Local GCS Demo Cache"
                     )
                 )
             except Exception:
@@ -536,7 +622,7 @@ def _load_recent_historical_triggers(limit: int = 10) -> List[Dict]:
 
     all_hits.sort(key=lambda a: str(a.get("triggered_at", "")), reverse=True)
     seen = set()
-    out = []
+    out  = []
     for item in all_hits:
         key = (item.get("rule_id"), item.get("triggered_at"))
         if key in seen:
@@ -549,15 +635,12 @@ def _load_recent_historical_triggers(limit: int = 10) -> List[Dict]:
 
 
 def _build_recent_trigger_feed(current_alerts: List[Dict], limit: int = 10) -> List[Dict]:
-    """
-    Always return a recent trigger feed. Current triggers are included first when present,
-    then older historical triggers fill the remainder up to the requested limit.
-    """
+    """Current triggers first, then historical fills remainder up to limit."""
     real_current = [a for a in current_alerts if not a.get("_error")]
-    historical = _load_recent_historical_triggers(limit=max(limit * 3, 20))
+    historical   = _load_recent_historical_triggers(limit=max(limit * 3, 20))
 
     merged: List[Dict] = []
-    seen = set()
+    seen: set = set()
     for item in sorted(real_current, key=lambda a: str(a.get("triggered_at", "")), reverse=True):
         key = (item.get("rule_id"), item.get("triggered_at"), item.get("name"))
         if key in seen:
@@ -580,17 +663,18 @@ def _build_recent_trigger_feed(current_alerts: List[Dict], limit: int = 10) -> L
 
 def _make_config_error(msg: str) -> Dict:
     return {
-        "rule_id":      "config_error",
-        "name":         "Configuration Error",
-        "country":      "—",
-        "indicator":    "—",
-        "category":     "System",
-        "severity":     "Low",
-        "description":  msg,
-        "display_value":"—",
-        "triggered_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "source":       "System",
-        "_error":       True,
+        "rule_id":       "config_error",
+        "name":          "Configuration Error",
+        "country":       "—",
+        "indicator":     "—",
+        "category":      "System",
+        "severity":      "Low",
+        "score":         0.0,
+        "description":   msg,
+        "display_value": "—",
+        "triggered_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "source":        "System",
+        "_error":        True,
     }
 
 
@@ -603,7 +687,7 @@ def _get_cached_alerts() -> List[Dict]:
 
     with _cache_lock:
         _cache["alerts"] = alerts
-        _cache["ts"] = time.time()
+        _cache["ts"]     = time.time()
 
     return alerts
 
@@ -616,6 +700,8 @@ def _get_cached_alerts() -> List[Dict]:
 def api_data_alerts():
     """
     Returns triggered alerts based on current GCS data vs thresholds.
+    Each alert now includes a numeric score (0-100) from Model B (MacroScorer).
+
     Query params:
       ?severity=High        — filter by severity
       ?category=Inflation   — filter by category
@@ -631,7 +717,6 @@ def api_data_alerts():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-    # Apply filters
     severity = (request.args.get("severity") or "").strip()
     category = (request.args.get("category") or "").strip()
     country  = (request.args.get("country")  or "").strip()
@@ -644,27 +729,30 @@ def api_data_alerts():
     if country:
         filtered = [a for a in filtered if a.get("country", "").lower() == country.lower()]
 
-    # Summary counts
-    high_count   = sum(1 for a in alerts if a.get("severity") == "High" and not a.get("_error"))
+    high_count   = sum(1 for a in alerts if a.get("severity") == "High"   and not a.get("_error"))
     medium_count = sum(1 for a in alerts if a.get("severity") == "Medium" and not a.get("_error"))
-    low_count    = sum(1 for a in alerts if a.get("severity") == "Low" and not a.get("_error"))
+    low_count    = sum(1 for a in alerts if a.get("severity") == "Low"    and not a.get("_error"))
 
     recent_alerts = _build_recent_trigger_feed(filtered, limit=10)
-    has_current = bool([a for a in filtered if not a.get("_error")])
+    has_current   = bool([a for a in filtered if not a.get("_error")])
     recent_message = ""
     if recent_alerts:
         if has_current:
             recent_message = "Showing the 10 most recent triggered data alerts, including current triggers."
         else:
-            recent_source = recent_alerts[0].get("source", "historical cache")
-            recent_message = f"No current threshold breaches; showing the 10 most recent triggered data alerts from {recent_source}."
+            recent_source  = recent_alerts[0].get("source", "historical cache")
+            recent_message = (
+                f"No current threshold breaches; showing the 10 most recent triggered "
+                f"data alerts from {recent_source}."
+            )
 
     return jsonify({
-        "status":        "success",
-        "generated_at":  datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "total_triggered": len([a for a in alerts if not a.get("_error")]),
+        "status":             "success",
+        "generated_at":       datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "total_triggered":    len([a for a in alerts if not a.get("_error")]),
         "historical_fallback": not has_current,
         "historical_message": recent_message,
+        "ml_scoring":         _MACRO_AVAILABLE,   # tells frontend whether ML score is live
         "summary": {
             "high":   high_count,
             "medium": medium_count,
@@ -682,10 +770,10 @@ def api_data_alert_rules():
             data = json.load(f)
         rules = data.get("rules", [])
         return jsonify({
-            "status": "success",
-            "total":  len(rules),
+            "status":  "success",
+            "total":   len(rules),
             "enabled": sum(1 for r in rules if r.get("enabled", True)),
-            "rules":  rules,
+            "rules":   rules,
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -694,10 +782,14 @@ def api_data_alert_rules():
 @data_alert_bp.post("/api/data/alerts/refresh")
 def api_data_alerts_refresh():
     """Force cache invalidation and re-run all rules."""
+    _reload_macro_snapshot()   # also reload macro snapshot on refresh
     with _cache_lock:
-        _cache["ts"] = 0.0
+        _cache["ts"]     = 0.0
         _cache["alerts"] = None
-    return jsonify({"status": "ok", "message": "Alert cache cleared. Next request will re-evaluate."})
+    return jsonify({
+        "status":  "ok",
+        "message": "Alert cache cleared and macro snapshot reloaded. Next request will re-evaluate.",
+    })
 
 
 # ═══════════════════════════════════════════════════════════
@@ -707,15 +799,15 @@ def api_data_alerts_refresh():
 @data_alert_bp.get("/api/data/alerts/matrix-items")
 def api_data_alerts_matrix_items():
     """
-    Returns triggered GCS alerts formatted as Matrix scored_items,
-    ready to be merged with pipeline analysis results on the frontend.
+    Returns triggered GCS alerts formatted as Matrix scored_items.
+    Each item now includes a numeric score from Model B.
     """
     try:
         alerts = _get_cached_alerts()
         items  = []
 
-        PROB_LABELS   = ['Unlikely','Seldom','Occasional','Likely','Frequent']
-        IMPACT_LABELS = ['Negligible','Minor','Moderate','Hazardous','Catastrophic']
+        PROB_LABELS   = ['Unlikely', 'Seldom', 'Occasional', 'Likely', 'Frequent']
+        IMPACT_LABELS = ['Negligible', 'Minor', 'Moderate', 'Hazardous', 'Catastrophic']
         MATRIX_LEVEL  = [
             ['Low','Low','Low','Medium','Medium'],
             ['Low','Low','Medium','Medium','High'],
@@ -727,25 +819,26 @@ def api_data_alerts_matrix_items():
         for a in alerts:
             if a.get("_error"):
                 continue
-            prob   = int(a.get("probability", 3))
-            impact = int(a.get("impact",      3))
-            # clamp 1-5
-            prob   = max(1, min(5, prob))
-            impact = max(1, min(5, impact))
-            level  = MATRIX_LEVEL[prob-1][impact-1]
+            prob   = max(1, min(5, int(a.get("probability", 3))))
+            impact = max(1, min(5, int(a.get("impact",      3))))
+            level  = MATRIX_LEVEL[prob - 1][impact - 1]
 
             items.append({
-                "title":           a["name"] + f" — {a['country']} {a['indicator'].upper()}",
-                "probability":     prob,
-                "impact":          impact,
-                "matrix_level":    level,
+                "title":            a["name"] + f" — {a['country']} {a['indicator'].upper()}",
+                "probability":      prob,
+                "impact":           impact,
+                "matrix_level":     level,
+                "score":            a.get("score", 0.0),   # ← numeric score
                 "impact_reasoning": a["description"] + f" (Actual: {a['display_value']})",
-                "source":          "GCS Data Alert",
-                "rule_id":         a["rule_id"],
-                "category":        a.get("category", ""),
-                "severity":        a.get("severity", ""),
-                "triggered_at":    a.get("triggered_at", ""),
+                "source":           "GCS Data Alert",
+                "rule_id":          a["rule_id"],
+                "category":         a.get("category", ""),
+                "severity":         a.get("severity", ""),
+                "triggered_at":     a.get("triggered_at", ""),
             })
+
+        # Sort by score descending
+        items.sort(key=lambda x: float(x.get("score", 0)), reverse=True)
 
         return jsonify({
             "status": "success",

@@ -186,8 +186,7 @@ async function loadDataAlerts(fresh = false) {
                     <div style="font-weight:700;font-size:12px;">${escapeHtml(a.name)}</div>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(a.triggered_at || '')}</span>
-                        <span class="status-badge" style="background:${sevBg(a.severity)};color:${sevColor(a.severity)};"
-                              title="${sevTooltip(a.severity)}">${escapeHtml(a.severity)}</span>
+                        <span class="status-badge" style="background:${sevBg(a.severity)};color:${sevColor(a.severity)};">${a.score != null && a.score > 0 ? Math.round(a.score) + ' · ' : ''}${escapeHtml(a.severity)}</span>
                     </div>
                 </div>
                 <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">${escapeHtml(a.description)}</div>
