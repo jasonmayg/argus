@@ -35,6 +35,16 @@ python-dotenv>=1.0.0      # Environment variable management from .env files
 python-dateutil>=2.8.2    # Date/time utilities
 google-cloud-storage>=2.18.0  # Read live Guardian snapshots from GCS
 
+# ==========================================================================
+# Machine Learning & NLP (Optional, for future enhancements)
+# Uncomment if you want to add ML/NLP capabilities
+pandas>=2.0.0
+scikit-learn>=1.3.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+joblib>=1.3.0
+
 # ============================================================================
 # Optional: For Development & Testing
 # ============================================================================

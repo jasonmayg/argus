@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,43 @@ from core.guardian_loader import (
     _load_guardian_snapshot_from_gcs,
     _resolve_guardian_snapshot_path,
 )
+
+# ── ML News Scorer (optional — falls back to rules if model not found) ────────
+# Looks for the trained model in ml/models/ relative to this file's location
+_ML_DIR = Path(__file__).resolve().parent.parent / "ml"
+sys.path.insert(0, str(_ML_DIR))
+
+try:
+    from predict import NewsScorer
+    _scorer = NewsScorer(
+        model_path=str(_ML_DIR / "models" / "news_scorer_model.pkl"),
+        tfidf_path=str(_ML_DIR / "models" / "news_scorer_tfidf.pkl"),
+    )
+    _ML_AVAILABLE = True
+    print("[newsalerts] ML scorer loaded successfully.")
+except Exception as _e:
+    print(f"[newsalerts] ML scorer not available, using rules fallback: {_e}")
+    _scorer       = None
+    _ML_AVAILABLE = False
+
+# Maps frontend weight keys (e.g. "liquidity_risk") to ML model category strings
+# Must stay in sync with TUNE_CAT_MAP in tune-strategy.js
+_WEIGHT_KEY_TO_CATEGORY: dict[str, str] = {
+    "liquidity_risk":   "Liquidity",
+    "regulatory_risk":  "Regulatory",
+    "market_risk":      "Market Risk",
+    "credit_risk":      "Credit Risk",
+    "operational_risk": "Operational",
+    "systematic_risk":  "Systematic Risk",
+    "political_risk":   "Political Risk",
+    "reputation_risk":  "Reputation Risk",
+    "disaster_risk":    "Disaster Risk",
+    "supply_risk":      "Supply Risk",
+    "demand_risk":      "Demand Risk",
+    "process_risk":     "Process Risk",
+    "business_risk":    "Business Risk",
+}
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def load_guardian_snapshot_for_newsalerts() -> tuple[dict[str, Any] | None, str]:
@@ -55,26 +94,78 @@ def filter_news_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def rescore_news_alerts(alerts: list[dict[str, Any]], risk_weights: dict[str, float] | None = None) -> list[dict[str, Any]]:
-    """Recompute Guardian News Alert scores from stored severity/recency inputs."""
+def rescore_news_alerts(
+    alerts: list[dict[str, Any]],
+    risk_weights: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Recompute Guardian News Alert scores.
+
+    Scoring strategy:
+      - If ML model is available: use NewsScorer.predict_one() to get news_score (0-10),
+        then apply recency and country_weight on top to produce the final 0-100 score.
+        The user's Weights Tuner value is passed as user_weight directly into the ML model.
+      - If ML model is not available: fall back to the original rules-based formula
+        (severity * recency * country_weight * persona_weight). Nothing breaks.
+    """
     risk_weights = risk_weights or {}
     rescored: list[dict[str, Any]] = []
+
     for alert in alerts:
-        row = dict(alert)
+        row          = dict(alert)
         category_key = str(row.get("category_key") or "").strip()
-        country = str(row.get("country") or "").strip()
+        country      = str(row.get("country") or "").strip()
+
         try:
-            severity = float(row.get("severity", 0) or 0)
+            recency = float(row.get("recency", 1.0) or 1.0)
         except Exception:
-            severity = 0.0
-        try:
-            recency = float(row.get("recency", 0) or 0)
-        except Exception:
-            recency = 0.0
+            recency = 1.0
 
         country_weight = 1.2 if country == "China" else 1.0
+        # persona_weight: the value the user set in Weights Tuner for this category
         persona_weight = float(risk_weights.get(category_key, 1.0))
-        score = max(0.0, min(100.0, 100.0 * severity * recency * country_weight * persona_weight))
+
+        if _ML_AVAILABLE and _scorer is not None:
+            # ── ML path ──────────────────────────────────────────────────────
+            ml_category = _WEIGHT_KEY_TO_CATEGORY.get(category_key, "General")
+            title = str(row.get("title") or row.get("headline") or "")
+            body  = str(
+                row.get("body") or
+                row.get("analysis_text") or
+                row.get("summary") or
+                title
+            )
+            try:
+                # news_score 0-10; user's slider value passed in as user_weight
+                news_score = _scorer.predict_one(
+                    title         = title,
+                    analysis_text = body,
+                    risk_category = ml_category,
+                    user_weight   = persona_weight,
+                )
+                score = max(0.0, min(100.0,
+                    news_score * 10.0 * recency * country_weight
+                ))
+            except Exception as _predict_err:
+                print(f"[newsalerts] ML predict failed for '{title[:40]}': {_predict_err}")
+                # Single-alert fallback to rules
+                try:
+                    severity = float(row.get("severity", 0) or 0)
+                except Exception:
+                    severity = 0.0
+                score = max(0.0, min(100.0,
+                    100.0 * severity * recency * country_weight * persona_weight
+                ))
+        else:
+            # ── Rules fallback (original logic, unchanged) ────────────────────
+            try:
+                severity = float(row.get("severity", 0) or 0)
+            except Exception:
+                severity = 0.0
+            score = max(0.0, min(100.0,
+                100.0 * severity * recency * country_weight * persona_weight
+            ))
+
         row["score"] = round(score, 2)
         rescored.append(row)
 

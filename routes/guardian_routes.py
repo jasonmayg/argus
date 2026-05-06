@@ -34,7 +34,7 @@ from core.agents import (
     build_cash_manager_dashboard,
     build_generic_persona_dashboard,
 )
-from core.newsalerts import build_rescored_newsalerts_payload
+from core.newsalerts import build_rescored_newsalerts_payload, rescore_news_alerts
 from core.guardian_loader import (
     GUARDIAN_SOURCE_WHITELIST,
     _load_guardian_snapshot_from_gcs,
@@ -55,110 +55,135 @@ def get_guardian_dashboard():
     """Get Guardian multi-country dashboard data for the ARGUS page."""
     gcs_result = _load_guardian_snapshot_from_gcs()
     gcs_diag = {
-        "ok": bool(gcs_result.get("ok")),
-        "message": str(gcs_result.get("message") or ""),
-        "bucket": str(gcs_result.get("bucket") or ""),
-        "prefix": str(gcs_result.get("prefix") or ""),
+        "ok":           bool(gcs_result.get("ok")),
+        "message":      str(gcs_result.get("message") or ""),
+        "bucket":       str(gcs_result.get("bucket") or ""),
+        "prefix":       str(gcs_result.get("prefix") or ""),
         "snapshot_ref": str(gcs_result.get("snapshot_ref") or ""),
     }
-    snapshot = None
-    snapshot_ref = ""
+    snapshot          = None
+    snapshot_ref      = ""
     prev_snapshot_obj = None
-    data_source = "local"
+    data_source       = "local"
 
     if gcs_result.get("ok"):
-        snapshot = gcs_result.get("snapshot")
-        snapshot_ref = str(gcs_result.get("snapshot_ref") or "")
+        snapshot          = gcs_result.get("snapshot")
+        snapshot_ref      = str(gcs_result.get("snapshot_ref") or "")
         prev_snapshot_obj = gcs_result.get("previous_snapshot")
-        data_source = "gcs"
+        data_source       = "gcs"
 
-        # ★ Quality check: if GCS snapshot has no scored alerts, prefer local data
+        # Quality check: if GCS snapshot has no scored alerts, prefer local data
         if snapshot:
-            gcs_alerts = snapshot.get("alerts") or []
+            gcs_alerts    = snapshot.get("alerts") or []
             gcs_triggered = len([
-                a for a in gcs_alerts
-                if float(a.get("score", 0)) > 0
+                a for a in gcs_alerts if float(a.get("score", 0)) > 0
             ])
             if gcs_triggered == 0:
-                # GCS data has no scores — fall back to local alerts_latest.json
-                snapshot = None
-                snapshot_ref = ""
+                snapshot          = None
+                snapshot_ref      = ""
                 prev_snapshot_obj = None
-                data_source = "local"
+                data_source       = "local"
 
     if snapshot is None:
         snapshot_path = _resolve_guardian_snapshot_path()
         if not snapshot_path.exists():
             return jsonify({
-                "status": "missing",
-                "message": "Guardian snapshot not found in GCS or local file",
+                "status":        "missing",
+                "message":       "Guardian snapshot not found in GCS or local file",
                 "snapshot_path": str(snapshot_path),
-                "gcs_status": gcs_diag,
+                "gcs_status":    gcs_diag,
             }), 404
         try:
-            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            snapshot     = json.loads(snapshot_path.read_text(encoding="utf-8"))
             snapshot_ref = str(snapshot_path)
         except Exception as e:
             return jsonify({
-                "status": "error",
-                "message": f"Failed to parse local snapshot: {str(e)}",
+                "status":        "error",
+                "message":       f"Failed to parse local snapshot: {str(e)}",
                 "snapshot_path": str(snapshot_path),
-                "gcs_status": gcs_diag,
+                "gcs_status":    gcs_diag,
             }), 500
 
-    data_mode = snapshot.get("data_mode")
+    data_mode         = snapshot.get("data_mode")
     enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
-    alerts = _filter_guardian_alerts(snapshot.get("alerts"), enforce_whitelist=enforce_whitelist)
+    alerts            = _filter_guardian_alerts(
+        snapshot.get("alerts"), enforce_whitelist=enforce_whitelist
+    )
+
+    # ── Model A: rescore all alerts with ML News Scorer ───────────────────────
+    # Uses default weights (no user tuning at dashboard load time).
+    # When the user drags the Weights Tuner, /api/guardian/news-alerts/rescore
+    # re-runs with their custom weights on top of this baseline.
+    try:
+        alerts = rescore_news_alerts(alerts, risk_weights={})
+        print(f"[dashboard] Model A rescored {len(alerts)} alerts successfully.")
+    except Exception as _ml_err:
+        print(f"[dashboard] ML rescore failed, using snapshot scores: {_ml_err}")
+    # ─────────────────────────────────────────────────────────────────────────
+
     monitored_countries = load_monitored_countries()
-    monitored_set = set(monitored_countries)
+    monitored_set       = set(monitored_countries)
 
     alert_rows_all = build_alert_list(alerts, max_items=5000)
-    scoped_alerts = [a for a in alerts if str(a.get("country") or "") in monitored_set]
-    alert_rows = build_alert_list(scoped_alerts if scoped_alerts else alerts, max_items=5000)
+    scoped_alerts  = [a for a in alerts if str(a.get("country") or "") in monitored_set]
+    alert_rows     = build_alert_list(
+        scoped_alerts if scoped_alerts else alerts, max_items=5000
+    )
 
     country_board = build_country_board(scoped_alerts if scoped_alerts else alerts)
-    availability = snapshot.get("data_avaliability") or snapshot.get("data_availability") or []
-    availability = [x for x in availability if str(x.get("source") or "").strip() in GUARDIAN_SOURCE_WHITELIST]
-    enabled_sources = [x for x in availability if x.get("enabled")]
+    availability  = snapshot.get("data_avaliability") or snapshot.get("data_availability") or []
+    availability  = [
+        x for x in availability
+        if str(x.get("source") or "").strip() in GUARDIAN_SOURCE_WHITELIST
+    ]
+    enabled_sources         = [x for x in availability if x.get("enabled")]
     healthy_enabled_sources = [x for x in enabled_sources if x.get("healthy")]
-    threshold = float(snapshot.get("threshold") or 40)
-    daily_comparison = _build_daily_warnings(alert_rows, snapshot.get("raw_dt_segments") or [], threshold=threshold)
+    threshold               = float(snapshot.get("threshold") or 40)
+    daily_comparison        = _build_daily_warnings(
+        alert_rows, snapshot.get("raw_dt_segments") or [], threshold=threshold
+    )
     triggered_count = len([x for x in alert_rows if float(x.get("score", 0)) >= threshold])
 
     if not availability and str(data_mode or "").startswith("live_gcs_raw"):
-        unique_sources = sorted({str(x.get("source") or "").strip() for x in alert_rows_all if str(x.get("source") or "").strip()})
-        enabled_sources = [{"source": s, "enabled": True, "healthy": True} for s in unique_sources]
+        unique_sources = sorted({
+            str(x.get("source") or "").strip()
+            for x in alert_rows_all
+            if str(x.get("source") or "").strip()
+        })
+        enabled_sources         = [{"source": s, "enabled": True, "healthy": True} for s in unique_sources]
         healthy_enabled_sources = enabled_sources[:]
 
     fx_input_rows = alert_rows
-    latest_dt = str(daily_comparison.get("latest_dt") or "").strip()
+    latest_dt     = str(daily_comparison.get("latest_dt") or "").strip()
     if str(data_mode or "").startswith("live_gcs_raw") and latest_dt:
         latest_rows = [x for x in alert_rows if str(x.get("raw_dt") or "") == latest_dt]
         if latest_rows:
             fx_input_rows = latest_rows
-    fx_summary = build_fx_summary(fx_input_rows, monitored_countries)
+    fx_summary           = build_fx_summary(fx_input_rows, monitored_countries)
     fx_summary["as_of_dt"] = latest_dt or None
 
     high_risk_country_count = len([x for x in country_board if float(x.get("max_score", 0)) >= 70])
-    at_risk_country_count = len([x for x in country_board if float(x.get("max_score", 0)) > 0])
-    high_risk_alert_count = len([x for x in alert_rows if float(x.get("score", 0)) >= 70])
-    total_risk_alert_count = len([x for x in alert_rows if float(x.get("score", 0)) > 0])
+    at_risk_country_count   = len([x for x in country_board if float(x.get("max_score", 0)) > 0])
+    high_risk_alert_count   = len([x for x in alert_rows    if float(x.get("score", 0)) >= 70])
+    total_risk_alert_count  = len([x for x in alert_rows    if float(x.get("score", 0)) > 0])
 
-    prev_triggered = None
-    current_triggered_for_trend = triggered_count
-    is_raw_mode = str(data_mode or "").startswith("live_gcs_raw")
+    prev_triggered               = None
+    current_triggered_for_trend  = triggered_count
+    is_raw_mode                  = str(data_mode or "").startswith("live_gcs_raw")
 
     if is_raw_mode:
-        prev_triggered = daily_comparison.get("previous_triggered")
+        prev_triggered              = daily_comparison.get("previous_triggered")
         current_triggered_for_trend = int(daily_comparison.get("latest_triggered") or 0)
 
     if isinstance(prev_snapshot_obj, dict):
         try:
-            prev_mode = prev_snapshot_obj.get("data_mode")
+            prev_mode    = prev_snapshot_obj.get("data_mode")
             prev_enforce = not str(prev_mode or "").startswith("live_gcs_raw")
-            prev_alerts = _filter_guardian_alerts(prev_snapshot_obj.get("alerts"), enforce_whitelist=prev_enforce)
-            prev_rows = build_alert_list(prev_alerts, max_items=5000)
-            prev_triggered = len([x for x in prev_rows if float(x.get("score", 0)) >= threshold])
+            prev_alerts  = _filter_guardian_alerts(
+                prev_snapshot_obj.get("alerts"), enforce_whitelist=prev_enforce
+            )
+            prev_rows       = build_alert_list(prev_alerts, max_items=5000)
+            prev_triggered  = len([x for x in prev_rows if float(x.get("score", 0)) >= threshold])
             current_triggered_for_trend = triggered_count
         except Exception:
             prev_triggered = None
@@ -167,26 +192,28 @@ def get_guardian_dashboard():
         if prev_path and prev_path.exists():
             try:
                 prev_snapshot = json.loads(prev_path.read_text(encoding="utf-8"))
-                prev_mode = prev_snapshot.get("data_mode")
-                prev_enforce = not str(prev_mode or "").startswith("live_gcs_raw")
-                prev_alerts = _filter_guardian_alerts(prev_snapshot.get("alerts"), enforce_whitelist=prev_enforce)
-                prev_rows = build_alert_list(prev_alerts, max_items=5000)
+                prev_mode     = prev_snapshot.get("data_mode")
+                prev_enforce  = not str(prev_mode or "").startswith("live_gcs_raw")
+                prev_alerts   = _filter_guardian_alerts(
+                    prev_snapshot.get("alerts"), enforce_whitelist=prev_enforce
+                )
+                prev_rows      = build_alert_list(prev_alerts, max_items=5000)
                 prev_triggered = len([x for x in prev_rows if float(x.get("score", 0)) >= threshold])
                 current_triggered_for_trend = triggered_count
             except Exception:
                 prev_triggered = None
 
-    trend_basis = "triggered"
-    trend_current = current_triggered_for_trend
+    trend_basis    = "triggered"
+    trend_current  = current_triggered_for_trend
     trend_previous = prev_triggered
-    trend_delta = None if trend_previous is None else (trend_current - trend_previous)
+    trend_delta    = None if trend_previous is None else (trend_current - trend_previous)
 
     if is_raw_mode:
-        trend_basis = "events"
-        trend_current = int(daily_comparison.get("latest_events") or 0)
-        prev_val = daily_comparison.get("previous_events")
+        trend_basis    = "events"
+        trend_current  = int(daily_comparison.get("latest_events") or 0)
+        prev_val       = daily_comparison.get("previous_events")
         trend_previous = None if prev_val is None else int(prev_val)
-        trend_delta = None if trend_previous is None else (trend_current - trend_previous)
+        trend_delta    = None if trend_previous is None else (trend_current - trend_previous)
 
     if trend_delta is None:
         trend_direction = "NA"
@@ -199,58 +226,59 @@ def get_guardian_dashboard():
 
     google_downside = _get_google_downside_snapshot()
     if isinstance(google_downside, dict) and google_downside.get("status") == "success":
-        as_of = str(google_downside.get("as_of_date") or "").strip()
+        as_of      = str(google_downside.get("as_of_date") or "").strip()
         stale_days = None
         if as_of:
             try:
-                as_dt = datetime.fromisoformat(as_of.replace("Z", "+00:00")).date()
+                as_dt      = datetime.fromisoformat(as_of.replace("Z", "+00:00")).date()
                 stale_days = (datetime.now().date() - as_dt).days
             except Exception:
                 stale_days = None
         google_downside["staleness_days"] = stale_days
-        google_downside["is_stale"] = bool(stale_days is not None and stale_days > 7)
+        google_downside["is_stale"]       = bool(stale_days is not None and stale_days > 7)
 
     dashboard_data = {
-        "status": "success",
+        "status":        "success",
         "snapshot_path": snapshot_ref,
         "meta": {
-            "generated_at_local": snapshot.get("generated_at_local"),
-            "generated_at_utc": snapshot.get("generated_at_utc"),
-            "timezone": snapshot.get("timezone"),
-            "persona": snapshot.get("persona"),
-            "threshold": snapshot.get("threshold"),
-            "data_mode": data_mode,
-            "event_count": snapshot.get("event_count", 0),
-            "alert_count": len(alert_rows),
-            "triggered_count": triggered_count,
-            "enabled_source_count": len(enabled_sources),
+            "generated_at_local":        snapshot.get("generated_at_local"),
+            "generated_at_utc":          snapshot.get("generated_at_utc"),
+            "timezone":                  snapshot.get("timezone"),
+            "persona":                   snapshot.get("persona"),
+            "threshold":                 snapshot.get("threshold"),
+            "data_mode":                 data_mode,
+            "event_count":               snapshot.get("event_count", 0),
+            "alert_count":               len(alert_rows),
+            "triggered_count":           triggered_count,
+            "enabled_source_count":      len(enabled_sources),
             "healthy_enabled_source_count": len(healthy_enabled_sources),
-            "data_source": data_source,
-            "raw_dt_segments": snapshot.get("raw_dt_segments") or [],
-            "scope": "11-country",
-            "global_event_count": len(alert_rows_all),
+            "data_source":               data_source,
+            "raw_dt_segments":           snapshot.get("raw_dt_segments") or [],
+            "scope":                     "11-country",
+            "global_event_count":        len(alert_rows_all),
+            "ml_scoring":                True,   # indicates Model A is active
         },
         "gcs_status": gcs_diag,
         "executive_summary": {
             "high_risk_country_count": high_risk_country_count,
-            "high_risk_alert_count": high_risk_alert_count,
-            "at_risk_country_count": at_risk_country_count,
-            "total_risk_alert_count": total_risk_alert_count,
+            "high_risk_alert_count":   high_risk_alert_count,
+            "at_risk_country_count":   at_risk_country_count,
+            "total_risk_alert_count":  total_risk_alert_count,
             "trend": {
-                "basis": trend_basis,
-                "direction": trend_direction,
-                "delta": trend_delta,
-                "current_triggered": trend_current,
-                "previous_triggered": trend_previous,
+                "basis":               trend_basis,
+                "direction":           trend_direction,
+                "delta":               trend_delta,
+                "current_triggered":   trend_current,
+                "previous_triggered":  trend_previous,
             },
         },
-        "country_rank_top5": country_board[:5],
+        "country_rank_top5":   country_board[:5],
         "critical_alerts_top5": alert_rows[:5],
-        "fx_summary": fx_summary,
-        "daily_comparison": daily_comparison,
-        "google_downside": google_downside,
-        "country_board": country_board,
-        "alerts": alert_rows,
+        "fx_summary":          fx_summary,
+        "daily_comparison":    daily_comparison,
+        "google_downside":     google_downside,
+        "country_board":       country_board,
+        "alerts":              alert_rows,
     }
     return jsonify(sanitize_for_json(dashboard_data))
 
@@ -258,36 +286,33 @@ def get_guardian_dashboard():
 @guardian_bp.route("/api/guardian/news-alerts/rescore", methods=["POST"])
 def rescore_guardian_newsalerts():
     """Server-side rescore of Guardian News Alerts using current tuner weights."""
-    body = request.get_json(force=True, silent=True) or {}
-    payload = build_rescored_newsalerts_payload(body.get("weights") or {})
-    status_code = 200 if payload.get("status") == "success" else 404 if payload.get("status") == "missing" else 500
+    body         = request.get_json(force=True, silent=True) or {}
+    payload      = build_rescored_newsalerts_payload(body.get("weights") or {})
+    status_code  = (
+        200 if payload.get("status") == "success"
+        else 404 if payload.get("status") == "missing"
+        else 500
+    )
     return jsonify(sanitize_for_json(payload)), status_code
 
 
 @guardian_bp.route("/api/personas")
 def get_personas():
-    """Return AI-baseline persona configs with per-region defaults.
-
-    Each persona entry includes:
-      alert_threshold  – global baseline
-      risk_weights     – global baseline weights
-      region_defaults  – {region_key: {alert_threshold, risk_weights}} for all regions
-    """
-    defaults = load_all_defaults()
+    """Return AI-baseline persona configs with per-region defaults."""
+    defaults     = load_all_defaults()
     personas_out = []
     for key, cfg in PERSONA_REGISTRY.items():
         entry = {"key": key, "label": cfg["label"], "summary": cfg["summary"]}
-        d = defaults.get(key, {})
+        d     = defaults.get(key, {})
         entry["alert_threshold"] = d.get("alert_threshold")
         entry["risk_weights"]    = d.get("risk_weights", {})
         entry["region_defaults"] = load_all_region_defaults(key)
         personas_out.append(entry)
     return jsonify({
-        "status": "success",
-        "personas": personas_out,
+        "status":          "success",
+        "personas":        personas_out,
         "default_persona": "cash_manager",
     })
-
 
 
 @guardian_bp.route("/api/persona/dashboard")
@@ -300,7 +325,7 @@ def get_persona_dashboard():
     snapshot, alert_rows, snapshot_ref = _snapshot_and_alert_rows()
     if snapshot is None:
         return jsonify({
-            "status": "missing",
+            "status":  "missing",
             "message": "Persona dashboard unavailable because Guardian snapshot could not be loaded.",
             "persona": persona,
         }), 404
@@ -310,7 +335,7 @@ def get_persona_dashboard():
     else:
         payload = build_generic_persona_dashboard(persona, alert_rows, snapshot)
 
-    payload["status"] = "success"
+    payload["status"]        = "success"
     payload["snapshot_path"] = snapshot_ref
     return jsonify(sanitize_for_json(payload))
 
@@ -319,26 +344,12 @@ def get_persona_dashboard():
 
 _PROFILES_DIR = Path("personas/profiles")
 _RESULTS_PATH = Path("shared_storage/latest_results.json")
-
-# Characters allowed in profile filenames (everything else → _)
-_SAFE_RE = re.compile(r"[^a-zA-Z0-9_\-]")
+_SAFE_RE      = re.compile(r"[^a-zA-Z0-9_\-]")
 
 
 @guardian_bp.route("/api/save_profile", methods=["POST"])
 def save_profile():
-    """Save a named weight profile to personas/profiles/<safe_name>.json.
-
-    Body::
-
-        {
-          "name":        "High Liquidity Focus",
-          "persona_key": "cash_manager",
-          "weights": {
-            "alert_threshold": 35,
-            "risk_weights": {"liquidity_risk": 1.8, ...}
-          }
-        }
-    """
+    """Save a named weight profile to personas/profiles/<safe_name>.json."""
     body = request.get_json(force=True, silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
@@ -381,21 +392,10 @@ def list_profiles():
 
 @guardian_bp.route("/api/load_profile", methods=["POST"])
 def load_profile():
-    """Load a saved profile, apply its weights as the active custom config,
-    then re-run AnalysisAgent on the cached classified news.
-
-    Body::
-
-        { "filename": "High_Liquidity_Focus.json" }
-
-    Returns the full profile **and** fresh ``rescored`` analysis so the
-    frontend can immediately update the risk matrix without waiting for a
-    full pipeline run.
-    """
-    body = request.get_json(force=True, silent=True) or {}
+    """Load a saved profile, apply its weights, then re-run AnalysisAgent."""
+    body     = request.get_json(force=True, silent=True) or {}
     filename = str(body.get("filename") or "").strip()
 
-    # Guard against path traversal
     if not filename or "/" in filename or "\\" in filename or not filename.endswith(".json"):
         return jsonify({"status": "error", "message": "Invalid filename"}), 400
 
@@ -408,13 +408,10 @@ def load_profile():
     except Exception as exc:
         return jsonify({"status": "error", "message": f"Could not read profile: {exc}"}), 500
 
-    persona_key    = str(profile.get("persona_key") or "cash_manager")
+    persona_key     = str(profile.get("persona_key") or "cash_manager")
     profile_weights = profile.get("weights") or {}
+    merged_cfg      = merge_weights(load_defaults(persona_key), profile_weights)
 
-    # Merge profile weights over AI defaults entirely in memory — no file written.
-    merged_cfg = merge_weights(load_defaults(persona_key), profile_weights)
-
-    # Re-run AnalysisAgent on cached classified news using the merged config.
     rescored = None
     if _RESULTS_PATH.exists():
         try:

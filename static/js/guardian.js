@@ -217,8 +217,9 @@ async function loadGuardianDashboard() {
             </div>`;
         }).join('');
 
-        // Filter out GCS raw entries and deduplicate
-        const seen = new Set();
+        // Filter out GCS raw entries, deduplicate, and keep only last 7 days
+        const seen       = new Set();
+        const sevenDays  = Date.now() - 7 * 24 * 60 * 60 * 1000;
         guardianTopAlerts = (d.alerts || d.critical_alerts_top5 || []).filter(a => {
             const src   = (a.source || '').toLowerCase();
             const title = (a.title  || '').trim();
@@ -227,6 +228,12 @@ async function loadGuardianDashboard() {
             const key = title.toLowerCase();
             if (seen.has(key)) return false;
             seen.add(key);
+            // Only show alerts from last 7 days
+            const pubDate = a.published_at || a.raw_dt || '';
+            if (pubDate) {
+                const ts = new Date(pubDate).getTime();
+                if (!isNaN(ts) && ts < sevenDays) return false;
+            }
             return true;
         });
 
