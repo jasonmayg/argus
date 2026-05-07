@@ -378,6 +378,8 @@ def _train_demo_model(
         "model_name": "demo_logistic_regression",
         "feature_columns": feature_columns,
         "threshold": best_threshold,
+        "feature_means": X_train.apply(pd.to_numeric, errors="coerce").mean().fillna(0.0).to_dict(),
+        "feature_medians": X_train.apply(pd.to_numeric, errors="coerce").median().fillna(0.0).to_dict(),
     }
     return artifact, metrics
 
@@ -441,6 +443,130 @@ def score_latest_demo_row(args: argparse.Namespace) -> dict[str, Any]:
         "feature_sample": feature_values,
         "gcs_meta": gcs_meta,
     }
+
+
+def score_latest_gcs_demo_row(args: argparse.Namespace) -> dict[str, Any]:
+    """
+    Score the latest cloud data without rebuilding the historical training frame.
+    The trained model is loaded once, the latest GCS partition supplies daily
+    macro features, and daily risk scores adjust the final index.
+    """
+    artifact = joblib.load(args.output_model)
+    model = artifact["model"]
+    feature_columns = artifact.get("feature_columns", [])
+    threshold = float(artifact.get("threshold", 0.5))
+    feature_means = artifact.get("feature_means", {}) if isinstance(artifact, dict) else {}
+
+    gcs_features, gcs_meta = _load_latest_gcs_feature_row()
+    if gcs_features.empty:
+        raise RuntimeError("GCS feature frame is empty")
+
+    latest = gcs_features.sort_values("date").iloc[-1:].copy()
+    missing_feature_count = 0
+    for col in feature_columns:
+        if col not in latest.columns:
+            latest[col] = feature_means.get(col, float("nan"))
+            missing_feature_count += 1
+
+    X = latest[feature_columns]
+    base_prob = float(model.predict_proba(X)[0][1])
+    daily_scores = _load_daily_risk_scores_from_outputs()
+    risk_score_pressure = _daily_risk_score_pressure(latest.iloc[0], daily_scores)
+    risk_weight = _bounded_float_env("DOWNSIDE_INDEX_RISK_SCORE_WEIGHT", 0.35, 0.0, 1.0)
+    prob = (base_prob * (1.0 - risk_weight)) + (risk_score_pressure * risk_weight)
+    level = "High" if prob >= 0.7 else ("Medium" if prob >= 0.4 else "Low")
+
+    feature_values = []
+    for col in feature_columns:
+        if len(feature_values) >= 12:
+            break
+        value = pd.to_numeric(latest[col], errors="coerce").iloc[0]
+        if pd.notna(value) and float(value) != 0.0:
+            feature_values.append({"name": col, "value": round(float(value), 6)})
+
+    return {
+        "as_of_date": str(latest["date"].iloc[0].date()),
+        "probability": round(prob, 6),
+        "percent": round(prob * 100, 2),
+        "level": level,
+        "base_model_probability": round(base_prob, 6),
+        "base_model_percent": round(base_prob * 100, 2),
+        "daily_risk_score_pressure": round(risk_score_pressure, 6),
+        "daily_risk_score_pressure_percent": round(risk_score_pressure * 100, 2),
+        "daily_risk_score_count": len(daily_scores),
+        "daily_risk_score_weight": risk_weight,
+        "uses_daily_risk_score": True,
+        "decision_threshold": threshold,
+        "predicted_positive": bool(prob >= threshold),
+        "feature_sample": feature_values,
+        "gcs_meta": gcs_meta,
+        "score_mode": "gcs_latest_plus_daily_risk_score",
+        "missing_feature_count": missing_feature_count,
+        "missing_feature_fill": "artifact_feature_mean_or_model_imputer",
+    }
+
+
+def _bounded_float_env(name: str, default: float, min_value: float, max_value: float) -> float:
+    try:
+        value = float(os.getenv(name, str(default)))
+    except Exception:
+        value = default
+    return max(min_value, min(max_value, value))
+
+
+def _extract_scores(obj: Any) -> list[float]:
+    scores: list[float] = []
+    if isinstance(obj, dict):
+        for key in ("score", "risk_score", "effective_score", "max_score", "probability", "risk_probability"):
+            if key in obj and obj.get(key) not in (None, ""):
+                value = pd.to_numeric(pd.Series([obj.get(key)]), errors="coerce").iloc[0]
+                if pd.notna(value):
+                    score = float(value)
+                    if 0 < score <= 1:
+                        score *= 100.0
+                    scores.append(max(0.0, min(100.0, score)))
+        for value in obj.values():
+            if isinstance(value, (dict, list)):
+                scores.extend(_extract_scores(value))
+    elif isinstance(obj, list):
+        for item in obj:
+            scores.extend(_extract_scores(item))
+    return scores
+
+
+def _load_daily_risk_scores_from_outputs() -> list[float]:
+    scores: list[float] = []
+    for path in [REPO_ROOT / "shared_storage" / "latest_results.json", REPO_ROOT / "shared_storage" / "latest_actions.json"]:
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        scores.extend(_extract_scores(payload))
+    return scores
+
+
+def _daily_risk_score_pressure(row: pd.Series, daily_scores: list[float]) -> float:
+    """
+    Convert the cloud-produced daily risk scores into a 0-1 pressure signal.
+    This ties the index to the daily risk-score model while preserving the
+    trained downside model as the base signal.
+    """
+    alert_count = max(float(row.get("gcs_raw_alert_count", 0.0) or 0.0), 0.0)
+    mean_score = max(float(row.get("gcs_raw_alert_score_mean", 0.0) or 0.0), 0.0) / 100.0
+    max_score = max(float(row.get("gcs_raw_alert_score_max", 0.0) or 0.0), 0.0) / 100.0
+    triggered = max(float(row.get("gcs_raw_triggered_count", 0.0) or 0.0), 0.0)
+    triggered_ratio = (triggered / alert_count) if alert_count > 0 else 0.0
+
+    if daily_scores:
+        series = pd.Series(daily_scores, dtype="float64").clip(lower=0.0, upper=100.0)
+        mean_score = max(mean_score, float(series.mean()) / 100.0)
+        max_score = max(max_score, float(series.max()) / 100.0)
+        triggered_ratio = max(triggered_ratio, float((series >= 40.0).mean()))
+
+    pressure = (0.45 * min(max_score, 1.0)) + (0.35 * min(mean_score, 1.0)) + (0.20 * min(triggered_ratio, 1.0))
+    return max(0.0, min(1.0, pressure))
 
 
 def _build_live_demo_frame(args: argparse.Namespace) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -717,6 +843,94 @@ def _load_gcs_feature_frame() -> tuple[pd.DataFrame, dict[str, Any]]:
     return merged, meta
 
 
+def _load_latest_gcs_feature_row() -> tuple[pd.DataFrame, dict[str, Any]]:
+    """
+    Build one feature row from the latest GCS dt partition only.
+    This is the daily scoring path: no retraining and no historical scan.
+    """
+    key_path = _resolve_gcs_key_file()
+    if key_path and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
+
+    from data_dashboard import (
+        _classify_dataset,
+        _get_gcs_bucket,
+        _infer_indicator_from_filename,
+        _read_gcs_csv_text,
+        _build_series_from_text,
+    )
+    from core.guardian_loader import _discover_raw_dt_segments, _read_alerts_from_gcs_raw_csvs
+
+    bucket = _get_gcs_bucket()
+    raw_base_prefix = os.getenv("GUARDIAN_GCS_RAW_PREFIX", "raw").strip().strip("/") or "raw"
+    root_prefix = os.getenv("ARGUS_GCS_ROOT_PREFIX", "").strip().strip("/")
+    history_root = f"{root_prefix}/{raw_base_prefix}" if root_prefix else raw_base_prefix
+    dt_segments = _discover_raw_dt_segments(bucket, history_root)
+    if not dt_segments:
+        return pd.DataFrame(columns=["date"]), {
+            "gcs_enabled": False,
+            "gcs_key_path": key_path,
+            "gcs_prefix": history_root,
+            "gcs_error": "no GCS dt partitions found",
+        }
+
+    latest_dt = dt_segments[-1]
+    latest_prefix = f"{history_root.rstrip('/')}/{latest_dt}/"
+    blobs = [b for b in bucket.list_blobs(prefix=latest_prefix) if str(b.name).lower().endswith(".csv")]
+    latest_date = pd.to_datetime(latest_dt.replace("dt=", ""), errors="coerce")
+    row: dict[str, Any] = {"date": latest_date}
+    meta = {
+        "gcs_enabled": True,
+        "gcs_key_path": key_path,
+        "gcs_prefix": history_root,
+        "gcs_latest_dt": latest_dt,
+        "gcs_dt_count": len(dt_segments),
+        "gcs_blob_count": len(blobs),
+        "gcs_series_features": 0,
+        "gcs_raw_alert_rows": 0,
+        "gcs_latest_only": True,
+    }
+
+    for blob in sorted(blobs, key=lambda x: x.name):
+        stem = Path(blob.name).stem
+        ds_type = _classify_dataset(stem)
+        try:
+            text = _read_gcs_csv_text(bucket, blob.name)
+            series = _build_series_from_text(Path(blob.name).name, text)
+        except Exception:
+            continue
+        dates = pd.to_datetime(series.get("dates") or [], utc=False, errors="coerce")
+        values = pd.to_numeric(series.get("values") or [], errors="coerce")
+        frame = pd.DataFrame({"date": dates, "value": values}).dropna(subset=["date"])
+        if frame.empty:
+            continue
+        frame = frame[frame["date"] <= latest_date].sort_values("date")
+        if frame.empty:
+            continue
+        indicator = _infer_indicator_from_filename(stem)
+        feature_name = f"gcs_{ds_type}_{indicator}"
+        row[feature_name] = float(frame["value"].iloc[-1]) if pd.notna(frame["value"].iloc[-1]) else 0.0
+        meta["gcs_series_features"] += 1
+
+    try:
+        raw_rows = _read_alerts_from_gcs_raw_csvs(bucket, latest_prefix.strip("/"))
+    except Exception:
+        raw_rows = []
+    meta["gcs_raw_alert_rows"] = len(raw_rows)
+    if raw_rows:
+        scores = pd.to_numeric(pd.Series([r.get("score") for r in raw_rows]), errors="coerce").fillna(0.0)
+        row["gcs_raw_alert_count"] = float(len(raw_rows))
+        row["gcs_raw_alert_score_mean"] = float(scores.mean())
+        row["gcs_raw_alert_score_max"] = float(scores.max())
+        row["gcs_raw_triggered_count"] = float((scores >= 40).sum())
+        row["gcs_raw_source_count"] = float(pd.Series([r.get("source", "") for r in raw_rows]).astype(str).nunique())
+        labels = [str(r.get("category_label") or "").strip() for r in raw_rows if str(r.get("category_label") or "").strip()]
+        row["gcs_raw_top_category_count"] = float(Counter(labels).most_common(1)[0][1]) if labels else 0.0
+        row["gcs_raw_has_top_category"] = float(1 if labels else 0)
+
+    return pd.DataFrame([row]), meta
+
+
 def _load_or_build_gcs_feature_frame(cache_path: Path, force_refresh: bool = False) -> tuple[pd.DataFrame, dict[str, Any]]:
     if cache_path.exists() and not force_refresh:
         cached = pd.read_csv(cache_path)
@@ -866,6 +1080,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--select-k", type=int, default=40, help="Keep only the top-K univariate features before fitting the demo model.")
     parser.add_argument("--logistic-c", type=float, default=0.1, help="Inverse regularization strength for the demo logistic regression.")
     parser.add_argument("--score-latest", action="store_true", help="Load the demo model and score the latest daily row using current GCS data.")
+    parser.add_argument("--score-gcs", action="store_true", help="Score the latest GCS partition plus daily risk-score outputs without local Dataset files.")
     parser.add_argument("--score-live", action="store_true", help="Fetch live price/news/financial API data and score a synthetic latest row.")
     parser.add_argument("--symbol", default="GOOGL", help="Ticker symbol for live API fetches.")
     parser.add_argument("--sec-cik", default="0001652044", help="SEC CIK for the issuer used in live financial fetches.")
@@ -891,6 +1106,11 @@ def main() -> None:
     if args.score_latest:
         print("\nLatest daily score:")
         print(json.dumps(score_latest_demo_row(args), ensure_ascii=False, indent=2))
+        return
+
+    if args.score_gcs:
+        print("\nLatest GCS daily score:")
+        print(json.dumps(score_latest_gcs_demo_row(args), ensure_ascii=False, indent=2))
         return
 
     if args.score_live:
