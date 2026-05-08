@@ -1,6 +1,6 @@
 {
   "status": "success",
-  "timestamp": "2026-05-07T20:57:52.851585",
+  "timestamp": "2026-05-08T09:36:59.743418",
   "stages": {
     "news_gathering": {
       "status": "success",
@@ -167,7 +167,7 @@
         "federal_reserve": {
           "count": 26,
           "status": "success",
-          "path": "shared_storage/raw/federal_reserve_20260507_205759.json"
+          "path": "shared_storage/raw/federal_reserve_20260508_093705.json"
         }
       }
     },
@@ -480,7 +480,7 @@
     "database": {
       "status": "success",
       "inserted": 26,
-      "path": "shared_storage/raw/pipeline_db_insert_20260507_205759.json"
+      "path": "shared_storage/raw/pipeline_db_insert_20260508_093705.json"
     },
     "analysis": {
       "status": "success",
@@ -502,14 +502,14 @@
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "The proposal for fund transfers through FedNow could occasionally face challenges.",
-            "impact": 3,
-            "impact_label": "Moderate",
-            "impact_reasoning": "Potential disruptions in fund transfers could moderately impact liquidity management.",
-            "matrix_level": "Medium",
-            "matrix_color": "#F59E0B",
+            "probability_reasoning": "The proposal for FedNow Service could impact fund transfer processes.",
+            "impact": 4,
+            "impact_label": "Hazardous",
+            "impact_reasoning": "Changes in fund transfer mechanisms can significantly impact liquidity management.",
+            "matrix_level": "High",
+            "matrix_color": "#EF4444",
             "matrix_text_color": "#fff",
-            "matrix_score": 1,
+            "matrix_score": 2,
             "llm_scored": true
           },
           {
@@ -526,10 +526,80 @@
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Proposals to modernize regulatory frameworks can occasionally face challenges.",
+            "probability_reasoning": "Proposals to modernize regulatory frameworks can have significant implications.",
+            "impact": 4,
+            "impact_label": "Hazardous",
+            "impact_reasoning": "Changes in regulatory capital frameworks can significantly impact liquidity management.",
+            "matrix_level": "High",
+            "matrix_color": "#EF4444",
+            "matrix_text_color": "#fff",
+            "matrix_score": 2,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-04-23",
+            "title": "Agencies finalize changes to enhance community bank leverage ratio",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260423a.htm",
+            "source": "federal_reserve",
+            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+            "risk_score": 10,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "ban"
+            ],
+            "probability": 2,
+            "probability_label": "Seldom",
+            "probability_reasoning": "Changes to leverage ratios may affect some banks but are unlikely to trigger immediate risk.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential changes in capital requirements could moderately impact liquidity management.",
+            "impact_reasoning": "Changes in leverage ratios could affect liquidity management for community banks.",
+            "matrix_level": "Medium",
+            "matrix_color": "#F59E0B",
+            "matrix_text_color": "#fff",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-04-16",
+            "title": "Federal Reserve Board issues enforcement action with Community Bankshares, Inc.",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260416a.htm",
+            "source": "federal_reserve",
+            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+            "risk_score": 10,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "ban"
+            ],
+            "probability": 2,
+            "probability_label": "Seldom",
+            "probability_reasoning": "Enforcement actions against institutions are more significant but still isolated.",
+            "impact": 3,
+            "impact_label": "Moderate",
+            "impact_reasoning": "Institutional enforcement actions can affect liquidity and operational risk.",
+            "matrix_level": "Medium",
+            "matrix_color": "#F59E0B",
+            "matrix_text_color": "#fff",
+            "matrix_score": 1,
+            "llm_scored": true
+          },
+          {
+            "date": "2026-03-26",
+            "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
+            "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
+            "source": "federal_reserve",
+            "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+            "risk_score": 20,
+            "risk_level": "Low",
+            "matched_keywords": [
+              "currency",
+              "ban"
+            ],
+            "probability": 2,
+            "probability_label": "Seldom",
+            "probability_reasoning": "Exemptions under regulatory acts are not frequent but not rare.",
+            "impact": 3,
+            "impact_label": "Moderate",
+            "impact_reasoning": "Exemptions can affect liquidity and credit risk management.",
             "matrix_level": "Medium",
             "matrix_color": "#F59E0B",
             "matrix_text_color": "#fff",
@@ -550,10 +620,10 @@
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Proposals to codify regulatory changes can occasionally face challenges.",
+            "probability_reasoning": "Proposals to codify regulatory changes can have significant implications.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential changes in regulatory focus could moderately impact liquidity management.",
+            "impact_reasoning": "Codifying changes in supervision can impact regulatory risk management.",
             "matrix_level": "Medium",
             "matrix_color": "#F59E0B",
             "matrix_text_color": "#fff",
@@ -575,10 +645,10 @@
             ],
             "probability": 3,
             "probability_label": "Occasional",
-            "probability_reasoning": "Public outreach meetings on regulatory reviews can occasionally face challenges.",
+            "probability_reasoning": "Public outreach meetings can lead to regulatory changes.",
             "impact": 3,
             "impact_label": "Moderate",
-            "impact_reasoning": "Potential regulatory changes could moderately impact liquidity management.",
+            "impact_reasoning": "Regulatory reviews can impact compliance and operational processes.",
             "matrix_level": "Medium",
             "matrix_color": "#F59E0B",
             "matrix_text_color": "#fff",
@@ -596,33 +666,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+            "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#22C55E",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-04-23",
-            "title": "Agencies finalize changes to enhance community bank leverage ratio",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260423a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Changes to leverage ratios may affect some banks but are unlikely to trigger immediate risks.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "The impact on liquidity is minor as community banks adjust over time.",
+            "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -642,33 +689,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#22C55E",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-04-16",
-            "title": "Federal Reserve Board issues enforcement action with Community Bankshares, Inc.",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260416a.htm",
-            "source": "federal_reserve",
-            "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-            "risk_score": 10,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against companies are infrequent and typically isolated.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "These actions have limited direct impact on liquidity or treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -686,10 +710,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+            "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -707,10 +731,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+            "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
+            "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -730,10 +754,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Termination of enforcement actions is a positive development, reducing risk.",
+            "probability_reasoning": "Termination of enforcement actions is a positive development but not frequent.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "This reduces regulatory pressure but has limited immediate impact on liquidity.",
+            "impact_reasoning": "This may improve liquidity conditions but has limited immediate impact.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -753,34 +777,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
-            "matrix_level": "Low",
-            "matrix_color": "#22C55E",
-            "matrix_text_color": "#fff",
-            "matrix_score": 0,
-            "llm_scored": true
-          },
-          {
-            "date": "2026-03-26",
-            "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
-            "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
-            "source": "federal_reserve",
-            "risk_category": "FINANCIAL_RISK::MARKET_RISK",
-            "risk_score": 20,
-            "risk_level": "Low",
-            "matched_keywords": [
-              "currency",
-              "ban"
-            ],
-            "probability": 2,
-            "probability_label": "Seldom",
-            "probability_reasoning": "Exemptions under regulatory acts are infrequent but not uncommon.",
-            "impact": 2,
-            "impact_label": "Minor",
-            "impact_reasoning": "Such exemptions have limited direct impact on liquidity or treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -798,10 +798,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Annual financial statements are routine disclosures with no immediate risk implications.",
+            "probability_reasoning": "Annual financial statements are routine disclosures.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such statements have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -821,10 +821,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -845,10 +845,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -868,10 +868,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Termination of enforcement actions is a positive development, reducing risk.",
+            "probability_reasoning": "Termination of enforcement actions is a positive development but not frequent.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "This reduces regulatory pressure but has limited immediate impact on liquidity.",
+            "impact_reasoning": "This may improve liquidity conditions but has limited immediate impact.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -891,10 +891,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -912,10 +912,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+            "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -935,10 +935,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -956,10 +956,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+            "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
+            "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -979,10 +979,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -1002,10 +1002,10 @@
             ],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Designation of chairs is a routine administrative action with no immediate risk implications.",
+            "probability_reasoning": "Designation of chairs is a routine administrative action.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such designations do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such designations have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -1023,10 +1023,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Actions to support penny circulation are routine and have no immediate risk implications.",
+            "probability_reasoning": "Actions to support penny circulation are routine and low risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such actions do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such actions have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -1044,10 +1044,10 @@
             "matched_keywords": [],
             "probability": 1,
             "probability_label": "Unlikely",
-            "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+            "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
             "impact": 1,
             "impact_label": "Negligible",
-            "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+            "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -1067,10 +1067,10 @@
             ],
             "probability": 2,
             "probability_label": "Seldom",
-            "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+            "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
             "impact": 2,
             "impact_label": "Minor",
-            "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+            "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
             "matrix_level": "Low",
             "matrix_color": "#22C55E",
             "matrix_text_color": "#fff",
@@ -1081,8 +1081,7 @@
         "llm_scored": true,
         "persona": "cash_manager",
         "by_risk_level": {
-          "high": [],
-          "medium": [
+          "high": [
             {
               "date": "2026-04-08",
               "title": "Federal Reserve Board invites public comment on proposal that would allow U.S. banks and credit unions to use intermediaries to transfer funds through the FedNow Service",
@@ -1098,14 +1097,14 @@
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "The proposal for fund transfers through FedNow could occasionally face challenges.",
-              "impact": 3,
-              "impact_label": "Moderate",
-              "impact_reasoning": "Potential disruptions in fund transfers could moderately impact liquidity management.",
-              "matrix_level": "Medium",
-              "matrix_color": "#F59E0B",
+              "probability_reasoning": "The proposal for FedNow Service could impact fund transfer processes.",
+              "impact": 4,
+              "impact_label": "Hazardous",
+              "impact_reasoning": "Changes in fund transfer mechanisms can significantly impact liquidity management.",
+              "matrix_level": "High",
+              "matrix_color": "#EF4444",
               "matrix_text_color": "#fff",
-              "matrix_score": 1,
+              "matrix_score": 2,
               "llm_scored": true
             },
             {
@@ -1122,10 +1121,82 @@
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Proposals to modernize regulatory frameworks can occasionally face challenges.",
+              "probability_reasoning": "Proposals to modernize regulatory frameworks can have significant implications.",
+              "impact": 4,
+              "impact_label": "Hazardous",
+              "impact_reasoning": "Changes in regulatory capital frameworks can significantly impact liquidity management.",
+              "matrix_level": "High",
+              "matrix_color": "#EF4444",
+              "matrix_text_color": "#fff",
+              "matrix_score": 2,
+              "llm_scored": true
+            }
+          ],
+          "medium": [
+            {
+              "date": "2026-04-23",
+              "title": "Agencies finalize changes to enhance community bank leverage ratio",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260423a.htm",
+              "source": "federal_reserve",
+              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+              "risk_score": 10,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "ban"
+              ],
+              "probability": 2,
+              "probability_label": "Seldom",
+              "probability_reasoning": "Changes to leverage ratios may affect some banks but are unlikely to trigger immediate risk.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential changes in capital requirements could moderately impact liquidity management.",
+              "impact_reasoning": "Changes in leverage ratios could affect liquidity management for community banks.",
+              "matrix_level": "Medium",
+              "matrix_color": "#F59E0B",
+              "matrix_text_color": "#fff",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-04-16",
+              "title": "Federal Reserve Board issues enforcement action with Community Bankshares, Inc.",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260416a.htm",
+              "source": "federal_reserve",
+              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
+              "risk_score": 10,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "ban"
+              ],
+              "probability": 2,
+              "probability_label": "Seldom",
+              "probability_reasoning": "Enforcement actions against institutions are more significant but still isolated.",
+              "impact": 3,
+              "impact_label": "Moderate",
+              "impact_reasoning": "Institutional enforcement actions can affect liquidity and operational risk.",
+              "matrix_level": "Medium",
+              "matrix_color": "#F59E0B",
+              "matrix_text_color": "#fff",
+              "matrix_score": 1,
+              "llm_scored": true
+            },
+            {
+              "date": "2026-03-26",
+              "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
+              "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
+              "source": "federal_reserve",
+              "risk_category": "FINANCIAL_RISK::MARKET_RISK",
+              "risk_score": 20,
+              "risk_level": "Low",
+              "matched_keywords": [
+                "currency",
+                "ban"
+              ],
+              "probability": 2,
+              "probability_label": "Seldom",
+              "probability_reasoning": "Exemptions under regulatory acts are not frequent but not rare.",
+              "impact": 3,
+              "impact_label": "Moderate",
+              "impact_reasoning": "Exemptions can affect liquidity and credit risk management.",
               "matrix_level": "Medium",
               "matrix_color": "#F59E0B",
               "matrix_text_color": "#fff",
@@ -1146,10 +1217,10 @@
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Proposals to codify regulatory changes can occasionally face challenges.",
+              "probability_reasoning": "Proposals to codify regulatory changes can have significant implications.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential changes in regulatory focus could moderately impact liquidity management.",
+              "impact_reasoning": "Codifying changes in supervision can impact regulatory risk management.",
               "matrix_level": "Medium",
               "matrix_color": "#F59E0B",
               "matrix_text_color": "#fff",
@@ -1171,10 +1242,10 @@
               ],
               "probability": 3,
               "probability_label": "Occasional",
-              "probability_reasoning": "Public outreach meetings on regulatory reviews can occasionally face challenges.",
+              "probability_reasoning": "Public outreach meetings can lead to regulatory changes.",
               "impact": 3,
               "impact_label": "Moderate",
-              "impact_reasoning": "Potential regulatory changes could moderately impact liquidity management.",
+              "impact_reasoning": "Regulatory reviews can impact compliance and operational processes.",
               "matrix_level": "Medium",
               "matrix_color": "#F59E0B",
               "matrix_text_color": "#fff",
@@ -1194,33 +1265,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+              "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#22C55E",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-04-23",
-              "title": "Agencies finalize changes to enhance community bank leverage ratio",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260423a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Changes to leverage ratios may affect some banks but are unlikely to trigger immediate risks.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "The impact on liquidity is minor as community banks adjust over time.",
+              "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1240,33 +1288,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#22C55E",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-04-16",
-              "title": "Federal Reserve Board issues enforcement action with Community Bankshares, Inc.",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260416a.htm",
-              "source": "federal_reserve",
-              "risk_category": "NON_COMMERCIAL_RISK::REGULATORY_RISK",
-              "risk_score": 10,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against companies are infrequent and typically isolated.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "These actions have limited direct impact on liquidity or treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1284,10 +1309,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+              "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1305,10 +1330,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+              "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
+              "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1328,10 +1353,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Termination of enforcement actions is a positive development, reducing risk.",
+              "probability_reasoning": "Termination of enforcement actions is a positive development but not frequent.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "This reduces regulatory pressure but has limited immediate impact on liquidity.",
+              "impact_reasoning": "This may improve liquidity conditions but has limited immediate impact.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1351,34 +1376,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
-              "matrix_level": "Low",
-              "matrix_color": "#22C55E",
-              "matrix_text_color": "#fff",
-              "matrix_score": 0,
-              "llm_scored": true
-            },
-            {
-              "date": "2026-03-26",
-              "title": "Federal Reserve Board announces it has made the joint findings with the Office of the Comptroller of the Currency required for the OCC to approve a request by Morgan Stanley Bank, N.A., for an exemption under section 23A of the Federal Reserve Act",
-              "link": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260326a.htm",
-              "source": "federal_reserve",
-              "risk_category": "FINANCIAL_RISK::MARKET_RISK",
-              "risk_score": 20,
-              "risk_level": "Low",
-              "matched_keywords": [
-                "currency",
-                "ban"
-              ],
-              "probability": 2,
-              "probability_label": "Seldom",
-              "probability_reasoning": "Exemptions under regulatory acts are infrequent but not uncommon.",
-              "impact": 2,
-              "impact_label": "Minor",
-              "impact_reasoning": "Such exemptions have limited direct impact on liquidity or treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1396,10 +1397,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Annual financial statements are routine disclosures with no immediate risk implications.",
+              "probability_reasoning": "Annual financial statements are routine disclosures.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such statements have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1419,10 +1420,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1443,10 +1444,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1466,10 +1467,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Termination of enforcement actions is a positive development, reducing risk.",
+              "probability_reasoning": "Termination of enforcement actions is a positive development but not frequent.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "This reduces regulatory pressure but has limited immediate impact on liquidity.",
+              "impact_reasoning": "This may improve liquidity conditions but has limited immediate impact.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1489,10 +1490,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1510,10 +1511,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+              "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1533,10 +1534,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1554,10 +1555,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "The approval of an application by a financial corporation is a routine event with no immediate risk indicators.",
+              "probability_reasoning": "Approval of application by a financial corporation is a routine event with low risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such approvals typically have no direct impact on liquidity or treasury operations.",
+              "impact_reasoning": "Such approvals typically have no immediate impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1577,10 +1578,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1600,10 +1601,10 @@
               ],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Designation of chairs is a routine administrative action with no immediate risk implications.",
+              "probability_reasoning": "Designation of chairs is a routine administrative action.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such designations do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such designations have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1621,10 +1622,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Actions to support penny circulation are routine and have no immediate risk implications.",
+              "probability_reasoning": "Actions to support penny circulation are routine and low risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such actions do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such actions have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1642,10 +1643,10 @@
               "matched_keywords": [],
               "probability": 1,
               "probability_label": "Unlikely",
-              "probability_reasoning": "Meeting minutes are routine disclosures with no immediate risk implications.",
+              "probability_reasoning": "Minutes of past meetings are informational and do not pose immediate risk.",
               "impact": 1,
               "impact_label": "Negligible",
-              "impact_reasoning": "Such disclosures do not affect liquidity or treasury operations.",
+              "impact_reasoning": "Such minutes have no direct impact on liquidity or settlements.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1665,10 +1666,10 @@
               ],
               "probability": 2,
               "probability_label": "Seldom",
-              "probability_reasoning": "Enforcement actions against individuals are infrequent and isolated events.",
+              "probability_reasoning": "Enforcement actions against individuals are relatively common and isolated.",
               "impact": 2,
               "impact_label": "Minor",
-              "impact_reasoning": "Such actions have limited impact on overall treasury operations.",
+              "impact_reasoning": "Such actions typically have limited impact on broader liquidity or operations.",
               "matrix_level": "Low",
               "matrix_color": "#22C55E",
               "matrix_text_color": "#fff",
@@ -1680,8 +1681,8 @@
         "by_category": {
           "FINANCIAL_RISK::CREDIT_RISK": 1,
           "NON_COMMERCIAL_RISK::REGULATORY_RISK": 15,
-          "Unknown": 8,
-          "FINANCIAL_RISK::MARKET_RISK": 2
+          "FINANCIAL_RISK::MARKET_RISK": 2,
+          "Unknown": 8
         },
         "top_keywords": [
           "ban",
@@ -1703,16 +1704,16 @@
           ],
           [
             0,
-            13,
-            0,
+            10,
+            3,
             0,
             0
           ],
           [
             0,
             0,
-            4,
-            0,
+            2,
+            2,
             0
           ],
           [
@@ -1735,19 +1736,21 @@
     "reporting": {
       "status": "success",
       "report": {
-        "timestamp": "2026-05-07T20:58:15.837409",
+        "timestamp": "2026-05-08T09:37:35.424610",
         "title": "Federal Reserve News Risk Analysis Report",
         "summary": {
           "total_items": 26,
           "extreme_count": 0,
-          "high_count": 0,
-          "medium_count": 4,
-          "low_count": 22,
+          "high_count": 2,
+          "medium_count": 5,
+          "low_count": 19,
           "llm_scored": true
         },
         "recommendations": [
+          "2 High-risk item(s) detected. Escalate to treasury risk committee.",
           "Monitor NON_COMMERCIAL_RISK::REGULATORY_RISK closely: 15 items flagged.",
-          "Monitor Unknown closely: 8 items flagged."
+          "Monitor Unknown closely: 8 items flagged.",
+          "2 item(s) rated Hazardous or Catastrophic impact."
         ],
         "top_keywords": [
           "ban",
@@ -1762,8 +1765,8 @@
         "category_distribution": {
           "FINANCIAL_RISK::CREDIT_RISK": 1,
           "NON_COMMERCIAL_RISK::REGULATORY_RISK": 15,
-          "Unknown": 8,
-          "FINANCIAL_RISK::MARKET_RISK": 2
+          "FINANCIAL_RISK::MARKET_RISK": 2,
+          "Unknown": 8
         }
       }
     },
@@ -1796,9 +1799,49 @@
           "matrix"
         ]
       },
-      "posture": "MODERATE",
-      "summary": "In the current moderate risk environment, immediate attention should be directed towards ensuring liquidity and payment continuity, with a particular focus on the US and China. The shift in the US Treasury auction signals potential short-term funding challenges, necessitating proactive liquidity management. Concurrently, the fluctuations in the CNY/EUR exchange rate highlight market risk concerns in China, which could impact cash mobility and cross-border transactions. Monitoring these developments closely will be crucial for maintaining operational stability and mitigating risks in key markets such as Canada, Germany, and France, where market risks are also present.",
+      "posture": "ELEVATED",
+      "summary": "In the current elevated risk environment, immediate focus should be on ensuring liquidity and payment continuity, particularly in light of market volatility in China and the US Treasury auction shifts impacting short-term funding. The ECB FX reference rates indicate significant market risk in Germany, France, and the UK, necessitating enhanced cash mobility strategies to mitigate currency exposure and ensure operational resilience. Prioritizing these actions will safeguard treasury operations against potential disruptions in key regions.",
       "country_groups": [
+        {
+          "country": "China",
+          "flag": "🇨🇳",
+          "max_score": 57.1,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 57.1,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate CNY/EUR: 7.9989",
+              "action": {
+                "recommended_action": "Initiate a currency hedge for CNY/EUR exposure.",
+                "why": "The ECB FX reference rate for CNY/EUR is high, indicating potential volatility and market risk. Hedging will protect against adverse currency movements.",
+                "expected_outcome": "The company will mitigate potential losses from unfavorable exchange rate fluctuations, stabilizing cash flow in EUR terms.",
+                "pros": [
+                  "Reduces exposure to currency volatility",
+                  "Stabilizes cash flow projections"
+                ],
+                "cons": [
+                  "Potential cost of hedging instruments",
+                  "May limit upside potential if CNY strengthens"
+                ],
+                "alternatives": [
+                  "Increase EUR reserves to naturally hedge exposure",
+                  "Delay EUR-denominated transactions until rates stabilize"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate CNY/EUR: 7.9989",
+                  "effective_score": 57.1,
+                  "source": "ecb",
+                  "score": 57.15,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
         {
           "country": "USA",
           "flag": "🇺🇸",
@@ -1811,20 +1854,20 @@
               "alert_count": 1,
               "top_alert_title": "US Treasury Auction Shift",
               "action": {
-                "recommended_action": "Increase short-term credit lines with existing banking partners.",
-                "why": "The shift in US Treasury auctions may lead to increased market volatility and tighter liquidity conditions. Securing additional credit lines ensures access to funds if market conditions deteriorate.",
-                "expected_outcome": "The company will have additional liquidity buffers to manage any short-term funding needs arising from market disruptions.",
+                "recommended_action": "Increase short-term cash reserves by drawing on existing credit lines.",
+                "why": "A shift in the US Treasury auction schedule may indicate potential volatility in funding markets. Increasing cash reserves ensures the company can meet its short-term obligations without disruption.",
+                "expected_outcome": "The company will maintain liquidity and payment continuity even if market conditions tighten.",
                 "pros": [
-                  "Enhances liquidity position",
-                  "Mitigates funding risk during market volatility"
+                  "Ensures liquidity during uncertain market conditions.",
+                  "Prevents potential disruptions in payment continuity."
                 ],
                 "cons": [
-                  "Potential increase in interest expenses",
-                  "May require additional collateral or covenants"
+                  "May incur interest costs on drawn credit lines.",
+                  "Could signal to the market a lack of confidence in current funding conditions."
                 ],
                 "alternatives": [
-                  "Reallocate cash reserves to more liquid instruments",
-                  "Negotiate longer payment terms with suppliers"
+                  "Delay non-essential capital expenditures to conserve cash.",
+                  "Re-evaluate and optimize current cash flow forecasts to identify potential savings."
                 ]
               },
               "alerts": [
@@ -1838,121 +1881,67 @@
               ]
             },
             {
-              "category": "Market Risk",
+              "category": "FX Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 50.0,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate USD/EUR: 1.177",
+              "top_alert_title": "USD Strength Extreme",
               "action": {
-                "recommended_action": "Hedge against USD/EUR currency fluctuations using forward contracts.",
-                "why": "The current ECB FX reference rate indicates potential volatility in the USD/EUR exchange rate, which could impact cash flow forecasts and financial statements. Hedging can mitigate the risk of adverse currency movements.",
-                "expected_outcome": "By locking in exchange rates, the company can stabilize its cash flows and protect against unfavorable currency fluctuations.",
+                "recommended_action": "Implement a USD hedging strategy using forward contracts.",
+                "why": "The extreme strength of the USD can lead to significant foreign exchange losses on international transactions. Hedging will protect against adverse currency movements and stabilize cash flows.",
+                "expected_outcome": "The company will mitigate potential losses from USD fluctuations and ensure more predictable financial outcomes.",
                 "pros": [
-                  "Reduces exposure to currency risk",
-                  "Stabilizes cash flow projections"
+                  "Reduces exposure to currency volatility",
+                  "Provides certainty in cash flow projections"
                 ],
                 "cons": [
-                  "Potential opportunity cost if the market moves favorably",
-                  "Costs associated with entering into forward contracts"
+                  "Potential opportunity cost if USD weakens",
+                  "Requires upfront costs and resources to set up"
                 ],
                 "alternatives": [
-                  "Use options to hedge currency risk",
-                  "Increase cash reserves in EUR to naturally hedge"
+                  "Increase USD-denominated revenue streams",
+                  "Diversify currency holdings to naturally hedge"
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate USD/EUR: 1.177",
-                  "effective_score": 40.7,
-                  "source": "ecb",
-                  "score": 40.68,
+                  "title": "USD Strength Extreme",
+                  "effective_score": 50.0,
+                  "source": "data_alert",
+                  "score": 50.0,
                   "weight_applied": 1.0
                 }
               ]
-            }
-          ]
-        },
-        {
-          "country": "China",
-          "flag": "🇨🇳",
-          "max_score": 48.8,
-          "category_cards": [
+            },
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 48.8,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate CNY/EUR: 8.0058",
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
               "action": {
-                "recommended_action": "Increase monitoring of CNY/EUR exchange rate fluctuations and consider entering into forward contracts to hedge against potential adverse movements.",
-                "why": "The current ECB FX reference rate indicates heightened market risk, which could impact the cost of transactions and financial reporting. Hedging will help stabilize cash flows and protect against currency volatility.",
-                "expected_outcome": "By hedging, the treasury can mitigate the impact of unfavorable exchange rate movements, ensuring more predictable financial outcomes.",
+                "recommended_action": "Increase USD cash reserves by converting EUR holdings at current favorable rates.",
+                "why": "The current ECB FX reference rate indicates a favorable USD/EUR conversion rate, which can be leveraged to bolster USD liquidity amidst market volatility.",
+                "expected_outcome": "Enhanced USD liquidity to support payment continuity and short-term funding needs.",
                 "pros": [
-                  "Reduces exposure to currency risk.",
-                  "Stabilizes cash flow and financial statements."
+                  "Improves USD liquidity position.",
+                  "Takes advantage of favorable exchange rates."
                 ],
                 "cons": [
-                  "Potential cost of hedging instruments.",
-                  "May limit potential gains from favorable currency movements."
+                  "Potential opportunity cost if rates improve further.",
+                  "Possible transaction costs associated with currency conversion."
                 ],
                 "alternatives": [
-                  "Increase cash reserves in EUR to naturally hedge against CNY depreciation.",
-                  "Diversify currency exposure by transacting in multiple currencies."
+                  "Hedge against further EUR depreciation using forward contracts.",
+                  "Delay conversion to observe potential rate improvements."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate CNY/EUR: 8.0058",
-                  "effective_score": 48.8,
+                  "title": "ECB FX reference rate USD/EUR: 1.1761",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 48.82,
-                  "weight_applied": 1.0
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "country": "Canada",
-          "flag": "🇨🇦",
-          "max_score": 40.7,
-          "category_cards": [
-            {
-              "category": "Market Risk",
-              "severity": "MEDIUM",
-              "effective_score": 40.7,
-              "alert_count": 2,
-              "top_alert_title": "Bank of Canada Valet daily market observation",
-              "action": {
-                "recommended_action": "Increase cash reserves in CAD to mitigate potential currency volatility.",
-                "why": "The ECB FX reference rate indicates potential CAD/EUR volatility, which could impact cash flow and liquidity. Holding more CAD reserves will provide a buffer against adverse currency movements.",
-                "expected_outcome": "Enhanced liquidity position in CAD, reducing the impact of currency fluctuations on operational cash flow.",
-                "pros": [
-                  "Improves liquidity in local currency",
-                  "Reduces exposure to currency risk"
-                ],
-                "cons": [
-                  "Potential opportunity cost if CAD depreciates",
-                  "May limit investment opportunities in other currencies"
-                ],
-                "alternatives": [
-                  "Hedge CAD/EUR exposure using forward contracts",
-                  "Diversify currency holdings to include more stable currencies"
-                ]
-              },
-              "alerts": [
-                {
-                  "title": "Bank of Canada Valet daily market observation",
-                  "effective_score": 40.7,
-                  "source": "bank_of_canada",
-                  "score": 40.68,
-                  "weight_applied": 1.0
-                },
-                {
-                  "title": "ECB FX reference rate CAD/EUR: 1.604",
-                  "effective_score": 40.7,
-                  "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -1962,65 +1951,65 @@
         {
           "country": "Germany",
           "flag": "🇩🇪",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 9,
-              "top_alert_title": "ECB FX reference rate USD/EUR: 1.177",
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
               "action": {
-                "recommended_action": "Initiate a currency hedge for USD and GBP exposures using forward contracts.",
-                "why": "The current FX rates indicate potential volatility in the USD/EUR and GBP/EUR pairs, which could impact cash flow predictability. Hedging will help stabilize cash flows and protect against adverse currency movements.",
-                "expected_outcome": "The company will have more predictable cash flows and reduced exposure to currency fluctuations, enhancing financial stability.",
+                "recommended_action": "Implement a currency hedging strategy using forward contracts for USD, GBP, and JPY exposures.",
+                "why": "The ECB FX reference rates indicate significant market volatility, which could impact cash flow and financial stability. Hedging will mitigate potential adverse effects on the company's financial position due to currency fluctuations.",
+                "expected_outcome": "The company will stabilize its cash flows and protect its profit margins from unfavorable currency movements.",
                 "pros": [
-                  "Reduces exposure to currency volatility",
-                  "Improves cash flow predictability"
+                  "Reduces financial uncertainty and exposure to currency risk.",
+                  "Helps in maintaining budgeted financial performance despite market volatility."
                 ],
                 "cons": [
-                  "Potential cost of hedging",
-                  "May miss out on favorable currency movements"
+                  "Potential costs associated with setting up and maintaining hedging instruments.",
+                  "May limit potential gains if currency movements are favorable."
                 ],
                 "alternatives": [
-                  "Use options for more flexible hedging",
-                  "Increase natural hedging by matching currency inflows and outflows"
+                  "Increase cash reserves in foreign currencies to naturally hedge against currency fluctuations.",
+                  "Negotiate with suppliers and customers to transact in euros to avoid currency risk."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate USD/EUR: 1.177",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate USD/EUR: 1.1761",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
                   "title": "ECB FX reference rate GBP/EUR: 0.8641",
-                  "effective_score": 40.7,
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate JPY/EUR: 184.07",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate JPY/EUR: 184.37",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate CAD/EUR: 1.604",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate CAD/EUR: 1.6063",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate AUD/EUR: 1.6219",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate AUD/EUR: 1.6259",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2030,65 +2019,65 @@
         {
           "country": "France",
           "flag": "🇫🇷",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 9,
-              "top_alert_title": "ECB FX reference rate USD/EUR: 1.177",
+              "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
               "action": {
-                "recommended_action": "Initiate a currency hedging strategy for USD and GBP exposures.",
-                "why": "The current FX rates indicate potential volatility in the USD/EUR and GBP/EUR pairs, which could impact cash flow predictability and financial results. Hedging will help stabilize cash flows and protect against adverse currency movements.",
-                "expected_outcome": "By hedging, the company can mitigate the impact of currency fluctuations on its financial statements, ensuring more predictable cash flows and budget adherence.",
+                "recommended_action": "Initiate a currency hedging strategy using forward contracts for USD/EUR and GBP/EUR.",
+                "why": "The current FX rates indicate potential volatility that could impact cash flows and financial statements. Hedging will stabilize cash flows against adverse currency movements.",
+                "expected_outcome": "The company will have a predictable cash flow and reduced exposure to currency fluctuations, improving financial stability.",
                 "pros": [
-                  "Reduces exposure to currency volatility.",
-                  "Enhances financial predictability and stability."
+                  "Reduces uncertainty in cash flows.",
+                  "Protects against adverse currency movements."
                 ],
                 "cons": [
-                  "Potential cost of hedging instruments.",
-                  "May limit upside potential if currency moves favorably."
+                  "Potential opportunity cost if rates move favorably.",
+                  "Requires upfront costs and management resources."
                 ],
                 "alternatives": [
-                  "Increase cash reserves in foreign currencies.",
-                  "Negotiate currency clauses in supplier contracts."
+                  "Use options for more flexible hedging.",
+                  "Increase cash reserves in foreign currencies to naturally hedge."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate USD/EUR: 1.177",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate USD/EUR: 1.1761",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
                   "title": "ECB FX reference rate GBP/EUR: 0.8641",
-                  "effective_score": 40.7,
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate JPY/EUR: 184.07",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate JPY/EUR: 184.37",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate CAD/EUR: 1.604",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate CAD/EUR: 1.6063",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 },
                 {
-                  "title": "ECB FX reference rate AUD/EUR: 1.6219",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate AUD/EUR: 1.6259",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2098,37 +2087,37 @@
         {
           "country": "UK",
           "flag": "🇬🇧",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
               "top_alert_title": "ECB FX reference rate GBP/EUR: 0.8641",
               "action": {
-                "recommended_action": "Initiate a hedge on GBP/EUR currency exposure using forward contracts.",
-                "why": "The ECB FX reference rate indicates potential volatility in the GBP/EUR exchange rate, posing a market risk. Hedging will protect against adverse currency movements that could impact cash flows.",
-                "expected_outcome": "The treasury will mitigate the risk of unfavorable exchange rate fluctuations, ensuring more predictable cash flows.",
+                "recommended_action": "Implement a currency hedging strategy for GBP/EUR exposure.",
+                "why": "The current ECB FX reference rate indicates potential volatility in the GBP/EUR exchange rate, which could impact cash flow and financial stability. Hedging will mitigate the risk of adverse currency movements affecting the company's financial position.",
+                "expected_outcome": "The company will have a more predictable cash flow and reduced exposure to currency fluctuations, enhancing financial stability.",
                 "pros": [
-                  "Reduces exposure to currency volatility",
-                  "Provides certainty in cash flow projections"
+                  "Reduces exposure to currency volatility.",
+                  "Improves predictability of cash flows."
                 ],
                 "cons": [
-                  "Potential cost of hedging instruments",
-                  "May miss out on favorable currency movements"
+                  "Potential costs associated with hedging instruments.",
+                  "May limit potential gains from favorable currency movements."
                 ],
                 "alternatives": [
-                  "Use options for more flexible currency risk management",
-                  "Increase cash reserves in EUR to naturally hedge exposure"
+                  "Increase cash reserves in EUR to naturally hedge exposure.",
+                  "Negotiate contracts in GBP to avoid currency conversion risks."
                 ]
               },
               "alerts": [
                 {
                   "title": "ECB FX reference rate GBP/EUR: 0.8641",
-                  "effective_score": 40.7,
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2138,37 +2127,77 @@
         {
           "country": "Japan",
           "flag": "🇯🇵",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate JPY/EUR: 184.07",
+              "top_alert_title": "ECB FX reference rate JPY/EUR: 184.37",
               "action": {
-                "recommended_action": "Initiate a currency swap to hedge against JPY/EUR volatility.",
-                "why": "The ECB FX reference rate indicates significant volatility in the JPY/EUR exchange rate, which could impact cash flows and financial statements. Hedging will protect against adverse currency movements.",
-                "expected_outcome": "The company will mitigate potential losses from unfavorable exchange rate fluctuations, ensuring more predictable cash flows.",
+                "recommended_action": "Initiate a hedge on JPY/EUR exposure using forward contracts.",
+                "why": "The high ECB FX reference rate indicates potential volatility in the JPY/EUR exchange rate, which could impact cash flow and financial statements. Hedging will protect against adverse currency movements.",
+                "expected_outcome": "Stabilized cash flows and reduced impact of exchange rate fluctuations on financial results.",
                 "pros": [
-                  "Reduces exposure to currency risk.",
-                  "Stabilizes cash flow projections."
+                  "Mitigates exchange rate risk",
+                  "Provides financial predictability"
                 ],
                 "cons": [
-                  "Potential cost of entering into a swap agreement.",
-                  "May limit upside potential if the exchange rate moves favorably."
+                  "Potential cost of hedging",
+                  "May limit upside potential if rates move favorably"
                 ],
                 "alternatives": [
-                  "Increase cash reserves in EUR to naturally hedge.",
-                  "Use forward contracts to lock in current exchange rates."
+                  "Use options for more flexible hedging",
+                  "Increase cash reserves in EUR to naturally hedge"
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate JPY/EUR: 184.07",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate JPY/EUR: 184.37",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
+                  "weight_applied": 1.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "country": "Canada",
+          "flag": "🇨🇦",
+          "max_score": 47.6,
+          "category_cards": [
+            {
+              "category": "Market Risk",
+              "severity": "MEDIUM",
+              "effective_score": 47.6,
+              "alert_count": 1,
+              "top_alert_title": "ECB FX reference rate CAD/EUR: 1.6063",
+              "action": {
+                "recommended_action": "Initiate a foreign exchange hedge for CAD/EUR exposure.",
+                "why": "The current ECB FX reference rate indicates a potential unfavorable movement in the CAD/EUR rate, which could impact financial stability. Hedging will protect against adverse currency fluctuations.",
+                "expected_outcome": "The company will mitigate potential losses from unfavorable currency movements, ensuring stable cash flows.",
+                "pros": [
+                  "Reduces exposure to currency volatility",
+                  "Provides budget certainty"
+                ],
+                "cons": [
+                  "Potential cost of hedging instruments",
+                  "May limit upside potential if rates move favorably"
+                ],
+                "alternatives": [
+                  "Increase cash reserves in EUR to naturally hedge against currency risk",
+                  "Delay major transactions until currency rates stabilize"
+                ]
+              },
+              "alerts": [
+                {
+                  "title": "ECB FX reference rate CAD/EUR: 1.6063",
+                  "effective_score": 47.6,
+                  "source": "ecb",
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2178,37 +2207,37 @@
         {
           "country": "Australia",
           "flag": "🇦🇺",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate AUD/EUR: 1.6219",
+              "top_alert_title": "ECB FX reference rate AUD/EUR: 1.6259",
               "action": {
-                "recommended_action": "Initiate a currency hedge for AUD exposure against the EUR.",
-                "why": "The ECB FX reference rate indicates potential volatility in the AUD/EUR exchange rate, which could impact cash flows. Hedging will protect against unfavorable currency movements.",
-                "expected_outcome": "By hedging, the company will stabilize its cash flows and reduce the impact of exchange rate fluctuations on its financials.",
+                "recommended_action": "Initiate a currency hedge for AUD/EUR exposure.",
+                "why": "The current ECB FX reference rate indicates significant market volatility, which could impact cash flows and financial stability. Hedging will mitigate potential adverse effects from currency fluctuations.",
+                "expected_outcome": "The action will stabilize cash flows and protect against unfavorable exchange rate movements, ensuring liquidity and payment continuity.",
                 "pros": [
-                  "Reduces exchange rate risk",
-                  "Stabilizes cash flow projections"
+                  "Reduces exposure to currency fluctuations",
+                  "Enhances predictability of cash flows"
                 ],
                 "cons": [
                   "Potential cost of hedging instruments",
-                  "May limit potential gains from favorable currency movements"
+                  "May limit upside potential if AUD strengthens"
                 ],
                 "alternatives": [
-                  "Monitor the exchange rate closely without immediate action",
-                  "Diversify currency holdings to mitigate risk"
+                  "Increase cash reserves in EUR to offset potential losses",
+                  "Negotiate forward contracts with key suppliers or customers"
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate AUD/EUR: 1.6219",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate AUD/EUR: 1.6259",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2218,37 +2247,37 @@
         {
           "country": "Brazil",
           "flag": "🇧🇷",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate BRL/EUR: 5.787",
+              "top_alert_title": "ECB FX reference rate BRL/EUR: 5.7794",
               "action": {
-                "recommended_action": "Increase hedging positions in BRL against EUR.",
-                "why": "The ECB FX reference rate indicates a significant depreciation of BRL against the EUR, which could affect cash flows and financial stability. Hedging will help mitigate potential losses from currency fluctuations.",
-                "expected_outcome": "The company will have more predictable cash flows and reduced exposure to adverse currency movements.",
+                "recommended_action": "Increase hedging on BRL/EUR exposure using forward contracts.",
+                "why": "The BRL/EUR exchange rate is volatile, posing a risk to cash flow stability. Hedging will mitigate potential losses from adverse currency movements.",
+                "expected_outcome": "Stabilized cash flow and reduced impact of currency fluctuations on financial statements.",
                 "pros": [
-                  "Reduces currency risk exposure",
-                  "Stabilizes cash flow projections"
+                  "Reduces exchange rate risk exposure.",
+                  "Provides predictability in cash flow management."
                 ],
                 "cons": [
-                  "Increases hedging costs",
-                  "Potential opportunity loss if BRL appreciates"
+                  "Potential opportunity cost if the BRL strengthens.",
+                  "Hedging costs may increase overall expenses."
                 ],
                 "alternatives": [
-                  "Do nothing and accept the currency risk",
-                  "Diversify currency holdings to include more stable currencies"
+                  "Increase cash reserves in EUR to naturally hedge against BRL depreciation.",
+                  "Use options instead of forwards to maintain flexibility."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate BRL/EUR: 5.787",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate BRL/EUR: 5.7794",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2258,37 +2287,37 @@
         {
           "country": "Mexico",
           "flag": "🇲🇽",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate MXN/EUR: 20.2473",
+              "top_alert_title": "ECB FX reference rate MXN/EUR: 20.2716",
               "action": {
-                "recommended_action": "Initiate a currency hedge for MXN/EUR exposure using forward contracts.",
-                "why": "The ECB FX reference rate indicates potential volatility in the MXN/EUR exchange rate, which could impact cash flows and financial stability. Hedging will protect against unfavorable currency movements.",
-                "expected_outcome": "The company will mitigate the risk of currency fluctuations impacting its cash flow, ensuring more predictable financial outcomes.",
+                "recommended_action": "Implement a hedging strategy using forward contracts to lock in current MXN/EUR rates for upcoming transactions.",
+                "why": "The MXN/EUR rate is volatile, and securing current rates can protect against unfavorable future movements. This action mitigates potential losses due to currency fluctuations.",
+                "expected_outcome": "The company will have more predictable cash flows and reduced exposure to adverse currency movements.",
                 "pros": [
-                  "Reduces exposure to adverse currency movements",
-                  "Provides more predictable cash flow"
+                  "Reduces uncertainty in cash flow forecasting.",
+                  "Protects against adverse currency movements."
                 ],
                 "cons": [
-                  "Potential cost of hedging instruments",
-                  "May limit potential gains from favorable currency movements"
+                  "Potentially higher costs if rates move favorably.",
+                  "Requires upfront commitment of resources."
                 ],
                 "alternatives": [
-                  "Use options for more flexible hedging",
-                  "Increase cash reserves in EUR to naturally hedge exposure"
+                  "Use options to provide more flexibility in currency movements.",
+                  "Increase monitoring of FX rates and adjust strategy as needed."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate MXN/EUR: 20.2473",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate MXN/EUR: 20.2716",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2298,37 +2327,37 @@
         {
           "country": "India",
           "flag": "🇮🇳",
-          "max_score": 40.7,
+          "max_score": 47.6,
           "category_cards": [
             {
               "category": "Market Risk",
               "severity": "MEDIUM",
-              "effective_score": 40.7,
+              "effective_score": 47.6,
               "alert_count": 1,
-              "top_alert_title": "ECB FX reference rate INR/EUR: 110.938",
+              "top_alert_title": "ECB FX reference rate INR/EUR: 111.1285",
               "action": {
-                "recommended_action": "Initiate a currency swap to hedge against INR/EUR fluctuations.",
-                "why": "The ECB FX reference rate indicates significant volatility in the INR/EUR exchange rate, which could impact cash flow and payment obligations. A currency swap will mitigate the risk of adverse currency movements affecting the company's financial position.",
-                "expected_outcome": "The company will stabilize its cash flow and protect its financial statements from unfavorable currency fluctuations.",
+                "recommended_action": "Initiate a currency hedge for INR/EUR exposure.",
+                "why": "The ECB FX reference rate indicates significant volatility in the INR/EUR exchange rate, posing a market risk to cash flows. Hedging will protect against unfavorable currency movements.",
+                "expected_outcome": "Stabilization of cash flows and reduced impact from currency fluctuations.",
                 "pros": [
-                  "Reduces exposure to currency volatility",
-                  "Improves predictability of cash flows"
+                  "Mitigates exchange rate risk.",
+                  "Ensures predictability in cash flow projections."
                 ],
                 "cons": [
-                  "Potentially high transaction costs",
-                  "Requires counterparty agreement"
+                  "Potential cost of hedging instruments.",
+                  "Opportunity cost if exchange rates move favorably."
                 ],
                 "alternatives": [
-                  "Use forward contracts to lock in exchange rates",
-                  "Increase cash reserves in EUR to buffer against rate changes"
+                  "Increase cash reserves in EUR to naturally hedge.",
+                  "Negotiate forward contracts with suppliers to lock in current rates."
                 ]
               },
               "alerts": [
                 {
-                  "title": "ECB FX reference rate INR/EUR: 110.938",
-                  "effective_score": 40.7,
+                  "title": "ECB FX reference rate INR/EUR: 111.1285",
+                  "effective_score": 47.6,
                   "source": "ecb",
-                  "score": 40.68,
+                  "score": 47.62,
                   "weight_applied": 1.0
                 }
               ]
@@ -2337,10 +2366,10 @@
         }
       ],
       "total_alerts": 29,
-      "generated_at": "2026-05-08 03:58 UTC",
+      "generated_at": "2026-05-08 16:38 UTC",
       "persona": "cash_manager",
       "weights_used": false
     }
   },
-  "completion_time": "2026-05-07T20:58:45.895371"
+  "completion_time": "2026-05-08T09:38:17.440917"
 }
