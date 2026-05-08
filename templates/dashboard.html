@@ -45,6 +45,9 @@
             <span class="nav-icon">◈</span><span class="nav-text">Risk Monitor</span>
             <span class="nav-badge" id="riskBadge" style="display:none;">!</span>
         </a>
+        <a class="nav-item" onclick="showPage('actions', this)">
+            <span class="nav-icon">▶</span><span class="nav-text">Decision Support</span>
+        </a>
         <a class="nav-item" onclick="showPage('news', this)">
             <span class="nav-icon">⚖</span><span class="nav-text">Regulatory</span>
         </a>
@@ -53,9 +56,6 @@
         </a>
         <a class="nav-item" onclick="showPage('chat', this)">
             <span class="nav-icon">◎</span><span class="nav-text">Guardian Chat</span>
-        </a>
-        <a class="nav-item" onclick="showPage('actions', this)">
-            <span class="nav-icon">▶</span><span class="nav-text">Actions</span>
         </a>
         <a class="nav-item" onclick="showPage('data', this)">
             <span class="nav-icon">▦</span><span class="nav-text">Data Source</span>
@@ -535,7 +535,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="font-size:16px;font-weight:700;color:var(--text-main);">▶ Treasury Actions</div>
+                        <div style="font-size:16px;font-weight:700;color:var(--text-main);">▶ Decision Support</div>
                         <span id="actionsPostureBadge" style="font-size:11px;font-weight:700;padding:3px 10px;
                               border-radius:12px;border:1px solid var(--border);font-family:var(--font-mono);">—</span>
                     </div>
