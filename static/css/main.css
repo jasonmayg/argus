@@ -1060,6 +1060,43 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
     line-height: 1.5;
 }
 
+.news-card-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.news-card-read {
+    font-size: 11px;
+    color: var(--primary);
+    text-decoration: none;
+    font-family: var(--font-mono);
+}
+
+.news-card-read:hover { text-decoration: underline; }
+
+.news-card-decision-btn {
+    margin-left: auto;
+    padding: 6px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.news-card-decision-btn:hover {
+    background: white;
+    color: var(--primary);
+}
+
 /* ============================================================
    TABLES (shared)
    ============================================================ */

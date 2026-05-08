@@ -1,0 +1,603 @@
+{
+  "status": "success",
+  "settings_used": {
+    "min_score": 40.0,
+    "exclude": [
+      "weather",
+      "disaster"
+    ],
+    "sources": [
+      "guardian",
+      "data",
+      "matrix"
+    ]
+  },
+  "posture": "MODERATE",
+  "summary": "In the current moderate risk environment, immediate operational treasury actions should prioritize maintaining liquidity and ensuring payment continuity, particularly in light of market risks in China and Canada, and funding concerns in the USA. The recent shifts in US Treasury auctions and fluctuating FX rates in China, Germany, and France necessitate vigilant monitoring to safeguard short-term funding and cash mobility. It is crucial to implement strategies that mitigate these risks to ensure seamless treasury operations across key markets.",
+  "country_groups": [
+    {
+      "country": "China",
+      "flag": "🇨🇳",
+      "max_score": 54.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 54.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate CNY/EUR: 7.9989",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for CNY/EUR exposure.",
+            "why": "The CNY/EUR exchange rate has reached a level that may expose the company to significant market risk. Hedging will protect against adverse currency movements.",
+            "expected_outcome": "The company will mitigate potential losses from unfavorable currency fluctuations, ensuring stable financial performance.",
+            "pros": [
+              "Reduces financial uncertainty from currency volatility.",
+              "Protects against potential adverse currency movements."
+            ],
+            "cons": [
+              "Hedging can incur additional costs.",
+              "May limit potential gains from favorable currency movements."
+            ],
+            "alternatives": [
+              "Increase cash reserves in EUR to naturally hedge the exposure.",
+              "Negotiate forward contracts with trading partners to lock in current rates."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate CNY/EUR: 7.9989",
+              "effective_score": 54.0,
+              "source": "ecb",
+              "score": 53.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "USA",
+      "flag": "🇺🇸",
+      "max_score": 50.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Funding",
+          "severity": "MEDIUM",
+          "effective_score": 50.0,
+          "alert_count": 1,
+          "top_alert_title": "US Treasury Auction Shift",
+          "action": {
+            "recommended_action": "Increase short-term credit lines with existing banking partners.",
+            "why": "The shift in the US Treasury Auction could lead to increased volatility in funding costs. Securing additional credit lines will provide a buffer against potential short-term liquidity shortages.",
+            "expected_outcome": "The company will have immediate access to additional funds, ensuring payment continuity and mitigating liquidity risks.",
+            "pros": [
+              "Enhances liquidity position.",
+              "Provides flexibility to manage unexpected funding needs."
+            ],
+            "cons": [
+              "May incur additional fees or interest costs.",
+              "Could lead to over-reliance on external funding."
+            ],
+            "alternatives": [
+              "Reallocate internal cash reserves to cover potential shortfalls.",
+              "Delay non-essential capital expenditures to preserve cash."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "US Treasury Auction Shift",
+              "effective_score": 50.0,
+              "source": "data_alert",
+              "score": 50.0,
+              "weight_applied": 1.0
+            }
+          ]
+        },
+        {
+          "category": "FX Risk",
+          "severity": "MEDIUM",
+          "effective_score": 50.0,
+          "alert_count": 1,
+          "top_alert_title": "USD Strength Extreme",
+          "action": {
+            "recommended_action": "Implement a hedging strategy using forward contracts to lock in current exchange rates for upcoming foreign currency payments.",
+            "why": "The USD is currently experiencing extreme strength, which could lead to unfavorable exchange rates for future foreign currency transactions. Hedging will protect against potential adverse currency movements.",
+            "expected_outcome": "The organization will stabilize its cash flows and protect its budget from the volatility of currency fluctuations.",
+            "pros": [
+              "Reduces uncertainty in cash flow forecasting.",
+              "Protects against adverse currency movements."
+            ],
+            "cons": [
+              "Potential opportunity cost if the USD weakens.",
+              "Requires upfront costs and management of hedging instruments."
+            ],
+            "alternatives": [
+              "Use options contracts for more flexible hedging.",
+              "Increase USD reserves to naturally hedge against currency exposure."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "USD Strength Extreme",
+              "effective_score": 50.0,
+              "source": "data_alert",
+              "score": 50.0,
+              "weight_applied": 1.0
+            }
+          ]
+        },
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for USD/EUR exposure.",
+            "why": "The current ECB FX reference rate indicates a potential risk of unfavorable currency movements impacting cash flows. Hedging will protect against adverse rate fluctuations.",
+            "expected_outcome": "Stabilized cash flow projections and reduced exposure to currency volatility.",
+            "pros": [
+              "Mitigates risk of adverse currency movements",
+              "Provides predictability in cash flow management"
+            ],
+            "cons": [
+              "Potential cost of hedging instruments",
+              "May limit upside potential if currency moves favorably"
+            ],
+            "alternatives": [
+              "Monitor currency trends and adjust hedging strategy as needed",
+              "Increase cash reserves in EUR to naturally hedge against USD depreciation"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate USD/EUR: 1.1761",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Canada",
+      "flag": "🇨🇦",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 2,
+          "top_alert_title": "Bank of Canada Valet daily market observation",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for CAD/EUR exposure using forward contracts.",
+            "why": "The CAD/EUR exchange rate is volatile, and a hedge will protect against adverse currency movements impacting cash flow. The Bank of Canada market observation score indicates heightened market risk that could affect currency stability.",
+            "expected_outcome": "The company's exposure to currency fluctuations will be minimized, ensuring stable cash flow and reduced financial risk.",
+            "pros": [
+              "Reduces exposure to currency volatility",
+              "Provides predictable cash flows"
+            ],
+            "cons": [
+              "Potential opportunity cost if the currency moves favorably",
+              "Costs associated with setting up hedging instruments"
+            ],
+            "alternatives": [
+              "Use options to hedge currency exposure",
+              "Increase cash reserves in EUR to naturally hedge against currency risk"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "Bank of Canada Valet daily market observation",
+              "effective_score": 45.0,
+              "source": "bank_of_canada",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate CAD/EUR: 1.6063",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Germany",
+      "flag": "🇩🇪",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 9,
+          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
+          "action": {
+            "recommended_action": "Initiate a currency hedging strategy using forward contracts for USD, GBP, and JPY exposures.",
+            "why": "The ECB FX reference rates indicate potential volatility in currency markets which could impact the company's cash flows and financial statements. Hedging will help manage these risks by locking in exchange rates.",
+            "expected_outcome": "Stabilized cash flows and reduced impact of adverse currency fluctuations on the company's financials.",
+            "pros": [
+              "Reduces uncertainty in cash flow projections.",
+              "Protects against adverse currency movements."
+            ],
+            "cons": [
+              "Potential opportunity cost if the market moves favorably.",
+              "Requires upfront costs and ongoing management."
+            ],
+            "alternatives": [
+              "Use currency options for more flexibility.",
+              "Increase natural hedging by aligning revenues and expenses in the same currency."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate USD/EUR: 1.1761",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate GBP/EUR: 0.8641",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate JPY/EUR: 184.37",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate CAD/EUR: 1.6063",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate AUD/EUR: 1.6259",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "France",
+      "flag": "🇫🇷",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 9,
+          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for USD and GBP exposures.",
+            "why": "The current FX rates indicate significant market volatility, which can impact cash flow and financial stability. Hedging will mitigate the risk of adverse currency movements affecting liquidity.",
+            "expected_outcome": "Stabilized cash flows and reduced exposure to currency fluctuations, ensuring better predictability in financial planning.",
+            "pros": [
+              "Reduces currency risk exposure",
+              "Improves financial predictability"
+            ],
+            "cons": [
+              "Potential cost of hedging instruments",
+              "May limit upside potential if currency moves favorably"
+            ],
+            "alternatives": [
+              "Increase cash reserves in foreign currencies",
+              "Negotiate forward contracts with key suppliers"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate USD/EUR: 1.1761",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate GBP/EUR: 0.8641",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate JPY/EUR: 184.37",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate CAD/EUR: 1.6063",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            },
+            {
+              "title": "ECB FX reference rate AUD/EUR: 1.6259",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "UK",
+      "flag": "🇬🇧",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate GBP/EUR: 0.8641",
+          "action": {
+            "recommended_action": "Initiate a forward contract to hedge against potential GBP depreciation against the EUR.",
+            "why": "The current ECB FX reference rate indicates a potential market risk due to currency fluctuations. Hedging will protect against adverse movements in the GBP/EUR exchange rate.",
+            "expected_outcome": "The company will mitigate the risk of currency losses, ensuring more predictable cash flows and financial stability.",
+            "pros": [
+              "Reduces exposure to currency volatility",
+              "Ensures predictable cash flow for budgeting"
+            ],
+            "cons": [
+              "Potential opportunity cost if GBP appreciates",
+              "Costs associated with setting up the hedge"
+            ],
+            "alternatives": [
+              "Increase cash reserves in EUR to naturally hedge",
+              "Use options contracts for more flexible hedging"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate GBP/EUR: 0.8641",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Japan",
+      "flag": "🇯🇵",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate JPY/EUR: 184.37",
+          "action": {
+            "recommended_action": "Initiate a currency hedging strategy to mitigate potential losses from JPY/EUR fluctuations.",
+            "why": "The ECB FX reference rate indicates a significant movement in the JPY/EUR exchange rate, which could impact cash flows and financial stability. Hedging will protect against adverse currency movements.",
+            "expected_outcome": "The company will stabilize its cash flows and reduce potential foreign exchange losses, ensuring better predictability in financial performance.",
+            "pros": [
+              "Reduces exposure to currency volatility",
+              "Improves financial predictability"
+            ],
+            "cons": [
+              "Potential costs associated with hedging instruments",
+              "May limit potential gains from favorable currency movements"
+            ],
+            "alternatives": [
+              "Monitor the exchange rate closely and adjust operational strategies accordingly",
+              "Increase cash reserves in JPY to naturally hedge against currency fluctuations"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate JPY/EUR: 184.37",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Australia",
+      "flag": "🇦🇺",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate AUD/EUR: 1.6259",
+          "action": {
+            "recommended_action": "Initiate a currency hedging strategy for AUD/EUR exposure.",
+            "why": "The current ECB FX reference rate indicates potential volatility in the AUD/EUR exchange rate, which could impact cash flow and financial stability. Hedging will protect against adverse currency movements.",
+            "expected_outcome": "Stabilization of cash flows and reduced impact of currency fluctuations on financial statements.",
+            "pros": [
+              "Reduces exposure to currency risk.",
+              "Provides more predictable financial outcomes."
+            ],
+            "cons": [
+              "Potential cost of hedging instruments.",
+              "May limit upside potential if the currency moves favorably."
+            ],
+            "alternatives": [
+              "Increase cash reserves in EUR to naturally hedge exposure.",
+              "Negotiate currency clauses in contracts to share risk with counterparties."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate AUD/EUR: 1.6259",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Brazil",
+      "flag": "🇧🇷",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate BRL/EUR: 5.7794",
+          "action": {
+            "recommended_action": "Increase hedging positions on BRL/EUR to mitigate potential currency volatility.",
+            "why": "The ECB FX reference rate indicates a significant movement in the BRL/EUR exchange rate, suggesting increased market risk. Hedging will protect against potential adverse currency fluctuations.",
+            "expected_outcome": "By increasing hedging positions, the treasury will stabilize cash flow and protect against potential losses from currency depreciation.",
+            "pros": [
+              "Reduces exposure to currency volatility",
+              "Stabilizes cash flow projections"
+            ],
+            "cons": [
+              "Potential cost of hedging instruments",
+              "May limit upside potential if BRL appreciates"
+            ],
+            "alternatives": [
+              "Increase cash reserves in EUR to naturally hedge against BRL depreciation",
+              "Diversify currency exposure by investing in other stable currencies"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate BRL/EUR: 5.7794",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "Mexico",
+      "flag": "🇲🇽",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate MXN/EUR: 20.2716",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for MXN against EUR using forward contracts.",
+            "why": "The ECB FX reference rate indicates potential volatility in the MXN/EUR exchange rate, which could impact cash flow and liquidity. Hedging will stabilize cash flows and protect against adverse currency movements.",
+            "expected_outcome": "The company will mitigate the risk of currency fluctuations affecting cash reserves and maintain stable liquidity levels.",
+            "pros": [
+              "Reduces exposure to currency volatility.",
+              "Stabilizes cash flow projections."
+            ],
+            "cons": [
+              "Potential cost of hedging instruments.",
+              "May limit upside potential if MXN strengthens."
+            ],
+            "alternatives": [
+              "Increase cash reserves in EUR to naturally hedge.",
+              "Use options instead of forwards for more flexibility."
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate MXN/EUR: 20.2716",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "country": "India",
+      "flag": "🇮🇳",
+      "max_score": 45.0,
+      "cash_usd_m": null,
+      "category_cards": [
+        {
+          "category": "Market Risk",
+          "severity": "MEDIUM",
+          "effective_score": 45.0,
+          "alert_count": 1,
+          "top_alert_title": "ECB FX reference rate INR/EUR: 111.1285",
+          "action": {
+            "recommended_action": "Initiate a currency hedge for INR/EUR exposure using forward contracts.",
+            "why": "The ECB FX reference rate for INR/EUR is at a high level, indicating potential volatility and market risk. Hedging will protect against adverse currency movements.",
+            "expected_outcome": "The company will mitigate the risk of currency fluctuations impacting its financials, ensuring more predictable cash flows.",
+            "pros": [
+              "Reduces exposure to currency volatility",
+              "Provides certainty in cash flow projections"
+            ],
+            "cons": [
+              "Potential cost of hedging",
+              "May limit potential gains from favorable currency movements"
+            ],
+            "alternatives": [
+              "Use options for more flexible hedging",
+              "Increase INR reserves to naturally hedge against EUR liabilities"
+            ]
+          },
+          "alerts": [
+            {
+              "title": "ECB FX reference rate INR/EUR: 111.1285",
+              "effective_score": 45.0,
+              "source": "ecb",
+              "score": 44.95,
+              "weight_applied": 1.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "total_alerts": 30,
+  "generated_at": "2026-05-08 20:48 UTC",
+  "persona": "cash_manager",
+  "weights_used": false
+}
