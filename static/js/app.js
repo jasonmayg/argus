@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Populate home risk category cards
     loadRiskCategories();
 
+    // Load today's recommendations for active persona
+    loadRecommendations(localStorage.getItem('argusPersona') || 'cash_manager');
+
     // Render geospatial risk map
     try { await loadRiskMap(); } catch(e) { /* map unavailable */ }
 });

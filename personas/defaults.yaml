@@ -6,6 +6,12 @@
 # region_overrides: shallow diffs applied on top of the global risk_weights.
 # Only keys that differ from global need to be listed.
 # Effective weight = global value, overridden by matching region key where present.
+#
+# Weight philosophy:
+#   >= 1.4  : Core focus for this persona — elevated sensitivity
+#   1.0-1.3 : Standard monitoring
+#   0.5-0.9 : Low relevance — will score below alert threshold in most cases
+#   <= 0.4  : Not relevant — effectively filtered out for this persona
 
 personas:
   cash_manager:
@@ -15,13 +21,13 @@ personas:
       credit_risk: 1.3
       liquidity_risk: 1.6
       operational_risk: 1.3
-      political_risk: 1.0
-      regulatory_risk: 1.3
-      reputation_risk: 0.8
+      political_risk: 0.5
+      regulatory_risk: 1.4
+      reputation_risk: 0.5
       systematic_risk: 1.2
-      disaster_risk: 1.1
-      supply_risk: 0.9
-      demand_risk: 0.7
+      disaster_risk: 0.3
+      supply_risk: 0.3
+      demand_risk: 0.3
       process_risk: 1.4
       business_risk: 0.9
     region_overrides:
@@ -75,10 +81,10 @@ personas:
       regulatory_risk: 1.2
       reputation_risk: 0.8
       systematic_risk: 1.3
-      disaster_risk: 0.7
-      supply_risk: 0.7
+      disaster_risk: 0.4
+      supply_risk: 0.4
       demand_risk: 0.9
-      process_risk: 0.8
+      process_risk: 0.5
       business_risk: 1.0
     region_overrides:
       us:
@@ -129,19 +135,19 @@ personas:
   treasury_ops:
     alert_threshold: 40
     risk_weights:
-      market_risk: 1.0
-      credit_risk: 1.3
+      market_risk: 0.7
+      credit_risk: 1.0
       liquidity_risk: 1.4
-      operational_risk: 1.2
-      political_risk: 1.0
-      regulatory_risk: 1.4
+      operational_risk: 1.8
+      political_risk: 0.6
+      regulatory_risk: 1.5
       reputation_risk: 0.9
       systematic_risk: 1.1
       disaster_risk: 1.2
-      supply_risk: 1.1
-      demand_risk: 0.8
-      process_risk: 1.2
-      business_risk: 1.0
+      supply_risk: 0.5
+      demand_risk: 0.4
+      process_risk: 1.7
+      business_risk: 1.3
     region_overrides:
       us:
         regulatory_risk: 1.5
@@ -185,18 +191,18 @@ personas:
   treasury_tech:
     alert_threshold: 38
     risk_weights:
-      market_risk: 0.8
-      credit_risk: 0.9
+      market_risk: 0.6
+      credit_risk: 0.6
       liquidity_risk: 1.0
-      operational_risk: 1.5
-      political_risk: 0.8
+      operational_risk: 1.8
+      political_risk: 0.5
       regulatory_risk: 1.2
       reputation_risk: 0.9
       systematic_risk: 1.0
       disaster_risk: 1.3
       supply_risk: 1.2
-      demand_risk: 0.8
-      process_risk: 1.5
+      demand_risk: 0.5
+      process_risk: 1.8
       business_risk: 1.1
     region_overrides:
       us:
@@ -242,17 +248,17 @@ personas:
   risk_manager:
     alert_threshold: 42
     risk_weights:
-      market_risk: 1.2
-      credit_risk: 1.3
-      liquidity_risk: 1.2
-      operational_risk: 1.1
+      market_risk: 1.4
+      credit_risk: 1.5
+      liquidity_risk: 1.4
+      operational_risk: 1.2
       political_risk: 1.3
-      regulatory_risk: 1.2
-      reputation_risk: 1.0
-      systematic_risk: 1.5
+      regulatory_risk: 1.3
+      reputation_risk: 0.8
+      systematic_risk: 1.6
       disaster_risk: 1.2
       supply_risk: 1.1
-      demand_risk: 1.0
+      demand_risk: 0.8
       process_risk: 1.1
       business_risk: 1.2
     region_overrides:
