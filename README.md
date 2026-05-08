@@ -1,6 +1,6 @@
 # ARGUS — Developer Handover Documentation
 
-> **Platform:** Argus Risk Intelligence Platform  
+> **Platform:** Argus Risk Intelligence Platform (Automated Risk Guardian Universal Sensing)
 > **Stack:** Python 3.10+ · Flask · Vanilla JS (ES6) · SQLite · OpenAI GPT-4o · Anthropic Claude · Google Cloud Storage  
 > **Status:** Production-ready · v3.0 · Last updated: 2026-04-16
 
