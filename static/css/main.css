@@ -1060,12 +1060,19 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
     line-height: 1.5;
 }
 
+/* Pin footer to bottom of matrix item cards so buttons align across the row */
+#riskMatrixItems > .card {
+    display: flex;
+    flex-direction: column;
+}
+
 .news-card-footer {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    margin-top: 12px;
+    margin-top: auto;
+    padding-top: 12px;
 }
 
 .news-card-read {
@@ -1082,8 +1089,8 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
     padding: 6px 14px;
     border-radius: 5px;
     border: 1px solid var(--primary);
-    background: var(--primary);
-    color: white;
+    background: var(--primary-glow);
+    color: var(--primary);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -1093,8 +1100,8 @@ button:hover { background: #F8FAFC; border-color: var(--border-hover); }
 }
 
 .news-card-decision-btn:hover {
-    background: white;
-    color: var(--primary);
+    background: var(--primary);
+    color: white;
 }
 
 /* ============================================================
