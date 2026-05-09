@@ -1,596 +1,581 @@
 {
-  "status": "success",
-  "settings_used": {
-    "min_score": 40.0,
-    "exclude": [
-      "weather",
-      "disaster"
-    ],
-    "sources": [
-      "guardian",
-      "data",
-      "matrix"
-    ]
-  },
+  "summary": "The current risk posture is elevated due to significant currency fluctuations and changes in treasury operations across multiple regions. Immediate actions are necessary to mitigate potential financial exposure and ensure compliance with evolving market conditions.",
   "posture": "ELEVATED",
-  "summary": "Risk posture is ELEVATED. 11 countries require attention.",
-  "country_groups": [
+  "actions": [
     {
       "country": "China",
-      "flag": "🇨🇳",
-      "max_score": 55.5,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 53,
+      "top_title": "ECB FX reference rate CNY/EUR: 7.9989",
+      "why_now": "The ECB FX reference rate CNY/EUR at 7.9989 indicates significant currency volatility requiring immediate action.",
+      "recommendation": "Implement currency hedging strategies using forward contracts for CNY.",
+      "recommendation_pros": [
+        "Directly locks in exchange rates, reducing uncertainty in future cash flows.",
+        "Provides protection against adverse currency movements in the short term."
+      ],
+      "recommendation_cons": [
+        "Potential opportunity cost if the CNY strengthens beyond the locked rate.",
+        "Requires upfront capital and may involve complex contract management."
+      ],
+      "recommendation_outcome": "Reduces CNY exposure by 25% over the next quarter.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 55.5,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate CNY/EUR: 7.9989",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in China and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in China with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate CNY/EUR: 7.9989",
-              "effective_score": 55.5,
-              "source": "ecb",
-              "score": 55.5,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase cash reserves in CNY to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in CNY.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of CNY.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in CNY reserves."
+        },
+        {
+          "action": "Diversify investments into multi-currency funds with a focus on Asian markets.",
+          "pros": [
+            "Spreads risk across multiple currencies, reducing dependency on CNY alone.",
+            "Potentially benefits from growth in other Asian economies."
+          ],
+          "cons": [
+            "May dilute returns if Asian markets underperform.",
+            "Involves higher management fees and requires careful selection of funds."
+          ],
+          "outcome": "Achieves a diversified currency portfolio with a 15% allocation to Asian markets."
         }
-      ]
+      ],
+      "alerts": []
     },
     {
       "country": "USA",
-      "flag": "🇺🇸",
-      "max_score": 50.0,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Funding",
+      "effective_score": 50,
+      "top_title": "US Treasury Auction Shift",
+      "why_now": "The shift in US Treasury auction signals a change in government funding strategies that could impact interest rates.",
+      "recommendation": "Re-evaluate and adjust the duration of the current bond portfolio.",
+      "recommendation_pros": [
+        "Aligns bond portfolio with expected changes in interest rates, reducing interest rate risk.",
+        "Allows for strategic reallocation to optimize yield."
+      ],
+      "recommendation_cons": [
+        "May incur transaction costs and potential capital losses on existing bonds.",
+        "Requires accurate forecasting of interest rate movements."
+      ],
+      "recommendation_outcome": "Optimizes bond portfolio duration to mitigate interest rate risk by 20% over the next year.",
+      "alternatives": [
         {
-          "category": "Funding",
-          "severity": "MEDIUM",
-          "effective_score": 50.0,
-          "alert_count": 1,
-          "top_alert_title": "US Treasury Auction Shift",
-          "action": {
-            "recommended_action": "Review Funding exposure in USA and assess mitigation options.",
-            "why": "Multiple Funding signals detected in USA with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "US Treasury Auction Shift",
-              "effective_score": 50.0,
-              "source": "data_alert",
-              "score": 50.0,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase holdings in short-term treasury securities.",
+          "pros": [
+            "Provides flexibility to reinvest at potentially higher rates in the near future.",
+            "Reduces exposure to long-term interest rate fluctuations."
+          ],
+          "cons": [
+            "May offer lower yields compared to long-term securities.",
+            "Frequent reinvestment required, increasing operational demands."
+          ],
+          "outcome": "Shifts 30% of the bond portfolio to short-term securities within six months."
         },
         {
-          "category": "FX Risk",
-          "severity": "MEDIUM",
-          "effective_score": 50.0,
-          "alert_count": 1,
-          "top_alert_title": "USD Strength Extreme",
-          "action": {
-            "recommended_action": "Review FX Risk exposure in USA and assess mitigation options.",
-            "why": "Multiple FX Risk signals detected in USA with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "USD Strength Extreme",
-              "effective_score": 50.0,
-              "source": "data_alert",
-              "score": 50.0,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Utilize interest rate swaps to hedge against rate changes.",
+          "pros": [
+            "Allows for customization of interest rate exposure without altering the underlying portfolio.",
+            "Can be tailored to specific risk management objectives."
+          ],
+          "cons": [
+            "Involves counterparty risk and requires ongoing management.",
+            "Complexity in structuring and monitoring swap agreements."
+          ],
+          "outcome": "Hedges 40% of the bond portfolio against interest rate changes using swaps by Q2."
+        }
+      ],
+      "alerts": []
+    },
+    {
+      "country": "USA",
+      "category": "FX Risk",
+      "effective_score": 50,
+      "top_title": "USD Strength Extreme",
+      "why_now": "The extreme strength of the USD requires immediate attention to manage potential FX risks.",
+      "recommendation": "Increase hedging of USD-denominated receivables through options.",
+      "recommendation_pros": [
+        "Provides flexibility to benefit from favorable USD movements while protecting against adverse shifts.",
+        "Limits downside risk without committing to a fixed rate."
+      ],
+      "recommendation_cons": [
+        "Options premiums can be costly, impacting cash flow.",
+        "Requires expertise to manage and execute effectively."
+      ],
+      "recommendation_outcome": "Hedges 50% of USD receivables, reducing FX risk exposure by Q1.",
+      "alternatives": [
+        {
+          "action": "Diversify revenue streams to include more non-USD currencies.",
+          "pros": [
+            "Reduces dependency on USD, balancing currency exposure.",
+            "Potentially captures growth in emerging markets."
+          ],
+          "cons": [
+            "May require significant changes to business operations.",
+            "Involves initial setup costs and market entry risks."
+          ],
+          "outcome": "Increases non-USD revenue by 20% over the next two years."
         },
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in USA and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in USA with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate USD/EUR: 1.1761",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Negotiate currency clauses in contracts to share FX risk with counterparties.",
+          "pros": [
+            "Distributes FX risk, reducing unilateral exposure.",
+            "Enhances collaborative risk management with partners."
+          ],
+          "cons": [
+            "May complicate contract negotiations and delay agreements.",
+            "Potentially limits flexibility in pricing strategies."
+          ],
+          "outcome": "Implements currency clauses in 30% of new contracts by year-end."
         }
-      ]
+      ],
+      "alerts": []
     },
     {
-      "country": "Germany",
-      "flag": "🇩🇪",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "country": "USA",
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate USD/EUR: 1.1761",
+      "why_now": "The ECB FX reference rate USD/EUR at 1.1761 indicates potential market volatility impacting cross-border transactions.",
+      "recommendation": "Conduct a comprehensive review of cross-border pricing strategies.",
+      "recommendation_pros": [
+        "Ensures pricing reflects current market conditions, maintaining competitiveness.",
+        "Identifies opportunities to optimize margins in different currency environments."
+      ],
+      "recommendation_cons": [
+        "Requires significant analysis and potential re-negotiation with partners.",
+        "May lead to short-term disruptions in pricing consistency."
+      ],
+      "recommendation_outcome": "Updates cross-border pricing strategies, improving margin stability by 15% within six months.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 9,
-          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Germany and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Germany with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate USD/EUR: 1.1761",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate GBP/EUR: 0.8641",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate JPY/EUR: 184.37",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate CAD/EUR: 1.6063",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate AUD/EUR: 1.6259",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "country": "France",
-      "flag": "🇫🇷",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+          "action": "Implement automated FX risk monitoring systems.",
+          "pros": [
+            "Provides real-time insights into currency movements, enabling quick response.",
+            "Reduces manual intervention, improving efficiency."
+          ],
+          "cons": [
+            "Initial setup and integration costs can be high.",
+            "Requires ongoing maintenance and updates to remain effective."
+          ],
+          "outcome": "Deploys automated monitoring systems, reducing manual FX risk management time by 40% by Q3."
+        },
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 9,
-          "top_alert_title": "ECB FX reference rate USD/EUR: 1.1761",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in France and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in France with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate USD/EUR: 1.1761",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate GBP/EUR: 0.8641",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate JPY/EUR: 184.37",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate CAD/EUR: 1.6063",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            },
-            {
-              "title": "ECB FX reference rate AUD/EUR: 1.6259",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Establish a dedicated FX risk management team.",
+          "pros": [
+            "Focuses expertise on managing and mitigating FX risks effectively.",
+            "Enhances strategic decision-making with specialized knowledge."
+          ],
+          "cons": [
+            "Increases operational costs due to additional staffing.",
+            "May take time to build and train a proficient team."
+          ],
+          "outcome": "Forms a dedicated team, improving FX risk response times by 30% within one year."
         }
-      ]
-    },
-    {
-      "country": "UK",
-      "flag": "🇬🇧",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
-        {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate GBP/EUR: 0.8641",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in UK and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in UK with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate GBP/EUR: 0.8641",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "country": "Japan",
-      "flag": "🇯🇵",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
-        {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate JPY/EUR: 184.37",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Japan and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Japan with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate JPY/EUR: 184.37",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
-        }
-      ]
+      ],
+      "alerts": []
     },
     {
       "country": "Canada",
-      "flag": "🇨🇦",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "Bank of Canada Valet daily market observation",
+      "why_now": "The Bank of Canada Valet daily market observation highlights potential shifts in Canadian market dynamics.",
+      "recommendation": "Increase monitoring of Canadian economic indicators to anticipate market changes.",
+      "recommendation_pros": [
+        "Enhances ability to respond proactively to economic shifts.",
+        "Improves decision-making with timely data insights."
+      ],
+      "recommendation_cons": [
+        "Requires investment in data analytics tools and resources.",
+        "May lead to information overload without proper filtering mechanisms."
+      ],
+      "recommendation_outcome": "Improves market response time by 25% through enhanced monitoring within six months.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate CAD/EUR: 1.6063",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Canada and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Canada with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate CAD/EUR: 1.6063",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Diversify investment portfolio with a focus on Canadian assets.",
+          "pros": [
+            "Capitalizes on potential growth opportunities in the Canadian market.",
+            "Reduces reliance on non-Canadian assets, balancing risk."
+          ],
+          "cons": [
+            "Exposes portfolio to Canadian market-specific risks.",
+            "May require adjustments in asset allocation strategies."
+          ],
+          "outcome": "Increases Canadian asset allocation by 15% over the next year."
+        },
+        {
+          "action": "Engage in strategic partnerships with Canadian financial institutions.",
+          "pros": [
+            "Leverages local expertise to navigate market conditions.",
+            "Enhances access to market intelligence and resources."
+          ],
+          "cons": [
+            "May involve complex negotiations and relationship management.",
+            "Potentially limits flexibility in independent decision-making."
+          ],
+          "outcome": "Establishes partnerships with three Canadian institutions, enhancing market insights by Q4."
         }
-      ]
+      ],
+      "alerts": []
+    },
+    {
+      "country": "Germany",
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate USD/EUR: 1.1761",
+      "why_now": "The ECB FX reference rate USD/EUR at 1.1761 suggests potential volatility in Eurozone markets affecting German operations.",
+      "recommendation": "Implement dynamic currency conversion strategies for Euro-denominated transactions.",
+      "recommendation_pros": [
+        "Allows for real-time adjustments to currency fluctuations, optimizing transaction values.",
+        "Enhances competitiveness by offering flexible pricing."
+      ],
+      "recommendation_cons": [
+        "Requires sophisticated systems for real-time currency conversion.",
+        "May involve higher transaction costs due to frequent conversions."
+      ],
+      "recommendation_outcome": "Improves transaction value optimization by 10% through dynamic conversion within the next quarter.",
+      "alternatives": [
+        {
+          "action": "Increase Euro-denominated cash reserves to buffer against volatility.",
+          "pros": [
+            "Provides immediate liquidity for Eurozone operations.",
+            "Reduces dependency on external financing during market fluctuations."
+          ],
+          "cons": [
+            "Ties up capital that could be used for other strategic investments.",
+            "Exposes the company to potential Euro depreciation."
+          ],
+          "outcome": "Increases Euro cash reserves by 20% within six months."
+        },
+        {
+          "action": "Engage in Eurozone market diversification to spread risk.",
+          "pros": [
+            "Reduces exposure to any single Eurozone market, balancing risk.",
+            "Potentially captures growth opportunities in less saturated markets."
+          ],
+          "cons": [
+            "May require significant market research and entry costs.",
+            "Involves operational complexities in managing multiple markets."
+          ],
+          "outcome": "Diversifies Eurozone market presence, increasing regional revenue by 15% over two years."
+        }
+      ],
+      "alerts": []
+    },
+    {
+      "country": "France",
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate USD/EUR: 1.1761",
+      "why_now": "The ECB FX reference rate USD/EUR at 1.1761 indicates potential volatility affecting French market operations.",
+      "recommendation": "Adopt a flexible pricing model for Euro-denominated products.",
+      "recommendation_pros": [
+        "Allows for quick adaptation to currency fluctuations, maintaining competitiveness.",
+        "Enhances customer satisfaction by offering fair pricing."
+      ],
+      "recommendation_cons": [
+        "Requires continuous monitoring and adjustment of pricing strategies.",
+        "May lead to pricing inconsistencies if not managed carefully."
+      ],
+      "recommendation_outcome": "Improves pricing flexibility, increasing market share by 5% within six months.",
+      "alternatives": [
+        {
+          "action": "Increase hedging of Euro-denominated liabilities using forward contracts.",
+          "pros": [
+            "Locks in exchange rates, reducing uncertainty in future liabilities.",
+            "Protects against adverse currency movements."
+          ],
+          "cons": [
+            "Potential opportunity cost if the Euro strengthens beyond the locked rate.",
+            "Involves upfront capital and contract management complexities."
+          ],
+          "outcome": "Hedges 40% of Euro liabilities, reducing FX risk exposure by Q2."
+        },
+        {
+          "action": "Establish a Euro-focused risk management team.",
+          "pros": [
+            "Focuses expertise on managing Euro-specific risks effectively.",
+            "Enhances strategic decision-making with specialized knowledge."
+          ],
+          "cons": [
+            "Increases operational costs due to additional staffing.",
+            "May take time to build and train a proficient team."
+          ],
+          "outcome": "Forms a dedicated team, improving Euro risk response times by 30% within one year."
+        }
+      ],
+      "alerts": []
+    },
+    {
+      "country": "UK",
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate GBP/EUR: 0.8641",
+      "why_now": "The ECB FX reference rate GBP/EUR at 0.8641 suggests potential market volatility impacting UK operations.",
+      "recommendation": "Implement a GBP hedging program using options.",
+      "recommendation_pros": [
+        "Offers flexibility to benefit from favorable GBP movements while protecting against adverse shifts.",
+        "Limits downside risk without committing to a fixed rate."
+      ],
+      "recommendation_cons": [
+        "Options premiums can be costly, impacting cash flow.",
+        "Requires expertise to manage and execute effectively."
+      ],
+      "recommendation_outcome": "Hedges 50% of GBP exposure, reducing FX risk by Q1.",
+      "alternatives": [
+        {
+          "action": "Increase GBP cash reserves to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in GBP.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of GBP.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in GBP reserves."
+        },
+        {
+          "action": "Negotiate currency clauses in contracts to share FX risk with counterparties.",
+          "pros": [
+            "Distributes FX risk, reducing unilateral exposure.",
+            "Enhances collaborative risk management with partners."
+          ],
+          "cons": [
+            "May complicate contract negotiations and delay agreements.",
+            "Potentially limits flexibility in pricing strategies."
+          ],
+          "outcome": "Implements currency clauses in 30% of new contracts by year-end."
+        }
+      ],
+      "alerts": []
+    },
+    {
+      "country": "Japan",
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate JPY/EUR: 184.37",
+      "why_now": "The ECB FX reference rate JPY/EUR at 184.37 indicates potential volatility affecting Japanese market operations.",
+      "recommendation": "Implement JPY hedging strategies using forward contracts.",
+      "recommendation_pros": [
+        "Directly locks in exchange rates, reducing uncertainty in future cash flows.",
+        "Provides protection against adverse currency movements in the short term."
+      ],
+      "recommendation_cons": [
+        "Potential opportunity cost if the JPY strengthens beyond the locked rate.",
+        "Requires upfront capital and may involve complex contract management."
+      ],
+      "recommendation_outcome": "Reduces JPY exposure by 25% over the next quarter.",
+      "alternatives": [
+        {
+          "action": "Increase cash reserves in JPY to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in JPY.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of JPY.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in JPY reserves."
+        },
+        {
+          "action": "Diversify investments into multi-currency funds with a focus on Asian markets.",
+          "pros": [
+            "Spreads risk across multiple currencies, reducing dependency on JPY alone.",
+            "Potentially benefits from growth in other Asian economies."
+          ],
+          "cons": [
+            "May dilute returns if Asian markets underperform.",
+            "Involves higher management fees and requires careful selection of funds."
+          ],
+          "outcome": "Achieves a diversified currency portfolio with a 15% allocation to Asian markets."
+        }
+      ],
+      "alerts": []
     },
     {
       "country": "Australia",
-      "flag": "🇦🇺",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate AUD/EUR: 1.6259",
+      "why_now": "The ECB FX reference rate AUD/EUR at 1.6259 suggests potential market volatility impacting Australian operations.",
+      "recommendation": "Adopt a flexible pricing model for AUD-denominated products.",
+      "recommendation_pros": [
+        "Allows for quick adaptation to currency fluctuations, maintaining competitiveness.",
+        "Enhances customer satisfaction by offering fair pricing."
+      ],
+      "recommendation_cons": [
+        "Requires continuous monitoring and adjustment of pricing strategies.",
+        "May lead to pricing inconsistencies if not managed carefully."
+      ],
+      "recommendation_outcome": "Improves pricing flexibility, increasing market share by 5% within six months.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate AUD/EUR: 1.6259",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Australia and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Australia with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate AUD/EUR: 1.6259",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase hedging of AUD-denominated liabilities using forward contracts.",
+          "pros": [
+            "Locks in exchange rates, reducing uncertainty in future liabilities.",
+            "Protects against adverse currency movements."
+          ],
+          "cons": [
+            "Potential opportunity cost if the AUD strengthens beyond the locked rate.",
+            "Involves upfront capital and contract management complexities."
+          ],
+          "outcome": "Hedges 40% of AUD liabilities, reducing FX risk exposure by Q2."
+        },
+        {
+          "action": "Establish an AUD-focused risk management team.",
+          "pros": [
+            "Focuses expertise on managing AUD-specific risks effectively.",
+            "Enhances strategic decision-making with specialized knowledge."
+          ],
+          "cons": [
+            "Increases operational costs due to additional staffing.",
+            "May take time to build and train a proficient team."
+          ],
+          "outcome": "Forms a dedicated team, improving AUD risk response times by 30% within one year."
         }
-      ]
+      ],
+      "alerts": []
     },
     {
       "country": "Brazil",
-      "flag": "🇧🇷",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate BRL/EUR: 5.7794",
+      "why_now": "The ECB FX reference rate BRL/EUR at 5.7794 indicates potential volatility affecting Brazilian market operations.",
+      "recommendation": "Implement BRL hedging strategies using forward contracts.",
+      "recommendation_pros": [
+        "Directly locks in exchange rates, reducing uncertainty in future cash flows.",
+        "Provides protection against adverse currency movements in the short term."
+      ],
+      "recommendation_cons": [
+        "Potential opportunity cost if the BRL strengthens beyond the locked rate.",
+        "Requires upfront capital and may involve complex contract management."
+      ],
+      "recommendation_outcome": "Reduces BRL exposure by 25% over the next quarter.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate BRL/EUR: 5.7794",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Brazil and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Brazil with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate BRL/EUR: 5.7794",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase cash reserves in BRL to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in BRL.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of BRL.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in BRL reserves."
+        },
+        {
+          "action": "Diversify investments into multi-currency funds with a focus on Latin American markets.",
+          "pros": [
+            "Spreads risk across multiple currencies, reducing dependency on BRL alone.",
+            "Potentially benefits from growth in other Latin American economies."
+          ],
+          "cons": [
+            "May dilute returns if Latin American markets underperform.",
+            "Involves higher management fees and requires careful selection of funds."
+          ],
+          "outcome": "Achieves a diversified currency portfolio with a 15% allocation to Latin American markets."
         }
-      ]
+      ],
+      "alerts": []
     },
     {
       "country": "Mexico",
-      "flag": "🇲🇽",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate MXN/EUR: 20.2716",
+      "why_now": "The ECB FX reference rate MXN/EUR at 20.2716 suggests potential market volatility impacting Mexican operations.",
+      "recommendation": "Implement MXN hedging strategies using forward contracts.",
+      "recommendation_pros": [
+        "Directly locks in exchange rates, reducing uncertainty in future cash flows.",
+        "Provides protection against adverse currency movements in the short term."
+      ],
+      "recommendation_cons": [
+        "Potential opportunity cost if the MXN strengthens beyond the locked rate.",
+        "Requires upfront capital and may involve complex contract management."
+      ],
+      "recommendation_outcome": "Reduces MXN exposure by 25% over the next quarter.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate MXN/EUR: 20.2716",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in Mexico and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in Mexico with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate MXN/EUR: 20.2716",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase cash reserves in MXN to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in MXN.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of MXN.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in MXN reserves."
+        },
+        {
+          "action": "Diversify investments into multi-currency funds with a focus on Latin American markets.",
+          "pros": [
+            "Spreads risk across multiple currencies, reducing dependency on MXN alone.",
+            "Potentially benefits from growth in other Latin American economies."
+          ],
+          "cons": [
+            "May dilute returns if Latin American markets underperform.",
+            "Involves higher management fees and requires careful selection of funds."
+          ],
+          "outcome": "Achieves a diversified currency portfolio with a 15% allocation to Latin American markets."
         }
-      ]
+      ],
+      "alerts": []
     },
     {
       "country": "India",
-      "flag": "🇮🇳",
-      "max_score": 46.2,
-      "cash_usd_m": null,
-      "category_cards": [
+      "category": "Market Risk",
+      "effective_score": 44,
+      "top_title": "ECB FX reference rate INR/EUR: 111.1285",
+      "why_now": "The ECB FX reference rate INR/EUR at 111.1285 indicates potential volatility affecting Indian market operations.",
+      "recommendation": "Implement INR hedging strategies using forward contracts.",
+      "recommendation_pros": [
+        "Directly locks in exchange rates, reducing uncertainty in future cash flows.",
+        "Provides protection against adverse currency movements in the short term."
+      ],
+      "recommendation_cons": [
+        "Potential opportunity cost if the INR strengthens beyond the locked rate.",
+        "Requires upfront capital and may involve complex contract management."
+      ],
+      "recommendation_outcome": "Reduces INR exposure by 25% over the next quarter.",
+      "alternatives": [
         {
-          "category": "Market Risk",
-          "severity": "MEDIUM",
-          "effective_score": 46.2,
-          "alert_count": 1,
-          "top_alert_title": "ECB FX reference rate INR/EUR: 111.1285",
-          "action": {
-            "recommended_action": "Review Market Risk exposure in India and assess mitigation options.",
-            "why": "Multiple Market Risk signals detected in India with elevated effective scores.",
-            "expected_outcome": "Reduced exposure and improved risk visibility.",
-            "pros": [
-              "Proactive risk management",
-              "Early intervention opportunity"
-            ],
-            "cons": [
-              "Execution cost",
-              "May require management approval"
-            ],
-            "alternatives": [
-              "Monitor and reassess in 24 hours",
-              "Partial hedge as interim measure"
-            ]
-          },
-          "alerts": [
-            {
-              "title": "ECB FX reference rate INR/EUR: 111.1285",
-              "effective_score": 46.2,
-              "source": "ecb",
-              "score": 46.25,
-              "weight_applied": 1.0
-            }
-          ]
+          "action": "Increase cash reserves in INR to manage short-term volatility.",
+          "pros": [
+            "Provides immediate liquidity to manage operational needs in INR.",
+            "Avoids the complexity and costs associated with financial derivatives."
+          ],
+          "cons": [
+            "Exposes the company to potential devaluation of INR.",
+            "Ties up capital that could be used for other investments."
+          ],
+          "outcome": "Maintains operational liquidity with a 10% buffer in INR reserves."
+        },
+        {
+          "action": "Diversify investments into multi-currency funds with a focus on Asian markets.",
+          "pros": [
+            "Spreads risk across multiple currencies, reducing dependency on INR alone.",
+            "Potentially benefits from growth in other Asian economies."
+          ],
+          "cons": [
+            "May dilute returns if Asian markets underperform.",
+            "Involves higher management fees and requires careful selection of funds."
+          ],
+          "outcome": "Achieves a diversified currency portfolio with a 15% allocation to Asian markets."
         }
-      ]
+      ],
+      "alerts": []
     }
   ],
-  "total_alerts": 29,
-  "generated_at": "2026-05-08 18:44 UTC",
-  "persona": "cash_manager",
-  "weights_used": false
+  "status": "success",
+  "generated_at": "2026-05-08 22:28 UTC",
+  "persona": "cash_manager"
 }

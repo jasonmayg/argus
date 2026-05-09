@@ -1,7 +1,6 @@
 /* ============================================================
-   ARGUS — Actions Page (v2)
-   - Softened language
-   - 3 action options per risk (recommendation + 2 alternatives)
+   ARGUS — Actions Page (v3)
+   - Per-option SWOT: each action option has its own pros/cons/outcome
    - Popup with Why + SWOT per option
    - Risk Monitor deep-link support via localStorage
    ============================================================ */
@@ -24,7 +23,7 @@ const THREAT_TEMPLATES = {
 };
 const DEFAULT_THREAT = 'Broader macroeconomic deterioration may exacerbate this risk category.';
 
-// ── Posture display labels (standardized to High/Medium/Low) ─
+// ── Posture display labels ────────────────────────────────
 const POSTURE_LABELS = {
     'CRITICAL':  'High',
     'ELEVATED':  'Medium',
@@ -32,7 +31,7 @@ const POSTURE_LABELS = {
     'CONTAINED': 'Low',
 };
 
-// ── Severity → Risk Monitor aligned labels ────────────────
+// ── Severity labels ───────────────────────────────────────
 const SEVERITY_LABELS = {
     'HIGH':   'High',
     'MEDIUM': 'Medium',
@@ -67,7 +66,7 @@ function saveActionsSettings() {
 // ── Posture calculation ───────────────────────────────────
 function calcPosture(items) {
     if (!items?.length) return 'CONTAINED';
-    const scores   = items.map(i => i.effective_score || i.score || 0);
+    const scores    = items.map(i => i.effective_score || i.score || 0);
     const highCount = items.filter(i => (i.effective_score || i.score || 0) >= 70).length;
     const medCount  = items.filter(i => (i.effective_score || i.score || 0) >= 40).length;
     const max       = Math.max(...scores);
@@ -241,7 +240,6 @@ async function loadActions() {
             const toggle = document.getElementById('actionsSettingsToggle');
             if (inner)  inner.style.display  = 'none';
             if (toggle) toggle.textContent   = '▾ Settings';
-            // Apply deep-link filter from Risk Monitor
             _applyDeepLink();
         } else {
             renderActionsEmpty();
@@ -268,15 +266,15 @@ function renderActionsEmpty() {
 
 // ── Render result ─────────────────────────────────────────
 function renderActionsResult(d) {
-    const actions  = d.actions || [];
-    const posture  = d.posture || calcPosture(actions);
-    const meta     = d.generated_at || new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC';
-    const persona  = d.persona || '';
+    const actions = d.actions || [];
+    const posture = d.posture || calcPosture(actions);
+    const meta    = d.generated_at || new Date().toISOString().replace('T',' ').substr(0,16) + ' UTC';
+    const persona = d.persona || '';
 
     const postureBadge = document.getElementById('actionsPostureBadge');
     const metaEl       = document.getElementById('actionsMeta');
     if (postureBadge) {
-        const ps = postureStyle(posture);
+        const ps        = postureStyle(posture);
         const softLabel = POSTURE_LABELS[posture] || posture;
         postureBadge.textContent       = softLabel;
         postureBadge.style.background  = ps.bg;
@@ -296,7 +294,6 @@ function renderActionsResult(d) {
         return;
     }
 
-    // Group by country, sort by max score
     const byCountry = {};
     actions.forEach(a => {
         const c = a.country || 'Global';
@@ -356,7 +353,7 @@ function toggleCountryCard(id) {
     toggle.textContent = visible ? '▸' : '▾';
 }
 
-// ── Category card with 3 options ──────────────────────────
+// ── Category card with 3 options (each with own SWOT) ─────
 function _categoryCard(item) {
     const score    = item.effective_score || item.score || 0;
     const rawSev   = item.severity || (score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'WATCH');
@@ -367,16 +364,47 @@ function _categoryCard(item) {
                      severity === 'Medium' ? 'var(--warning-bg)'   : 'var(--idle-bg)';
     const catId    = 'cat_' + Math.random().toString(36).substr(2,8);
     const category = item.category || '—';
+    const why      = item.why_now  || item.why || '';
 
-    // Build 3 options from recommendation + alternatives
+    // Build 3 options — each with its own SWOT data
+    // New schema: recommendation_pros/cons/outcome for primary,
+    // alternatives[].pros/cons/outcome for each alternative
+    // Fallback: legacy schema uses item.pros/cons for all options
     const options = [];
-    if (item.recommendation || item.recommended_action) {
-        options.push(item.recommendation || item.recommended_action);
+
+    const primaryText = item.recommendation || item.recommended_action || '';
+    if (primaryText) {
+        options.push({
+            text:    primaryText,
+            pros:    item.recommendation_pros    || item.pros    || [],
+            cons:    item.recommendation_cons    || item.cons    || [],
+            outcome: item.recommendation_outcome || item.expected_outcome || '',
+        });
     }
-    (item.alternatives || []).slice(0, 2).forEach(a => options.push(a));
+
+    (item.alternatives || []).slice(0, 2).forEach(alt => {
+        if (typeof alt === 'string') {
+            // Legacy: alternative is just a string, reuse parent pros/cons
+            options.push({
+                text:    alt,
+                pros:    item.pros    || [],
+                cons:    item.cons    || [],
+                outcome: item.expected_outcome || '',
+            });
+        } else {
+            // New schema: alternative has its own pros/cons/outcome
+            options.push({
+                text:    alt.action  || alt.text || String(alt),
+                pros:    alt.pros    || [],
+                cons:    alt.cons    || [],
+                outcome: alt.outcome || '',
+            });
+        }
+    });
+
     // Pad to 3 if needed
     while (options.length < 3 && options.length > 0) {
-        options.push(options[options.length - 1]);
+        options.push({ ...options[options.length - 1] });
     }
 
     const optionCards = options.map((opt, idx) => {
@@ -392,31 +420,30 @@ function _categoryCard(item) {
             <div style="font-size:10px;font-weight:700;color:white;background:var(--primary);
                         border-radius:50%;width:20px;height:20px;display:flex;align-items:center;
                         justify-content:center;flex-shrink:0;margin-top:1px;">${idx+1}</div>
-            <div style="font-size:12px;color:var(--text-main);line-height:1.5;">${escapeHtml(opt)}</div>
+            <div style="font-size:12px;color:var(--text-main);line-height:1.5;">${escapeHtml(opt.text)}</div>
           </div>
           <span style="font-size:11px;color:var(--primary);font-family:var(--font-mono);
                        white-space:nowrap;margin-left:10px;flex-shrink:0;">Details →</span>
         </div>
-        <!-- Hidden SWOT data -->
+        <!-- Per-option SWOT data -->
         <div id="${optId}_data" style="display:none;"
-             data-option="${escapeHtml(opt)}"
+             data-option="${escapeHtml(opt.text)}"
              data-category="${escapeHtml(category)}"
-             data-why="${escapeHtml(item.why_now || item.why || '')}"
-             data-pros="${escapeHtml(JSON.stringify(item.pros || []))}"
-             data-cons="${escapeHtml(JSON.stringify(item.cons || []))}"
-             data-outcome="${escapeHtml(item.expected_outcome || '')}">
+             data-why="${escapeHtml(why)}"
+             data-pros="${escapeHtml(JSON.stringify(opt.pros))}"
+             data-cons="${escapeHtml(JSON.stringify(opt.cons))}"
+             data-outcome="${escapeHtml(opt.outcome)}">
         </div>`;
     }).join('');
 
     return `
     <div style="border:1px solid var(--border);border-left:3px solid ${sevColor};border-radius:6px;overflow:hidden;">
-      <!-- Category header -->
       <div style="display:flex;justify-content:space-between;align-items:center;
                   padding:10px 14px;background:#FAFAFA;cursor:pointer;"
            onclick="toggleCategoryCard('${catId}')">
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="status-badge" style="background:${sevBg};color:${sevColor};font-size:10px;"
-                title="${severity === 'High' ? 'High Risk (score 60–100): Immediate review recommended. Signals indicate significant probability of material impact.' : severity === 'Medium' ? 'Medium Risk (score 30–59): Monitor closely. Moderate exposure detected across signals.' : 'Low Risk (score 0–29): Within acceptable bounds. Standard monitoring applies.'}">${severity}</span>
+                title="${severity === 'High' ? 'High Risk (score 60–100): Immediate review recommended.' : severity === 'Medium' ? 'Medium Risk (score 30–59): Monitor closely.' : 'Low Risk (score 0–29): Standard monitoring applies.'}">${severity}</span>
           <span style="font-size:12px;font-weight:600;color:var(--text-main);">${escapeHtml(category)}</span>
           <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
               — ${escapeHtml((item.top_title||'').substring(0,50))}${(item.top_title||'').length>50?'…':''}
@@ -427,7 +454,6 @@ function _categoryCard(item) {
           <span id="cattoggle_${catId}" style="font-size:11px;color:var(--text-muted);">▸</span>
         </div>
       </div>
-      <!-- Options (collapsed by default) -->
       <div id="${catId}" style="display:none;padding:12px 14px;background:white;
                                 border-top:1px solid var(--border);display:flex;
                                 flex-direction:column;gap:8px;">
@@ -451,7 +477,7 @@ function toggleCategoryCard(id) {
 
 // ── SWOT Popup ────────────────────────────────────────────
 function openSwotPopup(optId) {
-    const dataEl  = document.getElementById(optId + '_data');
+    const dataEl = document.getElementById(optId + '_data');
     if (!dataEl) return;
 
     const option   = dataEl.dataset.option   || '';
@@ -505,7 +531,7 @@ function openSwotPopup(optId) {
 
       <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
 
-        <!-- Why -->
+        <!-- Why this matters now -->
         ${why ? `
         <div style="background:#EFF6FF;border-radius:6px;padding:14px 16px;">
           <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;
@@ -522,9 +548,9 @@ function openSwotPopup(optId) {
               SWOT Analysis
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            ${swotCell('S','Strengths',  '#166534','#DCFCE7', pros.length   ? pros   : ['Mitigates identified risk exposure'])}
-            ${swotCell('W','Weaknesses', '#991B1B','#FEE2E2', cons.length   ? cons   : ['Requires resource allocation'])}
-            ${swotCell('O','Opportunity','#1E40AF','#DBEAFE', outcome       ? [outcome] : ['Improved risk-adjusted positioning'])}
+            ${swotCell('S','Strengths',  '#166534','#DCFCE7', pros.length  ? pros   : ['Addresses identified risk signal'])}
+            ${swotCell('W','Weaknesses', '#991B1B','#FEE2E2', cons.length  ? cons   : ['Requires resource allocation'])}
+            ${swotCell('O','Opportunity','#1E40AF','#DBEAFE', outcome      ? [outcome] : ['Improved risk-adjusted positioning'])}
             ${swotCell('T','Threat',     '#92400E','#FEF3C7', [threat])}
           </div>
         </div>
@@ -533,7 +559,7 @@ function openSwotPopup(optId) {
 
       <!-- Footer -->
       <div style="padding:14px 24px;border-top:1px solid var(--border);
-                  display:flex;justify-content:flex-end;gap:10px;">
+                  display:flex;justify-content:flex-end;">
         <button onclick="closeSwotPopup()"
             style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;
                    background:white;color:var(--text-secondary);font-size:12px;
@@ -559,13 +585,12 @@ function _applyDeepLink() {
     try {
         const { country } = JSON.parse(raw);
         if (!country) return;
-        // Wait for DOM then scroll + highlight
         setTimeout(() => {
             const cardId  = 'country_' + country.replace(/\W/g,'_');
             const wrapper = document.getElementById('country_card_' + cardId);
             if (wrapper) {
                 wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                wrapper.style.outline      = '2px solid var(--primary)';
+                wrapper.style.outline       = '2px solid var(--primary)';
                 wrapper.style.outlineOffset = '2px';
                 setTimeout(() => { wrapper.style.outline = wrapper.style.outlineOffset = ''; }, 2500);
             }

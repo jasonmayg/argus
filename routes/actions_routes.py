@@ -2,8 +2,10 @@
 ARGUS — Actions Routes
 routes/actions_routes.py
 
-Reads from shared_storage/latest_results.json → stages.actions_generation
-which is already populated by the pipeline.
+Auto-regeneration logic:
+  - GET /api/actions checks if cached data uses old schema (alternatives as strings)
+  - If old schema detected, automatically triggers _ai_generate() for fresh SWOT
+  - This ensures Daily Jobs always produces unique per-option SWOT analysis
 """
 
 import json
@@ -50,13 +52,51 @@ def _save_cache(data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _normalise(raw: dict) -> dict:
+def _needs_regeneration(pipeline: dict, cached: dict | None) -> bool:
     """
-    Pipeline shape  →  frontend shape
+    Return True if we should call _ai_generate() to produce fresh SWOT data.
 
-    Pipeline:  country_groups[].category_cards[].action.{why, recommended_action, ...}
-    Frontend:  actions[].{why_now, recommendation, ...}
+    Checks:
+    1. No cache at all → regenerate
+    2. Cache has no actions → regenerate
+    3. alternatives[0] is a string (old schema) → regenerate
+    4. No recommendation_pros field (old schema) → regenerate
+    5. Pipeline generated_at is newer than cache → regenerate
     """
+    if not cached:
+        return True
+
+    actions = cached.get("actions", [])
+    if not actions:
+        return True
+
+    first = actions[0]
+
+    # Check schema version: alternatives should be list of dicts
+    alts = first.get("alternatives", [])
+    if not alts:
+        return True
+    if isinstance(alts[0], str):
+        logger.info("Cache uses old schema (string alternatives) — regenerating")
+        return True
+
+    # Check for new per-option SWOT fields
+    if "recommendation_pros" not in first:
+        logger.info("Cache missing recommendation_pros — regenerating")
+        return True
+
+    # Check if pipeline is newer
+    pipeline_time = pipeline.get("generated_at", "")
+    cached_time   = cached.get("generated_at", "")
+    if pipeline_time and cached_time and pipeline_time > cached_time:
+        logger.info("Pipeline is newer than cache — regenerating")
+        return True
+
+    return False
+
+
+def _normalise(raw: dict) -> dict:
+    """Pipeline shape → frontend shape (fallback when AI fails)."""
     actions = []
     for cg in raw.get("country_groups", []):
         country = cg.get("country", "Global")
@@ -85,26 +125,46 @@ def _normalise(raw: dict) -> dict:
             })
 
     return {
-        "status":        "success",
-        "posture":       raw.get("posture", "CONTAINED"),
-        "summary":       raw.get("summary", ""),
-        "generated_at":  raw.get("generated_at", ""),
-        "persona":       raw.get("persona", ""),
+        "status":         "success",
+        "posture":        raw.get("posture", "CONTAINED"),
+        "summary":        raw.get("summary", ""),
+        "generated_at":   raw.get("generated_at", ""),
+        "persona":        raw.get("persona", ""),
         "custom_weights": raw.get("weights_used", False),
-        "signal_count":  raw.get("total_alerts", len(actions)),
-        "actions":       actions,
+        "signal_count":   raw.get("total_alerts", len(actions)),
+        "actions":        actions,
     }
 
 
 @actions_bp.route("/api/actions", methods=["GET"])
 def get_actions():
-    # 1. Pipeline result (freshest — always prefer)
     pipeline = _load_pipeline_actions()
-    if pipeline:
-        return jsonify(_normalise(pipeline))
+    cached   = _load_cache()
 
-    # 2. Manual cache fallback
-    cached = _load_cache()
+    if pipeline:
+        if _needs_regeneration(pipeline, cached):
+            logger.info("Auto-triggering AI regeneration for Decision Support")
+            try:
+                persona_key = pipeline.get("persona", "cash_manager") or "cash_manager"
+                result = _ai_generate(
+                    persona_key  = persona_key,
+                    min_score    = 40,
+                    exclude      = ["Weather / NOAA", "Disaster Risk"],
+                    sources_cfg  = {"guardian": True, "data_alerts": True, "matrix": True},
+                    pipeline_raw = pipeline,
+                )
+                _save_cache(result)
+                return jsonify(result)
+            except Exception as e:
+                logger.warning("Auto AI regeneration failed (%s) — normalising pipeline", e)
+                normalised = _normalise(pipeline)
+                _save_cache(normalised)
+                return jsonify(normalised)
+
+        # Cache is up to date and uses new schema
+        return jsonify({"status": "success", **cached})
+
+    # No pipeline — return cache if available
     if cached:
         return jsonify({"status": "success", **cached})
 
@@ -118,7 +178,7 @@ def get_actions():
 
 @actions_bp.route("/api/actions/generate", methods=["POST"])
 def generate_actions():
-    """Re-generate via AI, or fall back to pipeline data."""
+    """Re-generate via AI on demand (user clicks Re-generate button)."""
     body        = request.get_json(silent=True) or {}
     persona_key = body.get("persona", "cash_manager")
     min_score   = float(body.get("min_score", 40))
@@ -161,21 +221,90 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
 
     if not alerts:
         return {
-            "status": "success", "posture": "CONTAINED",
-            "summary": "No signals above the selected threshold.",
-            "generated_at": _now(), "persona": persona_key, "actions": [],
+            "status":       "success",
+            "posture":      "CONTAINED",
+            "summary":      "No signals above the selected threshold.",
+            "generated_at": _now(),
+            "persona":      persona_key,
+            "actions":      [],
         }
 
-    prompt = (
-        f"You are a treasury risk AI for a {persona_key.replace('_',' ')}.\n"
-        "Generate recommendations. Respond ONLY with JSON:\n"
-        '{"summary":"...","posture":"CRITICAL|ELEVATED|MODERATE|CONTAINED","actions":[{'
-        '"country","category","effective_score","top_title","why_now","recommendation",'
-        '"expected_outcome","pros":[],"cons":[],"alternatives":[],"alerts":[]}]}\n\n'
-        "Signals:\n" +
-        "\n".join(f"  {a['country']} / {a['category']} ({a['score']:.0f}): {a['title']}"
-                  for a in alerts)
+    signals_text = "\n".join(
+        f"  - [{a['country']}] {a['category']} (score {a['score']:.0f}): \"{a['title']}\""
+        for a in alerts
     )
+
+    prompt = f"""You are a treasury risk advisor for a {persona_key.replace('_', ' ')}.
+
+For each signal below, generate one action with a primary recommendation and two
+alternative options. CRITICAL: each option must have its own unique SWOT analysis
+that specifically addresses that option's approach — never reuse the same pros/cons
+across options.
+
+Respond ONLY with valid JSON in this exact schema:
+{{
+  "summary": "2-sentence executive summary of overall risk posture",
+  "posture": "CRITICAL|ELEVATED|MODERATE|CONTAINED",
+  "actions": [
+    {{
+      "country": "country name",
+      "category": "risk category",
+      "effective_score": 0,
+      "top_title": "signal headline",
+      "why_now": "1 sentence explaining why this specific signal requires action today — must reference the actual event or data point from the signal title",
+      "recommendation": "primary recommended action text",
+      "recommendation_pros": [
+        "specific strength of THIS primary action tied to the signal",
+        "another strength specific to this approach"
+      ],
+      "recommendation_cons": [
+        "specific weakness or risk of THIS primary action",
+        "another constraint specific to this approach"
+      ],
+      "recommendation_outcome": "concrete measurable outcome if primary action is taken (e.g. reduces CNY exposure by 20%, ensures compliance by Q3)",
+      "alternatives": [
+        {{
+          "action": "first alternative — genuinely different strategy from the primary",
+          "pros": [
+            "specific strength of THIS alternative that differs from primary pros",
+            "another strength unique to this alternative approach"
+          ],
+          "cons": [
+            "specific weakness of THIS alternative that differs from primary cons",
+            "another constraint unique to this alternative"
+          ],
+          "outcome": "concrete outcome specific to this alternative approach"
+        }},
+        {{
+          "action": "second alternative — another genuinely different strategy",
+          "pros": [
+            "specific strength of THIS second alternative",
+            "another strength unique to this approach"
+          ],
+          "cons": [
+            "specific weakness of THIS second alternative",
+            "another constraint unique to this approach"
+          ],
+          "outcome": "concrete outcome specific to this second alternative"
+        }}
+      ],
+      "alerts": []
+    }}
+  ]
+}}
+
+Signals to analyse:
+{signals_text}
+
+Critical rules:
+- PRIMARY and each ALTERNATIVE must have COMPLETELY DIFFERENT pros/cons — they are different strategies
+- Example: if primary is "hedge with forward contracts", alternatives could be "increase cash buffer" and "reduce exposure limit" — each has a different risk/benefit profile
+- why_now must quote or directly reference the actual signal title
+- All outcomes must be measurable (percentages, deadlines, quantities)
+- NEVER repeat the same pros/cons across options
+- NEVER use generic text like "Proactive risk management", "Execution cost", "Mitigates identified risk"
+- Generate exactly one action object per signal listed above
+"""
 
     openai_key = os.environ.get("OPENAI_API_KEY", "")
     if openai_key:
@@ -184,7 +313,7 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
             model="gpt-4o",
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+            temperature=0.4,
         )
         d = json.loads(resp.choices[0].message.content or "{}")
         return {**d, "status": "success", "generated_at": _now(), "persona": persona_key}
