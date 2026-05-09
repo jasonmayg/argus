@@ -1834,11 +1834,12 @@
     "ai_classification": {
       "status": "success",
       "classified": 0,
-      "message": "All news already classified"
+      "errors": 13,
+      "total": 13
     },
     "guardian_refresh": {
       "status": "success",
-      "summary": "country_reports=22 files at /path/to/PycharmProjects/argus/guardian_poc/reports"
+      "summary": "country_reports=22 files at /path/to/Downloads/argus/guardian_poc/reports"
     },
     "regulatory_classification": {
       "status": "success",

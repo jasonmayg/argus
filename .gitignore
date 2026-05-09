@@ -131,6 +131,15 @@ docker-compose.override.yml
 guardian_poc/reports/
 
 # ============================================================================
+# Pipeline file queue (raw crawls, bridge_manager intermediate output)
+# Keep latest_results.json and latest_actions.json tracked — those feed the UI.
+# ============================================================================
+shared_storage/raw/
+shared_storage/processed/
+shared_storage/analyzed/
+shared_storage/failed/
+
+# ============================================================================
 # Misc
 # ============================================================================
 *.pickle

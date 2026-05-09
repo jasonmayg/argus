@@ -88,7 +88,7 @@ except ImportError:
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-ANALYZE_API_URL  = os.getenv("ARGUS_ANALYZE_URL",     "http://localhost:5050/api/analyze")
+ANALYZE_API_URL  = os.getenv("ARGUS_ANALYZE_URL",     "http://127.0.0.1:5050/api/analyze")
 RAW_DIR          = Path(os.getenv("BRIDGE_RAW_DIR",      "./shared_storage/raw"))
 ANALYZED_DIR     = Path(os.getenv("BRIDGE_ANALYZED_DIR", "./shared_storage/analyzed"))
 PROCESSED_DIR    = Path(os.getenv("BRIDGE_PROCESSED_DIR","./shared_storage/processed"))
