@@ -946,7 +946,12 @@ def _get_google_downside_snapshot():
 
     alphabet_root = _resolve_alphabet_root()
     if not alphabet_root:
-        return {"status": "unavailable", "reason": "Alphabet project folder not found"}
+        # The demo path is the only one we expect to succeed in normal
+        # deployments; surface its specific reason instead of masking it
+        # with the legacy-desktop fallback message.
+        return demo_payload if demo_payload.get("reason") else {
+            "status": "unavailable", "reason": "Alphabet project folder not found"
+        }
 
     try:
         import joblib
