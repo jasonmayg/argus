@@ -1,21 +1,21 @@
 # ARGUS — Developer Handover Documentation
 
-> **Platform:** Argus Risk Intelligence Platform (Automated Risk Guardian Universal Sensing)  
+> **Platform:** Argus Risk Intelligence Platform (Automated Risk Guardian for Universal Sensing)  
 > **Stack:** Python 3.10+ · Flask · Vanilla JS (ES6) · SQLite · OpenAI GPT-4o · Anthropic Claude · Google Cloud Storage  
-> **Status:** Production-ready · v3.0 · Last updated: 2026-04-16
+> **Status:** Production-ready · v3.1 · Last updated: 2026-05-10
 
 ---
 
 ## Quick Start
 
-Run the app locally in 4 steps:
+Run the app locally in 4 steps. Pick the snippet that matches your OS.
+
+### macOS / Linux (bash, zsh)
 
 ```bash
 # 1. Create and activate a virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
-# If you are in Windows, use command below instead
-.\.venv\Scripts\activate
 
 # 2. Install dependencies
 pip install -r requirements.txt
@@ -27,9 +27,38 @@ cp .env.example .env       # then edit .env and set OPENAI_API_KEY / ANTHROPIC_A
 python frontend_app.py
 ```
 
+### Windows (PowerShell)
+
+```powershell
+# 1. Create and activate a virtual environment
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+# If activation is blocked, allow scripts for this session only:
+#   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure API keys
+Copy-Item .env.example .env  # then edit .env in your editor of choice
+
+# 4. Start the server
+python frontend_app.py
+```
+
+### Windows (Command Prompt / cmd.exe)
+
+```bat
+py -3 -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -r requirements.txt
+copy .env.example .env
+python frontend_app.py
+```
+
 Then open http://localhost:5050 in your browser.
 
-> **Production:** `gunicorn --bind 0.0.0.0:5050 "frontend_app:create_app()"` — see [Section 9](#9-deployment-guidelines) for full deployment setup.
+> **Production:** Linux/macOS use `gunicorn --bind 0.0.0.0:5050 "frontend_app:create_app()"`. Windows users should use `waitress` (Gunicorn does not run on Windows) — see [Section 9](#9-deployment-guidelines) for full deployment setup.
 
 ---
 
@@ -544,6 +573,10 @@ There is no global state store. Each module owns its state in module-level `let`
 
 Create a `.env` file at the project root (copy from `.env.example`). All variables are optional unless marked required.
 
+> **Windows path note:** Use forward slashes (`/`) or escape backslashes (`\\`) inside `.env`. For example:
+> `GOOGLE_APPLICATION_CREDENTIALS=C:/argus/service-account.json`
+> `ARGUS_STORAGE_DIR=C:/argus/shared_storage`
+
 ```bash
 # ── AI Models ──────────────────────────────────────────────────────
 OPENAI_API_KEY=sk-...              # Required for: brief, chat, actions generation
@@ -586,19 +619,47 @@ FRED_API_KEY=                      # Required only for FRED economic indicator s
 - [ ] `shared_storage/` and all four subdirectories (`raw/`, `analyzed/`, `processed/`, `failed/`) exist and are writable
 - [ ] `data/fed_news/` directory exists (SQLite will create `argus_news.db` on first run)
 
+**macOS / Linux:**
+
 ```bash
-# Create required writable directories
 mkdir -p shared_storage/{raw,analyzed,processed,failed}
 mkdir -p data/fed_news data/logs personas/profiles
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+foreach ($d in 'shared_storage\raw','shared_storage\analyzed','shared_storage\processed','shared_storage\failed','data\fed_news','data\logs','personas\profiles') {
+    New-Item -ItemType Directory -Force -Path $d | Out-Null
+}
+```
+
+**Windows (cmd.exe):**
+
+```bat
+mkdir shared_storage\raw shared_storage\analyzed shared_storage\processed shared_storage\failed
+mkdir data\fed_news data\logs personas\profiles
+```
+
 ### 9.2 Install Dependencies
+
+**macOS / Linux:**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install gunicorn          # Production WSGI server
+pip install pandas openpyxl   # Required for cash positions endpoint
+```
+
+**Windows (PowerShell):**
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install waitress          # Production WSGI server (Gunicorn is Linux/macOS-only)
 pip install pandas openpyxl   # Required for cash positions endpoint
 ```
 
@@ -637,6 +698,17 @@ loglevel = "info"
 ```bash
 gunicorn -c gunicorn.conf.py "frontend_app:create_app()"
 ```
+
+**Windows: use Waitress instead of Gunicorn**
+
+Gunicorn relies on the POSIX `fork()` syscall and does not run on Windows. Use `waitress`, which is a pure-Python production WSGI server:
+
+```powershell
+pip install waitress
+waitress-serve --listen=0.0.0.0:5050 --threads=8 --call frontend_app:create_app
+```
+
+To run it as a long-lived service, register it with `nssm` (https://nssm.cc) or Windows Task Scheduler with the trigger "At system startup". Keep `--threads` between 4 and 16; the pipeline contends on `shared_storage/` writes at higher counts.
 
 ### 9.4 CORS Configuration
 
@@ -691,17 +763,31 @@ data/fed_news/        ← SQLite DB is created and written here
 data/logs/            ← daily_monitor.py writes logs here
 ```
 
+**macOS / Linux** — POSIX permissions:
+
 ```bash
 # Example: if running as user 'argus' in group 'www-data'
 chown -R argus:www-data personas/profiles shared_storage data/
 chmod -R 775 personas/profiles shared_storage data/
 ```
 
+**Windows** — NTFS ACLs (PowerShell, run as Administrator):
+
+```powershell
+# Grant the account that runs the service Modify rights on the writable dirs.
+# Replace 'IIS_IUSRS' with the actual service account (e.g. 'NT SERVICE\<svc-name>').
+foreach ($d in 'personas\profiles','shared_storage','data') {
+    icacls $d /grant "IIS_IUSRS:(OI)(CI)M" /T
+}
+```
+
 If `personas/profiles/` is not writable, `POST /api/save_profile` will return a 500 error silently — verify permissions before going live.
 
-### 9.7 Cron / Scheduled Jobs
+### 9.7 Scheduled Jobs
 
-The pipeline should run automatically to keep data fresh. Add to crontab:
+The pipeline should run automatically to keep data fresh.
+
+**macOS / Linux — cron**
 
 ```bash
 crontab -e
@@ -721,6 +807,37 @@ Alternatively, use the interactive setup script:
 bash setup_cron.sh
 ```
 
+**Windows — Task Scheduler**
+
+Cron does not exist on Windows. Use `schtasks` or the Task Scheduler GUI. The example below registers a 4-hour recurring job that runs `daily_monitor.py` inside the project venv. Adjust `C:\argus` to your install path.
+
+```powershell
+# Create a wrapper .bat so Task Scheduler activates the venv before running
+@'
+@echo off
+cd /d C:\argus
+call .\.venv\Scripts\activate.bat
+python daily_monitor.py >> data\logs\daily_monitor.log 2>&1
+'@ | Out-File -FilePath C:\argus\run_daily_monitor.bat -Encoding ASCII
+
+# Register the task: every 4 hours, starting at midnight, run as SYSTEM
+schtasks /Create `
+    /TN "ArgusDailyMonitor" `
+    /TR "C:\argus\run_daily_monitor.bat" `
+    /SC HOURLY /MO 4 `
+    /ST 00:00 `
+    /RU SYSTEM /F
+```
+
+To remove or inspect the job:
+
+```powershell
+schtasks /Query /TN "ArgusDailyMonitor"
+schtasks /Delete /TN "ArgusDailyMonitor" /F
+```
+
+The interactive `setup_cron.sh` script is a Bash script and does not run on Windows; use `schtasks` or the Task Scheduler GUI (`taskschd.msc`) instead.
+
 ### 9.8 Google Cloud Deployment Notes
 
 If deploying to Cloud Run or GCE:
@@ -732,10 +849,19 @@ If deploying to Cloud Run or GCE:
 
 ### 9.9 Health Check
 
+**macOS / Linux:**
+
 ```bash
 curl http://localhost:5050/api/status
-# Expected: {"is_running": false, "current_stage": null, "agents_status": {...}}
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-RestMethod http://localhost:5050/api/status
+```
+
+Expected response: `{"is_running": false, "current_stage": null, "agents_status": {...}}`.
 
 ---
 
@@ -748,7 +874,7 @@ curl http://localhost:5050/api/status
 | Risk matrix scores all show heuristic (0–100) instead of P/I | `ANTHROPIC_API_KEY` unset | Set key or accept heuristic fallback |
 | Guardian dashboard returns `status: "missing"` | No snapshot in GCS or local | Run `python guardian_poc/src/daily_job.py` |
 | `TypeError: '<' not supported` on `/api/results` | `None` values in JSON sort | Use `sanitize_for_json()` before `jsonify()` |
-| Port 5050 already in use | Another process bound to port | `lsof -i :5050` → kill PID, or set `PORT=5051` |
+| Port 5050 already in use | Another process bound to port | macOS/Linux: `lsof -i :5050` → `kill <PID>`. Windows: `netstat -ano | findstr :5050` → `taskkill /PID <PID> /F`. Or set `PORT=5051` in `.env` |
 | `ModuleNotFoundError: crawl4ai` | Dependencies not installed | `pip install -r requirements.txt` |
 | Cash positions show `"Error loading cash data"` | `pandas`/`openpyxl` missing | `pip install pandas openpyxl` |
 | Bridge: `Connection refused` on `/api/analyze` | Flask server not running | Start `frontend_app.py` before `bridge_manager.py` |
