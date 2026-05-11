@@ -1,0 +1,94 @@
+# ARGUS LLM Routing Configuration (Phase 0)
+#
+# Maps semantic tasks to provider fallback chains. The router tries providers
+# in chain order; on rate-limit or transient failure it advances to the next.
+#
+# Why no Gemini: this Google account's Gemini API free-tier quota is 0
+# (account/region policy). Add it back as a chain entry only if the quota
+# situation changes.
+#
+# Provider priority by task class:
+#   - Bulk/template tasks  → Groq (free, fast)  → OpenAI mini (cheap fallback)
+#   - High-value reasoning → OpenAI 4o / Claude Sonnet (quality first)
+#   - All tasks fall back to claude-haiku if cheaper paths fail
+
+tasks:
+  # Bulk classification — runs per news item, must be cheap
+  risk_classify:
+    chain: [groq_llama_70b, openai_4o_mini, anthropic_haiku]
+
+  # P/I matrix scoring — same volume profile as risk_classify
+  risk_matrix_pi:
+    chain: [groq_llama_70b, anthropic_haiku]
+
+  # Guardian chat — latency-sensitive, conversational
+  guardian_chat:
+    chain: [groq_llama_70b, openai_4o, anthropic_haiku]
+
+  # Intelligence brief — quality-sensitive, low volume
+  intelligence_brief:
+    chain: [openai_4o, anthropic_sonnet, groq_llama_70b]
+
+  # Action recommendations — business decision, quality first
+  actions_generation:
+    chain: [openai_4o, anthropic_sonnet]
+
+  # Regulatory change classification — moderate volume, JSON output
+  regulatory_classify:
+    chain: [groq_llama_70b, openai_4o_mini, anthropic_haiku]
+
+  # Generic recommendations endpoint
+  recommendations:
+    chain: [groq_llama_70b, openai_4o_mini]
+
+  # Catch-all for tasks not explicitly mapped above
+  default:
+    chain: [groq_llama_70b, openai_4o_mini, anthropic_haiku]
+
+
+providers:
+  # ── Free tier ─────────────────────────────────────────────────────────
+  groq_llama_70b:
+    type: openai_compatible
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    model: llama-3.3-70b-versatile
+    timeout_sec: 30
+    max_retries: 1
+    supports_json_mode: true        # supports response_format={type:json_object}
+
+  # ── Paid: OpenAI ──────────────────────────────────────────────────────
+  openai_4o:
+    type: openai_compatible
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4o
+    timeout_sec: 60
+    max_retries: 1
+    supports_json_mode: true
+
+  openai_4o_mini:
+    type: openai_compatible
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    model: gpt-4o-mini
+    timeout_sec: 60
+    max_retries: 1
+    supports_json_mode: true
+
+  # ── Paid: Anthropic ───────────────────────────────────────────────────
+  anthropic_haiku:
+    type: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    model: claude-haiku-4-5-20251001
+    timeout_sec: 60
+    max_retries: 1
+    supports_json_mode: false       # Anthropic uses tool-use for JSON; not implemented in Phase 0
+
+  anthropic_sonnet:
+    type: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    model: claude-sonnet-4-6
+    timeout_sec: 60
+    max_retries: 1
+    supports_json_mode: false
