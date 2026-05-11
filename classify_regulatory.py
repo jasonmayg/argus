@@ -30,19 +30,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import requests
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
+from core.llm_router import call_llm
+
 # ── Config ────────────────────────────────────────────────────────────────
-DB_PATH       = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
-OPENAI_URL     = "https://api.openai.com/v1/chat/completions"
-BATCH_DELAY    = 0.5
+DB_PATH     = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
+BATCH_DELAY = 0.5
 
 GCS_BUCKET     = "your-gcs-bucket"
 GCS_RADAR_PATH = "news_google_macro_radar.csv"
@@ -143,15 +141,17 @@ def _clean_html(text: str) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# OpenAI classification
+# LLM classification (routed via core.llm_router, task=regulatory_classify)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _classify_item(title: str, summary: str, published_at: str = "") -> Optional[Dict]:
-    """Call OpenAI to classify one news item."""
-    if not OPENAI_API_KEY:
-        print("    [OpenAI] OPENAI_API_KEY not set")
-        return None
+    """Classify one news item via the LLM router.
 
+    The router picks a provider from the regulatory_classify chain in
+    config/llm_routing.yaml (Groq first, OpenAI mini fallback). Returns the
+    parsed JSON dict on success, or None if every provider failed or the
+    response was not valid JSON.
+    """
     user_prompt = f"""Title: {title}
 Published: {published_at}
 Summary: {_clean_html(summary)[:400]}
@@ -159,33 +159,19 @@ Summary: {_clean_html(summary)[:400]}
 Classify this news item for regulatory changes affecting treasury operations."""
 
     try:
-        resp = requests.post(
-            OPENAI_URL,
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": OPENAI_MODEL,
-                "messages": [
-                    {"role": "system", "content": REGULATORY_SYSTEM},
-                    {"role": "user",   "content": user_prompt},
-                ],
-                "max_tokens": 400,
-                "temperature": 0.1,
-            },
-            timeout=30,
-        )
-        if not resp.ok:
-            print(f"    [OpenAI] Error {resp.status_code}: {resp.text[:100]}")
-            return None
-
-        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        raw = call_llm(
+            task="regulatory_classify",
+            system=REGULATORY_SYSTEM,
+            user=user_prompt,
+            max_tokens=400,
+            temperature=0.1,
+            response_format="json",
+        ).strip()
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
         return json.loads(raw)
 
     except Exception as e:
-        print(f"    [OpenAI] Exception: {e}")
+        print(f"    [LLM] Exception: {e}")
         return None
 
 

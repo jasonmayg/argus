@@ -4,21 +4,18 @@ import os
 import json
 import sqlite3
 import time
-import requests
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
+from core.llm_router import call_llm
+
 # ── Blueprint ─────────────────────────────────────────────────
 ai_bp = Blueprint("ai_routes", __name__)
 
 # ── Config ────────────────────────────────────────────────────
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
-OPENAI_URL     = "https://api.openai.com/v1/chat/completions"
-
 DB_PATH = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
 
 _news_cache: Dict[str, Any] = {"ts": 0, "items": []}
@@ -34,47 +31,23 @@ PERSONA_LABELS = {
 
 
 # ═══════════════════════════════════════════════════════════════
-# OpenAI helpers
+# Chat history helper
 # ═══════════════════════════════════════════════════════════════
 
-def _openai(system: str, user: str, max_tokens: int = 1024) -> str:
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is not set in .env")
-    resp = requests.post(
-        OPENAI_URL,
-        headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-        json={
-            "model":    OPENAI_MODEL,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            "max_tokens": max_tokens,
-            "temperature": 0.4,
-        },
-        timeout=30,
-    )
-    if not resp.ok:
-        raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:300]}")
-    return resp.json()["choices"][0]["message"]["content"].strip()
+def _convert_chat_history(history: List[Dict]) -> List[Dict[str, str]]:
+    """Normalize the frontend chat history shape into the router message shape.
 
-
-def _openai_with_history(system: str, history: List[Dict], user_msg: str, max_tokens: int = 1024) -> str:
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is not set in .env")
-    messages = [{"role": "system", "content": system}]
+    Frontend uses {"role": "ai"|"user", "content": "..."}; router/OpenAI use
+    {"role": "assistant"|"user", "content": "..."}. Empty turns are dropped.
+    Caps at the most recent 10 turns to keep prompts small.
+    """
+    out: List[Dict[str, str]] = []
     for turn in history[-10:]:
         role    = "assistant" if turn.get("role") == "ai" else "user"
         content = (turn.get("content") or "").strip()
         if content:
-            messages.append({"role": role, "content": content})
-    messages.append({"role": "user", "content": user_msg})
-    resp = requests.post(
-        OPENAI_URL,
-        headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-        json={"model": OPENAI_MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": 0.4},
-        timeout=30,
-    )
-    if not resp.ok:
-        raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:300]}")
-    return resp.json()["choices"][0]["message"]["content"].strip()
+            out.append({"role": role, "content": content})
+    return out
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -237,7 +210,13 @@ Pipeline context:
 Generate the treasury intelligence brief now."""
 
     try:
-        raw        = _openai(BRIEF_SYSTEM, user_prompt, max_tokens=800)
+        raw = call_llm(
+            task="intelligence_brief",
+            system=BRIEF_SYSTEM,
+            user=user_prompt,
+            max_tokens=800,
+            temperature=0.4,
+        )
         brief_text = raw
         signals: List[Dict] = []
         if "```json" in raw:
@@ -288,7 +267,15 @@ def api_chat():
     if news_ctx:
         system += f"\n\nRecent news (ARGUS DB):\n{news_ctx}"
     try:
-        reply = _openai_with_history(system, history, user_msg, max_tokens=1024)
+        chat_messages = _convert_chat_history(history)
+        chat_messages.append({"role": "user", "content": user_msg})
+        reply = call_llm(
+            task="guardian_chat",
+            system=system,
+            messages=chat_messages,
+            max_tokens=1024,
+            temperature=0.4,
+        )
         return jsonify({"status": "success", "reply": reply})
     except RuntimeError as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -479,9 +466,16 @@ Triggered data alerts (macro indicators):
 Generate the daily recommendation JSON for this {persona_label}."""
 
     try:
-        raw = _openai(RECOMMENDATIONS_SYSTEM, user_prompt, max_tokens=600)
+        raw = call_llm(
+            task="recommendations",
+            system=RECOMMENDATIONS_SYSTEM,
+            user=user_prompt,
+            max_tokens=600,
+            temperature=0.4,
+            response_format="json",
+        )
 
-        # Strip markdown fences if model added them anyway
+        # Strip markdown fences in case the model wraps the JSON anyway
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]

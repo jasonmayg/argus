@@ -26,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from core.llm_router import call_llm
 from risk_matrix import (
     calculate_risk_level,
     PROBABILITY_LABELS,
@@ -136,7 +137,6 @@ class AnalysisAgent(Agent):
         super().__init__("RiskAnalyzer")
         self.persona = persona
         self.analysis_results: Dict = {}
-        self._api_key = os.getenv("OPENAI_API_KEY")
         # Use explicitly supplied weights (e.g. from a loaded profile) or fall
         # back to the AI-baseline defaults from personas/defaults.yaml.
         if weights is not None:
@@ -261,8 +261,14 @@ class AnalysisAgent(Agent):
     # ── Scoring orchestration ─────────────────────────────────────────────────
 
     async def _score_items(self, news_items: List[Dict]) -> List[Dict]:
-        """Try LLM scoring; fall back to heuristic on any failure."""
-        if self._api_key and news_items:
+        """Try LLM scoring; fall back to heuristic on any failure.
+
+        The LLM router transparently picks a provider from the configured chain
+        for task=risk_matrix_pi. If every provider fails (or none is configured),
+        AllProvidersFailedError bubbles up and we fall back to the keyword
+        heuristic so the pipeline still produces scores.
+        """
+        if news_items:
             try:
                 return await self._score_with_llm(news_items)
             except Exception as exc:
@@ -272,14 +278,11 @@ class AnalysisAgent(Agent):
     # ── LLM-powered scoring ───────────────────────────────────────────────────
 
     async def _score_with_llm(self, news_items: List[Dict]) -> List[Dict]:
-        """Call Claude to assign Probability and Impact for every item.
+        """Assign Probability and Impact for every item via the LLM router.
 
         Items beyond ``_LLM_BATCH_LIMIT`` are scored heuristically to cap cost.
+        Routing is governed by config/llm_routing.yaml under task=risk_matrix_pi.
         """
-        import requests  # OpenAI via REST
-
-        openai_url   = "https://api.openai.com/v1/chat/completions"
-        openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
         llm_items = news_items[: self._LLM_BATCH_LIMIT]
 
         items_text = "\n".join(
@@ -328,24 +331,12 @@ Return a JSON array — one object per item, in the same order:
 ]
 Return ONLY the JSON array — no preamble, no markdown fences."""
 
-        resp = requests.post(
-            openai_url,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type":  "application/json",
-            },
-            json={
-                "model":       openai_model,
-                "messages":    [{"role": "user", "content": prompt}],
-                "max_tokens":  4096,
-                "temperature": 0.2,
-            },
-            timeout=60,
-        )
-        if not resp.ok:
-            raise RuntimeError(f"OpenAI error {resp.status_code}: {resp.text[:300]}")
-
-        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        raw = call_llm(
+            task="risk_matrix_pi",
+            user=prompt,
+            max_tokens=4096,
+            temperature=0.2,
+        ).strip()
         if raw.startswith("```"):
             parts = raw.split("```")
             raw = parts[1] if len(parts) > 1 else raw
