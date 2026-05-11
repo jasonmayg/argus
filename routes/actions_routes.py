@@ -14,6 +14,8 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
+from core.llm_router import call_llm
+
 logger = logging.getLogger(__name__)
 
 actions_bp = Blueprint("actions", __name__)
@@ -201,8 +203,6 @@ def generate_actions():
 
 
 def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
-    import os
-
     alerts = []
     if pipeline_raw:
         for cg in pipeline_raw.get("country_groups", []):
@@ -306,30 +306,18 @@ Critical rules:
 - Generate exactly one action object per signal listed above
 """
 
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-    if openai_key:
-        import openai
-        resp = openai.OpenAI(api_key=openai_key).chat.completions.create(
-            model="gpt-4o",
-            response_format={"type": "json_object"},
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-        )
-        d = json.loads(resp.choices[0].message.content or "{}")
-        return {**d, "status": "success", "generated_at": _now(), "persona": persona_key}
-
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if anthropic_key:
-        import anthropic
-        msg = anthropic.Anthropic(api_key=anthropic_key).messages.create(
-            model="claude-opus-4-6", max_tokens=4096,
-            messages=[{"role": "user", "content": prompt + "\n\nRespond ONLY with JSON."}],
-        )
-        raw = msg.content[0].text.strip().lstrip("```json").rstrip("```").strip()
-        d = json.loads(raw)
-        return {**d, "status": "success", "generated_at": _now(), "persona": persona_key}
-
-    raise RuntimeError("No AI API keys (OPENAI_API_KEY / ANTHROPIC_API_KEY)")
+    raw = call_llm(
+        task="actions_generation",
+        user=prompt,
+        max_tokens=4096,
+        temperature=0.4,
+        response_format="json",
+    ).strip()
+    # The router preserves a leading code fence when a provider wraps the JSON
+    if raw.startswith("```"):
+        raw = raw.lstrip("`").lstrip("json").strip().rstrip("`").strip()
+    d = json.loads(raw or "{}")
+    return {**d, "status": "success", "generated_at": _now(), "persona": persona_key}
 
 
 def _now():

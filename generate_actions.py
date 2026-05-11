@@ -28,18 +28,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import requests
-
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
+from core.llm_router import call_llm
+
 # ── Config ─────────────────────────────────────────────────────
-OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL    = os.getenv("OPENAI_MODEL", "gpt-4o")
-OPENAI_URL      = "https://api.openai.com/v1/chat/completions"
 ACTIONS_PATH    = Path("shared_storage/latest_actions.json")
 GUARDIAN_PATH   = Path("guardian_poc/data/alerts_latest.json")
 RESULTS_PATH    = Path("shared_storage/latest_results.json")
@@ -282,37 +279,28 @@ def _compute_risk_posture(alerts: List[Dict]) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════
-# OpenAI generation
+# LLM generation (routed via core.llm_router, task=actions_generation)
 # ═══════════════════════════════════════════════════════════════
 
-def _call_openai(system: str, user: str, max_tokens: int = 1500) -> Optional[str]:
-    if not OPENAI_API_KEY:
-        print("[generate_actions] OPENAI_API_KEY not set")
-        return None
+def _call_llm(
+    system: str,
+    user: str,
+    max_tokens: int = 1500,
+    response_format: str = "text",
+) -> Optional[str]:
+    """Route an actions_generation call. Returns None on failure so callers can
+    fall back to deterministic defaults without aborting the pipeline."""
     try:
-        resp = requests.post(
-            OPENAI_URL,
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type":  "application/json",
-            },
-            json={
-                "model":       OPENAI_MODEL,
-                "messages":    [
-                    {"role": "system", "content": system},
-                    {"role": "user",   "content": user},
-                ],
-                "max_tokens":  max_tokens,
-                "temperature": 0.3,
-            },
-            timeout=45,
-        )
-        if not resp.ok:
-            print(f"[generate_actions] OpenAI error {resp.status_code}: {resp.text[:200]}")
-            return None
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        return call_llm(
+            task="actions_generation",
+            system=system,
+            user=user,
+            max_tokens=max_tokens,
+            temperature=0.3,
+            response_format=response_format,
+        ).strip()
     except Exception as e:
-        print(f"[generate_actions] OpenAI exception: {e}")
+        print(f"[generate_actions] LLM exception: {e}")
         return None
 
 
@@ -342,7 +330,7 @@ Top risk signals:
 
 Write the executive summary now."""
 
-    result = _call_openai(system, user, max_tokens=200)
+    result = _call_llm(system, user, max_tokens=200)
     return result or f"Risk posture is {posture}. {len(country_groups)} countries require attention."
 
 
@@ -383,7 +371,7 @@ Alerts:
 
 Generate the action recommendation."""
 
-    raw = _call_openai(system, user, max_tokens=500)
+    raw = _call_llm(system, user, max_tokens=500, response_format="json")
     if raw:
         try:
             raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
