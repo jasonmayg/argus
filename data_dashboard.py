@@ -29,12 +29,13 @@ data_dashboard_bp = Blueprint("data_dashboard", __name__)
 # -------------------------
 # Config / conventions
 # -------------------------
-COUNTRY_PREFIX_RE = re.compile(r"^(us|ca|uk|de|jp|fr|br|in|au|mx|cn)_", re.I)
+COUNTRY_PREFIX_RE = re.compile(r"^(us|ca|uk|de|jp|fr|br|in|au|mx|cn|eu|kr)_", re.I)
 
 DEFAULT_COUNTRY_NAME_MAP = {
     "us": "USA", "ca": "Canada", "uk": "UK",   "de": "Germany",
     "jp": "Japan", "fr": "France", "br": "Brazil", "in": "India",
     "au": "Australia", "mx": "Mexico", "cn": "China",
+    "eu": "Eurozone", "kr": "Korea",
 }
 
 INDICATOR_DISPLAY = {
