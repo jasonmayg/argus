@@ -43,3 +43,15 @@ collections:
   news_max_chars: 1500
   alerts_max_chars: 800
   regulatory_max_chars: 2000
+
+endpoints:
+  # Per-endpoint RAG enablement. If `enabled: false`, the endpoint falls back
+  # to its pre-RAG context loader. Useful as a kill-switch if retrieval
+  # quality regresses.
+  chat:
+    enabled: true
+    news_top_k: 5
+    alerts_top_k: 3
+    # Skip alerts collection retrieval if its count is below this — avoids
+    # injecting noise when the snapshot is sparse.
+    alerts_min_count: 5

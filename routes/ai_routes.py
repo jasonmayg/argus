@@ -4,6 +4,7 @@ import os
 import json
 import sqlite3
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -11,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from flask import Blueprint, jsonify, request
 
 from core.llm_router import call_llm
+from core.rag_context import build_chat_context
 
 # ── Blueprint ─────────────────────────────────────────────────
 ai_bp = Blueprint("ai_routes", __name__)
@@ -244,7 +246,8 @@ You have deep expertise in:
 - FX & liquidity risk: currency volatility, cross-border flows
 - Treasury operations: cash management, hedging, funding gaps
 
-Use the pipeline and news context provided to answer questions accurately.
+Use the pipeline and retrieved news/alerts to answer questions accurately.
+Tag citations inline using the [N#] / [A#] markers from the retrieval block.
 If data is unavailable, say so and answer from general knowledge.
 Tone: precise, professional, concise. No disclaimers or filler."""
 
@@ -258,14 +261,23 @@ def api_chat():
     history  = body.get("history", [])
     if not user_msg:
         return jsonify({"status": "error", "message": "message is required"}), 400
+
+    request_id   = uuid.uuid4().hex[:16]
     results      = _load_latest_results()
     pipeline_ctx = _results_summary_text(results) if results else ""
-    news_ctx     = _news_summary_text(limit=8)
-    system       = CHAT_SYSTEM
+    rag_ctx      = build_chat_context(user_msg, request_id=request_id, endpoint="api.chat")
+
+    system = CHAT_SYSTEM
     if pipeline_ctx:
         system += f"\n\nLatest pipeline context:\n{pipeline_ctx}"
-    if news_ctx:
-        system += f"\n\nRecent news (ARGUS DB):\n{news_ctx}"
+    if rag_ctx.used and rag_ctx.prompt_text:
+        system += f"\n\n{rag_ctx.prompt_text}"
+    else:
+        # Fallback when RAG is disabled or returned nothing useful.
+        legacy_news = _news_summary_text(limit=8)
+        if legacy_news:
+            system += f"\n\nRecent news (ARGUS DB):\n{legacy_news}"
+
     try:
         chat_messages = _convert_chat_history(history)
         chat_messages.append({"role": "user", "content": user_msg})
@@ -276,7 +288,17 @@ def api_chat():
             max_tokens=1024,
             temperature=0.4,
         )
-        return jsonify({"status": "success", "reply": reply})
+        return jsonify({
+            "status": "success",
+            "reply": reply,
+            "request_id": request_id,
+            "citations": [c.__dict__ for c in rag_ctx.citations],
+            "rag": {
+                "used":        rag_ctx.used,
+                "news_hits":   rag_ctx.news_hits,
+                "alerts_hits": rag_ctx.alerts_hits,
+            },
+        })
     except RuntimeError as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
