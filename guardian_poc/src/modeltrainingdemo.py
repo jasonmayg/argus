@@ -866,17 +866,41 @@ def _load_latest_gcs_feature_row() -> tuple[pd.DataFrame, dict[str, Any]]:
     root_prefix = os.getenv("ARGUS_GCS_ROOT_PREFIX", "").strip().strip("/")
     history_root = f"{root_prefix}/{raw_base_prefix}" if root_prefix else raw_base_prefix
     dt_segments = _discover_raw_dt_segments(bucket, history_root)
-    if not dt_segments:
+    fallback_used = False
+    fallback_candidates: list[str] = []
+
+    if dt_segments:
+        latest_dt = dt_segments[-1]
+        latest_prefix = f"{history_root.rstrip('/')}/{latest_dt}/"
+        blobs = [b for b in bucket.list_blobs(prefix=latest_prefix) if str(b.name).lower().endswith(".csv")]
+    else:
+        today = pd.Timestamp.utcnow().date()
+        fallback_candidates = [
+            f"dt={today.strftime('%Y-%m-%d')}",
+            f"dt={(today - pd.Timedelta(days=1)).strftime('%Y-%m-%d')}",
+        ]
+        latest_dt = ""
+        latest_prefix = ""
+        blobs = []
+        for candidate_dt in fallback_candidates:
+            candidate_prefix = f"{history_root.rstrip('/')}/{candidate_dt}/"
+            candidate_blobs = [b for b in bucket.list_blobs(prefix=candidate_prefix) if str(b.name).lower().endswith(".csv")]
+            if candidate_blobs:
+                latest_dt = candidate_dt
+                latest_prefix = candidate_prefix
+                blobs = candidate_blobs
+                fallback_used = True
+                break
+
+    if not latest_dt:
         return pd.DataFrame(columns=["date"]), {
             "gcs_enabled": False,
             "gcs_key_path": key_path,
             "gcs_prefix": history_root,
             "gcs_error": "no GCS dt partitions found",
+            "gcs_dt_fallback_candidates": fallback_candidates,
         }
 
-    latest_dt = dt_segments[-1]
-    latest_prefix = f"{history_root.rstrip('/')}/{latest_dt}/"
-    blobs = [b for b in bucket.list_blobs(prefix=latest_prefix) if str(b.name).lower().endswith(".csv")]
     latest_date = pd.to_datetime(latest_dt.replace("dt=", ""), errors="coerce")
     row: dict[str, Any] = {"date": latest_date}
     meta = {
@@ -889,6 +913,8 @@ def _load_latest_gcs_feature_row() -> tuple[pd.DataFrame, dict[str, Any]]:
         "gcs_series_features": 0,
         "gcs_raw_alert_rows": 0,
         "gcs_latest_only": True,
+        "gcs_dt_fallback_used": fallback_used,
+        "gcs_dt_fallback_candidates": fallback_candidates,
     }
 
     for blob in sorted(blobs, key=lambda x: x.name):
