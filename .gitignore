@@ -18,6 +18,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Phase 2 — Chroma persistent storage (regeneratable from SQLite via backfill)
+data/chroma_db/
+
+# Phase 3 — Large agent outputs landed to disk
+data/agent_outputs/
 .Python
 build/
 develop-eggs/

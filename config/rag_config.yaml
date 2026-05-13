@@ -1,0 +1,45 @@
+# ARGUS Phase 2 RAG / Vector Store Configuration
+
+embedder:
+  # Default provider for all embed() calls. Override per-call via
+  # core.embedder.get_embedder("<name>") if a specific scenario needs the
+  # fallback (e.g. quality-sensitive backfill).
+  default: sentence_transformer
+
+  # If the default embedder raises EmbedderError, embed_with_fallback() tries
+  # this provider. Set to null to disable fallback.
+  fallback: openai
+
+  providers:
+    sentence_transformer:
+      type: sentence_transformer
+      model: all-MiniLM-L6-v2
+      # Bump version when retraining or swapping model files. The new value
+      # propagates into Chroma metadata so chroma_audit.py can flag rows that
+      # were embedded with the old model.
+      version: v1
+
+    openai:
+      type: openai
+      model: text-embedding-3-small
+      api_key_env: OPENAI_API_KEY
+      version: v1
+
+storage:
+  # Chroma persistent dir. Gitignored.
+  persist_dir: data/chroma_db
+
+retrieval:
+  # Default top_k for search_* methods. Individual callers can override.
+  default_top_k: 10
+  # Chroma returns squared L2 distance for normalized vectors. We filter out
+  # results with distance > max_distance (1.0 ~ irrelevant; tighten for
+  # higher precision, loosen for recall).
+  max_distance: 1.2
+
+collections:
+  # Document length caps. Texts longer than this are trimmed before
+  # embedding to avoid wasting context on boilerplate.
+  news_max_chars: 1500
+  alerts_max_chars: 800
+  regulatory_max_chars: 2000

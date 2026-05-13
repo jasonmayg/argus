@@ -364,6 +364,93 @@ def render_json(agg: dict, since: datetime | None) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# RAG (Phase 2): read rag_queries and join on request_id
+# ─────────────────────────────────────────────────────────────────────────
+def load_rag_rows(db_path: Path, since: Optional[datetime]) -> list[dict]:
+    """Return rag_queries rows in the window, empty list if table missing."""
+    if not db_path.exists():
+        return []
+    with sqlite3.connect(db_path) as conn:
+        tables = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()}
+        if "rag_queries" not in tables:
+            return []
+        sql = (
+            "SELECT id, timestamp, endpoint, collection, query_text, n_results, "
+            "       top_score, latency_ms, embedder_model, embedder_version, request_id "
+            "FROM rag_queries"
+        )
+        params: tuple = ()
+        if since is not None:
+            sql += " WHERE timestamp >= ?"
+            params = (since.isoformat(),)
+        sql += " ORDER BY id"
+        conn.row_factory = sqlite3.Row
+        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def aggregate_rag(rows: list[dict]) -> dict:
+    by_endpoint: dict[str, dict] = defaultdict(lambda: {
+        "queries": 0, "collections": defaultdict(int), "latencies": [], "top_scores": [],
+    })
+    by_collection: dict[str, dict] = defaultdict(lambda: {
+        "queries": 0, "latencies": [], "top_scores": [], "request_ids": set(),
+    })
+    for r in rows:
+        endpoint = r.get("endpoint") or "<unspecified>"
+        coll = r.get("collection") or "<unknown>"
+        latency = int(r.get("latency_ms") or 0)
+        top = r.get("top_score")
+        e = by_endpoint[endpoint]
+        e["queries"] += 1
+        e["collections"][coll] += 1
+        if latency > 0:
+            e["latencies"].append(latency)
+        if top is not None:
+            e["top_scores"].append(top)
+        c = by_collection[coll]
+        c["queries"] += 1
+        if latency > 0:
+            c["latencies"].append(latency)
+        if top is not None:
+            c["top_scores"].append(top)
+        if r.get("request_id"):
+            c["request_ids"].add(r["request_id"])
+    return {
+        "total": len(rows),
+        "by_endpoint": dict(by_endpoint),
+        "by_collection": dict(by_collection),
+    }
+
+
+def render_rag_text(rag_agg: dict, llm_request_ids: set[str]) -> str:
+    if rag_agg["total"] == 0:
+        return ""
+    rule = "─" * 78
+    lines = ["", "RAG Queries", rule]
+    lines.append(f"Total RAG queries : {rag_agg['total']}")
+    # Join: how many RAG queries fed an LLM call we recorded?
+    joined = 0
+    for c in rag_agg["by_collection"].values():
+        joined += sum(1 for rid in c["request_ids"] if rid in llm_request_ids)
+    lines.append(f"Joined to LLM call: {joined}  (RAG queries inside an /api/* request that also called an LLM)")
+    lines.append("")
+    lines.append(f"{'collection':<18} {'queries':>8} {'p50 ms':>8} {'avg top_score':>14}")
+    for coll, c in sorted(rag_agg["by_collection"].items(), key=lambda kv: -kv[1]["queries"]):
+        p50 = _percentile(c["latencies"], 50)
+        avg_top = (sum(c["top_scores"]) / len(c["top_scores"])) if c["top_scores"] else 0.0
+        lines.append(f"{coll:<18} {c['queries']:>8} {p50:>6}ms  {avg_top:>14.3f}")
+    lines.append("")
+    lines.append(f"{'endpoint':<28} {'queries':>8} {'p50 ms':>8}  collections")
+    for ep, e in sorted(rag_agg["by_endpoint"].items(), key=lambda kv: -kv[1]["queries"]):
+        p50 = _percentile(e["latencies"], 50)
+        colls = ", ".join(f"{c}={n}" for c, n in sorted(e["collections"].items(), key=lambda kv: -kv[1]))[:40]
+        lines.append(f"{ep[:28]:<28} {e['queries']:>8} {p50:>6}ms  {colls}")
+    return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────
 def main() -> int:
@@ -376,16 +463,46 @@ def main() -> int:
                         help="How many top failure clusters to show. Default: 5")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"SQLite DB path. Default: {DEFAULT_DB}")
+    parser.add_argument("--include-rag", action="store_true",
+                        help="Also report Phase 2 rag_queries (joined on request_id)")
     args = parser.parse_args()
 
     since = parse_since(args.since)
     rows = load_rows(args.db, since)
     agg = aggregate(rows)
 
+    rag_rows: list[dict] = []
+    rag_agg: dict = {"total": 0}
+    if args.include_rag:
+        rag_rows = load_rag_rows(args.db, since)
+        rag_agg = aggregate_rag(rag_rows)
+
     if args.format == "json":
-        print(render_json(agg, since))
+        payload = json.loads(render_json(agg, since))
+        if args.include_rag:
+            payload["rag"] = {
+                "total": rag_agg["total"],
+                "by_endpoint": {
+                    ep: {"queries": e["queries"],
+                         "p50_ms": _percentile(e["latencies"], 50),
+                         "collections": dict(e["collections"])}
+                    for ep, e in rag_agg.get("by_endpoint", {}).items()
+                },
+                "by_collection": {
+                    c: {"queries": v["queries"],
+                        "p50_ms": _percentile(v["latencies"], 50),
+                        "avg_top_score": (sum(v["top_scores"]) / len(v["top_scores"])) if v["top_scores"] else 0.0}
+                    for c, v in rag_agg.get("by_collection", {}).items()
+                },
+            }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         print(render_text(agg, since, args.top_failures))
+        if args.include_rag:
+            llm_rids: set[str] = {r["request_id"] for r in rows if r.get("request_id")}
+            extra = render_rag_text(rag_agg, llm_rids)
+            if extra:
+                print(extra)
 
     return 0
 

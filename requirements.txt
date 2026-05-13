@@ -24,6 +24,15 @@ anthropic>=0.7.0          # Claude API client
 openai>=1.0.0            # OpenAI API client
 
 # ============================================================================
+# Vector Store & Embeddings (Phase 2)
+# ============================================================================
+chromadb>=0.5,<0.6        # Embedded vector store. Pinned below 1.x — 0.5 is
+                          # the last series with a stable API; 1.x introduces
+                          # breaking changes we'll adopt deliberately later.
+sentence-transformers>=2.7  # Local embedding model (all-MiniLM-L6-v2 default).
+                          # Pulls torch + transformers (~500MB on first install).
+
+# ============================================================================
 # Data Processing & Storage
 # ============================================================================
 # SQLite3 is included with Python, no installation needed
