@@ -68,3 +68,17 @@ endpoints:
     # query. 0 disables pipeline-derived terms; the query falls back to
     # persona keywords only.
     pipeline_terms_max: 3
+
+  actions:
+    enabled: true
+    # actions_history hits become few-shot examples — keep this small so
+    # the prompt doesn't balloon past the model's effective attention
+    # budget. Past three runs is usually enough to anchor style/scope.
+    few_shot_top_k: 3
+    # regulatory hits become "supporting evidence" the LLM can ground
+    # its why_now sentences in.
+    regulatory_top_k: 3
+    # Skip few-shot block entirely until actions_history has been
+    # populated for at least this many runs — embeds otherwise return
+    # noisy matches against a near-empty collection.
+    history_min_count: 5
