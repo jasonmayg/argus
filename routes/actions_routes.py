@@ -10,11 +10,13 @@ Auto-regeneration logic:
 
 import json
 import logging
+import uuid
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
 from core.llm_router import call_llm
+from core.rag_context import build_actions_context
 
 logger = logging.getLogger(__name__)
 
@@ -229,9 +231,24 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
             "actions":      [],
         }
 
+    request_id = uuid.uuid4().hex[:16]
+    rag_ctx = build_actions_context(
+        alerts=alerts,
+        persona=persona_key,
+        request_id=request_id,
+        endpoint="api.actions",
+    )
+
     signals_text = "\n".join(
         f"  - [{a['country']}] {a['category']} (score {a['score']:.0f}): \"{a['title']}\""
         for a in alerts
+    )
+
+    few_shot_block = (
+        f"\n\n{rag_ctx.few_shot_text}\n" if rag_ctx.few_shot_text else ""
+    )
+    regulatory_block = (
+        f"\n\n{rag_ctx.regulatory_text}\n" if rag_ctx.regulatory_text else ""
     )
 
     prompt = f"""You are a treasury risk advisor for a {persona_key.replace('_', ' ')}.
@@ -295,7 +312,7 @@ Respond ONLY with valid JSON in this exact schema:
 
 Signals to analyse:
 {signals_text}
-
+{regulatory_block}{few_shot_block}
 Critical rules:
 - PRIMARY and each ALTERNATIVE must have COMPLETELY DIFFERENT pros/cons — they are different strategies
 - Example: if primary is "hedge with forward contracts", alternatives could be "increase cash buffer" and "reduce exposure limit" — each has a different risk/benefit profile
@@ -309,7 +326,10 @@ Critical rules:
     raw = call_llm(
         task="actions_generation",
         user=prompt,
-        max_tokens=4096,
+        # 4096 was tight pre-RAG and started truncating once few-shot + regulatory
+        # blocks pushed the per-card prose longer. 6144 covers the worst case
+        # (13+ alerts × per-card SWOT) with headroom; still under provider caps.
+        max_tokens=6144,
         temperature=0.4,
         response_format="json",
     ).strip()
@@ -317,7 +337,19 @@ Critical rules:
     if raw.startswith("```"):
         raw = raw.lstrip("`").lstrip("json").strip().rstrip("`").strip()
     d = json.loads(raw or "{}")
-    return {**d, "status": "success", "generated_at": _now(), "persona": persona_key}
+    return {
+        **d,
+        "status":       "success",
+        "generated_at": _now(),
+        "persona":      persona_key,
+        "request_id":   request_id,
+        "citations":    [c.__dict__ for c in rag_ctx.citations],
+        "rag": {
+            "used":            rag_ctx.used,
+            "history_hits":    rag_ctx.history_hits,
+            "regulatory_hits": rag_ctx.regulatory_hits,
+        },
+    }
 
 
 def _now():

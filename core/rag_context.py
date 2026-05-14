@@ -9,6 +9,7 @@ endpoint-specific prompting.
 Public surface:
     build_chat_context(query, request_id, ...) -> ChatContext
     build_brief_context(persona, pipeline_results, request_id, ...) -> ChatContext
+    build_actions_context(alerts, persona, request_id, ...) -> ChatContext
     load_endpoint_config(endpoint) -> dict
 
 A `ChatContext` carries both the LLM-facing prompt string and a structured
@@ -364,4 +365,152 @@ def build_brief_context(
         used=True,
         news_hits=len(news_hits),
         alerts_hits=len(alerts_hits),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Actions builder
+# ─────────────────────────────────────────────────────────────────────────
+@dataclass
+class ActionsContext:
+    """Distinct from ChatContext: actions has two prompt blocks (few-shot
+    + regulatory) so the caller can splice them into different parts of
+    its prompt template, plus a regulatory-hit count for the response."""
+    few_shot_text: str = ""
+    regulatory_text: str = ""
+    citations: list[Citation] = field(default_factory=list)
+    used: bool = False
+    history_hits: int = 0
+    regulatory_hits: int = 0
+
+
+def _format_few_shot(hit: SearchHit, idx: int) -> str:
+    """Render an actions_history hit as a compact few-shot example. The
+    history docs already encode WHY/ACTION/PROS/CONS in a structured way,
+    so we mostly just label them."""
+    m = hit.metadata or {}
+    header_bits = []
+    if m.get("country"):  header_bits.append(str(m["country"]))
+    if m.get("category"): header_bits.append(str(m["category"]))
+    if m.get("generated_at"): header_bits.append(str(m["generated_at"])[:10])
+    header = " | ".join(header_bits) or "previous run"
+    body = (hit.document or "").strip()
+    return f"Example {idx} ({header}):\n{body}"
+
+
+def _format_regulatory(hit: SearchHit, idx: int) -> str:
+    m = hit.metadata or {}
+    header_bits = []
+    if m.get("country"):  header_bits.append(str(m["country"]))
+    if m.get("category"): header_bits.append(str(m["category"]))
+    if m.get("severity"): header_bits.append(f"severity={m['severity']}")
+    if m.get("effective_date"): header_bits.append(str(m["effective_date"]))
+    header = " | ".join(header_bits) or "regulatory"
+    body = _first_line(hit.document, 220)
+    return f"[R{idx}] ({header}) {body}"
+
+
+def build_actions_context(
+    alerts: list[dict],
+    persona: str,
+    request_id: Optional[str] = None,
+    endpoint: str = "api.actions",
+) -> ActionsContext:
+    """Pull few-shot history + regulatory evidence for an actions generation.
+
+    Composes a single retrieval query from the alert titles plus the
+    persona's risk-keyword expansion. Runs two queries:
+
+      * actions_history → top-K become few-shot examples in the prompt.
+        Skipped if the collection is too small to yield meaningful
+        nearest neighbours.
+      * regulatory → top-K become "supporting evidence" the LLM can
+        cite to anchor its why_now sentences.
+
+    Returns ActionsContext. Callers should treat `used=False` as a
+    signal to fall through to the legacy actions prompt; behaviour
+    parity with pre-RAG /api/actions/generate is preserved.
+    """
+    cfg = load_endpoint_config("actions")
+    if not cfg.get("enabled", True):
+        return ActionsContext()
+    if not alerts:
+        return ActionsContext()
+
+    few_shot_k = int(cfg.get("few_shot_top_k", 3))
+    regulatory_k = int(cfg.get("regulatory_top_k", 3))
+    history_min = int(cfg.get("history_min_count", 5))
+
+    # Compose query: alert titles carry the most signal; persona keywords
+    # bias retrieval toward this user's risk priorities.
+    alert_titles: list[str] = []
+    for a in alerts[:6]:                          # cap to avoid an oversized query
+        t = (a.get("title") or "").strip()
+        if t:
+            alert_titles.append(t)
+    persona_terms = _persona_query_terms(persona, top_n=3)
+    query = " | ".join(alert_titles + persona_terms).strip()
+    if not query:
+        return ActionsContext()
+
+    try:
+        store = get_vector_store()
+    except Exception:
+        return ActionsContext()
+
+    history_hits: list[SearchHit] = []
+    regulatory_hits: list[SearchHit] = []
+    try:
+        if few_shot_k > 0 and store.count("actions_history") >= history_min:
+            history_hits = store.search_actions_history(
+                query, n_results=few_shot_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        history_hits = []
+
+    try:
+        if regulatory_k > 0:
+            regulatory_hits = store.search_regulatory(
+                query, n_results=regulatory_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        regulatory_hits = []
+
+    if not history_hits and not regulatory_hits:
+        return ActionsContext()
+
+    citations: list[Citation] = []
+    few_shot_text = ""
+    if history_hits:
+        examples = [_format_few_shot(h, i + 1) for i, h in enumerate(history_hits)]
+        few_shot_text = (
+            "Past similar action cards from this system — match their tone, "
+            "specificity, and the why_now / recommendation / pros / cons "
+            "structure. Do NOT copy their content; treat them as style guides.\n\n"
+            + "\n\n".join(examples)
+        )
+        citations.extend(_to_citation("actions_history", h, f"E{i+1}")
+                         for i, h in enumerate(history_hits))
+
+    regulatory_text = ""
+    if regulatory_hits:
+        lines = [_format_regulatory(h, i + 1) for i, h in enumerate(regulatory_hits)]
+        regulatory_text = (
+            "Recent regulatory developments relevant to these signals — quote a "
+            "[R#] tag in the why_now field when one of these directly explains "
+            "the timing or scope of a recommendation:\n"
+            + "\n".join(lines)
+        )
+        citations.extend(_to_citation("regulatory", h, f"R{i+1}")
+                         for i, h in enumerate(regulatory_hits))
+
+    return ActionsContext(
+        few_shot_text=few_shot_text,
+        regulatory_text=regulatory_text,
+        citations=citations,
+        used=True,
+        history_hits=len(history_hits),
+        regulatory_hits=len(regulatory_hits),
     )
