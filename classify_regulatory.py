@@ -370,9 +370,11 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
                 "message": "All items already classified"}
 
     print(f"\n[RegulatoryClassifier] Processing {len(all_items)} items...")
-    processed = 0
+    processed        = 0
     regulatory_count = 0
-    errors = 0
+    errors           = 0
+    chroma_mirrored  = 0
+    chroma_skipped   = 0
 
     for i, (source_type, item) in enumerate(all_items, 1):
         title = item["title"][:70]
@@ -399,10 +401,13 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
             processed += 1
 
             # Phase 2E: mirror to Chroma so /api/brief, /api/actions can
-            # retrieve this regulatory item without a backfill pass.
+            # retrieve this regulatory item without a backfill pass. The
+            # helper is fail-soft (returns False rather than raising), so
+            # we surface the boolean as a counter — silent skips are now
+            # visible in the per-run summary and the return dict.
             if reg_id:
                 from core.chroma_writer import dual_write_regulatory
-                dual_write_regulatory(reg_id, {
+                ok = dual_write_regulatory(reg_id, {
                     "title":           item["title"],
                     "url":             item.get("url", ""),
                     "country":         result.get("country", "Global"),
@@ -416,6 +421,10 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
                     "is_regulatory":   1 if result.get("is_regulatory") else 0,
                     "source_type":     source_type,
                 })
+                if ok:
+                    chroma_mirrored += 1
+                else:
+                    chroma_skipped += 1
 
             if result.get("is_regulatory") and result.get("confidence", 0) >= 0.5:
                 regulatory_count += 1
@@ -433,15 +442,21 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
             time.sleep(BATCH_DELAY)
 
     conn.close()
-    print(f"\n[RegulatoryClassifier] Done: {processed} processed, "
-          f"{regulatory_count} regulatory, {errors} errors")
+    print(
+        f"\n[RegulatoryClassifier] Done: {processed} processed, "
+        f"{regulatory_count} regulatory, {errors} errors, "
+        f"{chroma_mirrored} mirrored to Chroma "
+        f"({chroma_skipped} skipped/failed)"
+    )
 
     return {
-        "status":     "success",
-        "processed":  processed,
-        "regulatory": regulatory_count,
-        "errors":     errors,
-        "total":      len(all_items),
+        "status":          "success",
+        "processed":       processed,
+        "regulatory":      regulatory_count,
+        "errors":          errors,
+        "total":           len(all_items),
+        "chroma_mirrored": chroma_mirrored,
+        "chroma_skipped":  chroma_skipped,
     }
 
 

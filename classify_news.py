@@ -549,8 +549,10 @@ async def classify_all_news(force: bool = False) -> Dict:
         return {"status": "success", "classified": 0, "message": "All news already classified"}
 
     print(f"\n[ClassifyNews] Processing {len(items)} news items...")
-    classified = 0
-    errors     = 0
+    classified      = 0
+    errors          = 0
+    chroma_mirrored = 0
+    chroma_skipped  = 0
 
     for i, news in enumerate(items, 1):
         print(f"\n  [{i}/{len(items)}] {news['title'][:70]}")
@@ -562,10 +564,14 @@ async def classify_all_news(force: bool = False) -> Dict:
             classified += 1
 
             # Phase 2E: mirror to Chroma so /api/chat, /api/brief semantic
-            # search picks up newly-classified items the same day.
+            # search picks up newly-classified items the same day. Track
+            # the boolean return so operators can see, per run, how many
+            # SQLite commits actually made it into the vector store —
+            # silent skips (kill-switch flipped, embedder unhealthy) used
+            # to be invisible.
             try:
                 from core.chroma_writer import dual_write_news
-                dual_write_news(news["id"], {
+                ok = dual_write_news(news["id"], {
                     "title":         news.get("title", ""),
                     "date":          news.get("date", ""),
                     "link":          news.get("link", ""),
@@ -578,7 +584,12 @@ async def classify_all_news(force: bool = False) -> Dict:
             except Exception:
                 # Hook is fail-soft inside dual_write_news; this guard only
                 # catches the (unlikely) import-time failure of the helper.
-                pass
+                ok = False
+
+            if ok:
+                chroma_mirrored += 1
+            else:
+                chroma_skipped += 1
         except Exception as e:
             print(f"    ERROR: {e}")
             errors += 1
@@ -588,13 +599,19 @@ async def classify_all_news(force: bool = False) -> Dict:
             time.sleep(BATCH_DELAY_SEC)
 
     conn.close()
-    print(f"\n[ClassifyNews] Done: {classified} classified, {errors} errors")
+    print(
+        f"\n[ClassifyNews] Done: {classified} classified, {errors} errors, "
+        f"{chroma_mirrored} mirrored to Chroma "
+        f"({chroma_skipped} skipped/failed)"
+    )
 
     return {
-        "status":     "success",
-        "classified": classified,
-        "errors":     errors,
-        "total":      len(items),
+        "status":          "success",
+        "classified":      classified,
+        "errors":          errors,
+        "total":           len(items),
+        "chroma_mirrored": chroma_mirrored,
+        "chroma_skipped":  chroma_skipped,
     }
 
 
