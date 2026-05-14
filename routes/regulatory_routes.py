@@ -10,13 +10,17 @@ Regulatory Changes Tracker API:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
+
+logger = logging.getLogger(__name__)
 
 regulatory_bp = Blueprint("regulatory_routes", __name__)
 
@@ -24,6 +28,51 @@ DB_PATH = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
 
 # Minimum confidence to show as "regulatory"
 MIN_CONFIDENCE = 0.3
+
+
+def _semantic_regulatory_search(query: str) -> Tuple[List[Tuple[int, float]], Optional[str], Optional[float]]:
+    """Run a Chroma semantic search over the regulatory collection.
+
+    Returns ``(hits, request_id, top_distance)`` where ``hits`` is a list of
+    ``(reg_id, distance)`` tuples ordered by similarity. On any failure or
+    when the endpoint is disabled in config the result is ``([], None, None)``
+    and the caller is expected to fall back to a SQL LIKE scan — the UI must
+    keep working even if the vector store is unhealthy.
+    """
+    from core.rag_context import load_endpoint_config
+
+    cfg = load_endpoint_config("regulatory_search")
+    if not cfg.get("enabled", True):
+        return [], None, None
+
+    top_k = int(cfg.get("top_k", 20))
+    request_id = uuid.uuid4().hex[:16]
+    try:
+        from core.vector_store import get_vector_store
+        store = get_vector_store()
+        hits = store.search_regulatory(
+            query,
+            n_results=top_k,
+            request_id=request_id,
+            endpoint="api.regulatory.search",
+        )
+    except Exception as exc:
+        logger.warning("regulatory semantic search failed (%s)", exc)
+        return [], request_id, None
+
+    pairs: List[Tuple[int, float]] = []
+    for h in hits:
+        # Chroma doc ids are formatted "reg_{int_id}" by VectorStore.add_regulatory
+        if not h.id.startswith("reg_"):
+            continue
+        try:
+            reg_id_int = int(h.id.split("_", 1)[1])
+        except (IndexError, ValueError):
+            continue
+        pairs.append((reg_id_int, float(h.distance)))
+
+    top = pairs[0][1] if pairs else None
+    return pairs, request_id, top
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -49,11 +98,47 @@ def _table_exists(conn: sqlite3.Connection) -> bool:
 # GET /api/regulatory
 # ═══════════════════════════════════════════════════════════════════════════
 
+_SELECT_REGULATORY_COLUMNS = """
+    SELECT id, source_type, title, url, published_at,
+           country, category, severity,
+           change_before, change_after, effective_date,
+           treasury_impact, action_required,
+           confidence, is_regulatory, raw_summary, classified_at
+    FROM regulatory_changes
+"""
+
+
+def _row_to_item(row: sqlite3.Row, distance: Optional[float] = None) -> Dict[str, Any]:
+    item = {
+        "id":             row["id"],
+        "source_type":    row["source_type"],
+        "title":          row["title"],
+        "url":            row["url"] or "",
+        "published_at":   row["published_at"] or "",
+        "country":        row["country"] or "Global",
+        "category":       row["category"] or "General Regulatory",
+        "severity":       row["severity"] or "Low",
+        "change_before":  row["change_before"] or "",
+        "change_after":   row["change_after"] or "",
+        "effective_date": row["effective_date"] or "",
+        "treasury_impact":row["treasury_impact"] or "",
+        "action_required":row["action_required"] or "",
+        "confidence":     round(float(row["confidence"] or 0), 2),
+        "is_regulatory":  bool(row["is_regulatory"]),
+        "summary":        row["raw_summary"] or "",
+        "classified_at":  row["classified_at"] or "",
+    }
+    if distance is not None:
+        item["distance"] = round(distance, 4)
+    return item
+
+
 @regulatory_bp.get("/api/regulatory")
 def api_regulatory():
     """
     Returns regulatory changes.
     Query params:
+      ?q=text                 free-text semantic search (Phase 2F)
       ?country=China          filter by country
       ?category=Capital+Controls  filter by category
       ?severity=High          filter by severity
@@ -74,19 +159,85 @@ def api_regulatory():
             "message": "Run Daily Jobs to classify regulatory changes",
         })
 
-    # Build query
-    conditions = []
-    params: List[Any] = []
-
     show_all = request.args.get("all") == "1"
-    if not show_all:
-        conditions.append(f"confidence >= {MIN_CONFIDENCE}")
-
     country  = (request.args.get("country")  or "").strip()
     category = (request.args.get("category") or "").strip()
     severity = (request.args.get("severity") or "").strip()
     source   = (request.args.get("source")   or "").strip()
+    query    = (request.args.get("q")        or "").strip()
+    limit    = min(int(request.args.get("limit", 50)), 200)
 
+    rag_info: Dict[str, Any] = {"used": False}
+    request_id: Optional[str] = None
+
+    # ── Branch 1: semantic search (query provided + Chroma healthy) ───
+    if query:
+        sem_hits, request_id, top_distance = _semantic_regulatory_search(query)
+
+        if sem_hits:
+            # Fetch full rows for the hit ids in one SELECT, then preserve
+            # the semantic order in Python (SQL IN clauses don't guarantee
+            # ordering).
+            id_list = [h[0] for h in sem_hits]
+            placeholders = ",".join("?" * len(id_list))
+            cur = conn.execute(
+                _SELECT_REGULATORY_COLUMNS + f" WHERE id IN ({placeholders})",
+                id_list,
+            )
+            rows_by_id = {row["id"]: row for row in cur.fetchall()}
+
+            items: List[Dict[str, Any]] = []
+            for reg_id, dist in sem_hits:
+                row = rows_by_id.get(reg_id)
+                if row is None:
+                    # Vector hit with no matching SQLite row — Chroma is
+                    # stale relative to the DB; skip rather than 500.
+                    continue
+
+                # Apply remaining filters in Python so we keep the semantic
+                # ordering. SQL filters would re-rank by severity/confidence.
+                if not show_all and float(row["confidence"] or 0) < MIN_CONFIDENCE:
+                    continue
+                if country  and (row["country"]  or "").lower() != country.lower():  continue
+                if category and (row["category"] or "").lower() != category.lower(): continue
+                if severity and (row["severity"] or "").lower() != severity.lower(): continue
+                if source   and row["source_type"] != source: continue
+
+                items.append(_row_to_item(row, distance=dist))
+                if len(items) >= limit:
+                    break
+
+            conn.close()
+            rag_info = {
+                "used":          True,
+                "request_id":    request_id,
+                "hits":          len(items),
+                "top_distance":  round(top_distance, 4) if top_distance is not None else None,
+            }
+            return jsonify({
+                "status":         "success",
+                "total":          len(items),
+                "generated_at":   datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+                "query":          query,
+                "filters": {
+                    "country":  country  or None,
+                    "category": category or None,
+                    "severity": severity or None,
+                },
+                "rag":            rag_info,
+                "items":          items,
+            })
+
+        # Semantic path returned nothing (disabled, errored, or empty
+        # collection). Fall through to the SQL LIKE path below so the
+        # caller still gets keyword results.
+
+    # ── Branch 2: SQL path (no q, or q with no semantic hits) ─────────
+    conditions: List[str] = []
+    params: List[Any] = []
+
+    if not show_all:
+        conditions.append(f"confidence >= {MIN_CONFIDENCE}")
     if country:
         conditions.append("LOWER(country) = LOWER(?)")
         params.append(country)
@@ -99,61 +250,48 @@ def api_regulatory():
     if source:
         conditions.append("source_type = ?")
         params.append(source)
+    if query:
+        conditions.append("(LOWER(title) LIKE LOWER(?) OR LOWER(raw_summary) LIKE LOWER(?))")
+        like = f"%{query}%"
+        params.extend([like, like])
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    limit = min(int(request.args.get("limit", 50)), 200)
 
-    cur = conn.cursor()
-    cur.execute(f"""
-        SELECT id, source_type, title, url, published_at,
-               country, category, severity,
-               change_before, change_after, effective_date,
-               treasury_impact, action_required,
-               confidence, is_regulatory, raw_summary, classified_at
-        FROM regulatory_changes
+    cur = conn.execute(
+        _SELECT_REGULATORY_COLUMNS + f"""
         {where}
         ORDER BY
             CASE severity WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
             confidence DESC,
             published_at DESC
         LIMIT ?
-    """, params + [limit])
+    """,
+        params + [limit],
+    )
 
-    items = []
-    for row in cur.fetchall():
-        items.append({
-            "id":             row["id"],
-            "source_type":    row["source_type"],
-            "title":          row["title"],
-            "url":            row["url"] or "",
-            "published_at":   row["published_at"] or "",
-            "country":        row["country"] or "Global",
-            "category":       row["category"] or "General Regulatory",
-            "severity":       row["severity"] or "Low",
-            "change_before":  row["change_before"] or "",
-            "change_after":   row["change_after"] or "",
-            "effective_date": row["effective_date"] or "",
-            "treasury_impact":row["treasury_impact"] or "",
-            "action_required":row["action_required"] or "",
-            "confidence":     round(float(row["confidence"] or 0), 2),
-            "is_regulatory":  bool(row["is_regulatory"]),
-            "summary":        row["raw_summary"] or "",
-            "classified_at":  row["classified_at"] or "",
-        })
-
+    items = [_row_to_item(row) for row in cur.fetchall()]
     conn.close()
 
-    return jsonify({
+    # If we got here with a query but no semantic hits, mark rag.used=false
+    # but include the request_id so the operator can correlate with telemetry.
+    if query and request_id:
+        rag_info = {"used": False, "request_id": request_id, "fallback": "sql_like"}
+
+    response: Dict[str, Any] = {
         "status":         "success",
         "total":          len(items),
         "generated_at":   datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "filters": {
-            "country":  country or None,
+            "country":  country  or None,
             "category": category or None,
             "severity": severity or None,
         },
         "items": items,
-    })
+    }
+    if query:
+        response["query"] = query
+        response["rag"]   = rag_info
+    return jsonify(response)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

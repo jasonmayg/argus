@@ -82,3 +82,10 @@ endpoints:
     # populated for at least this many runs — embeds otherwise return
     # noisy matches against a near-empty collection.
     history_min_count: 5
+
+  regulatory_search:
+    # Phase 2F: /api/regulatory?q=<text> uses Chroma for semantic ranking
+    # instead of SQL LIKE. With this off the endpoint falls back to a
+    # title/raw_summary LIKE scan so the UI keeps working.
+    enabled: true
+    top_k: 20
