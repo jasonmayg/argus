@@ -151,6 +151,45 @@ class TestEnabled:
 
 
 # ────────────────────────────────────────────────────────────────
+# Diagnostic logging — operators should be able to see *why* a write
+# was skipped without attaching a debugger.
+# ────────────────────────────────────────────────────────────────
+
+class TestEnabledLogging:
+    def test_global_disable_logs_reason_at_debug(self, chroma_writer, caplog):
+        _rewrite_config(chroma_writer, chroma_writer._CONFIG_PATH, """
+            dual_write:
+              enabled: false
+        """)
+        with caplog.at_level("DEBUG", logger="core.chroma_writer"):
+            chroma_writer._enabled("news")
+        assert any(
+            "globally disabled" in r.message and "source=news" in r.message
+            for r in caplog.records
+        )
+
+    def test_per_source_disable_logs_reason_at_debug(self, chroma_writer, caplog):
+        _rewrite_config(chroma_writer, chroma_writer._CONFIG_PATH, """
+            dual_write:
+              enabled: true
+              regulatory: false
+        """)
+        with caplog.at_level("DEBUG", logger="core.chroma_writer"):
+            chroma_writer._enabled("regulatory")
+        assert any(
+            "explicitly disabled" in r.message and "regulatory" in r.message
+            for r in caplog.records
+        )
+
+    def test_enabled_source_does_not_log(self, chroma_writer, caplog):
+        """The default-on branch is the hot path — logging there would
+        flood the log on every classification run."""
+        with caplog.at_level("DEBUG", logger="core.chroma_writer"):
+            chroma_writer._enabled("news")
+        assert not [r for r in caplog.records if r.levelname == "DEBUG"]
+
+
+# ────────────────────────────────────────────────────────────────
 # Happy path — store is reachable, source is enabled
 # ────────────────────────────────────────────────────────────────
 

@@ -51,13 +51,31 @@ def reset_config_cache() -> None:
 
 
 def _enabled(source: str) -> bool:
+    """Return whether ``source`` is allowed to dual-write.
+
+    Logs each *disabled* decision at DEBUG so operators investigating a
+    "why is Chroma stale?" report can flip
+    ``logging.getLogger("core.chroma_writer").setLevel(logging.DEBUG)`` and
+    see exactly which gate blocked the write. The default-on branch is
+    intentionally not logged — it's the hot path and would flood the log
+    on every classification run.
+    """
     cfg = _dual_write_cfg()
     if cfg.get("enabled") is False:
+        logger.debug(
+            "chroma_writer: dual-write globally disabled by config (source=%s)",
+            source,
+        )
         return False
     per_source = cfg.get(source)
     # If the per-source key is explicitly False, skip; otherwise default-on
     # so adding a new collection doesn't require a config bump.
-    return per_source is not False
+    if per_source is False:
+        logger.debug(
+            "chroma_writer: source %r explicitly disabled by config", source,
+        )
+        return False
+    return True
 
 
 def _store():
