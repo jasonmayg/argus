@@ -44,6 +44,18 @@ collections:
   alerts_max_chars: 800
   regulatory_max_chars: 2000
 
+dual_write:
+  # Phase 2E: real-time hooks fire chroma_writer.dual_write_* from the
+  # corresponding SQLite / snapshot write sites. With this on, Phase 2A's
+  # backfill script becomes a one-time bootstrap, not a daily dependency.
+  # Set `enabled: false` to fully kill-switch the hooks; per-collection
+  # flags allow disabling a single source without halting the others.
+  enabled: true
+  news: true
+  regulatory: true
+  alerts: true
+  actions: true
+
 endpoints:
   # Per-endpoint RAG enablement. If `enabled: false`, the endpoint falls back
   # to its pre-RAG context loader. Useful as a kill-switch if retrieval
