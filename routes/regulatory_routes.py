@@ -30,7 +30,10 @@ DB_PATH = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
 MIN_CONFIDENCE = 0.3
 
 
-def _semantic_regulatory_search(query: str) -> Tuple[List[Tuple[int, float]], Optional[str], Optional[float]]:
+def _semantic_regulatory_search(
+    query: str,
+    top_k_override: Optional[int] = None,
+) -> Tuple[List[Tuple[int, float]], Optional[str], Optional[float]]:
     """Run a Chroma semantic search over the regulatory collection.
 
     Returns ``(hits, request_id, top_distance)`` where ``hits`` is a list of
@@ -38,6 +41,11 @@ def _semantic_regulatory_search(query: str) -> Tuple[List[Tuple[int, float]], Op
     when the endpoint is disabled in config the result is ``([], None, None)``
     and the caller is expected to fall back to a SQL LIKE scan — the UI must
     keep working even if the vector store is unhealthy.
+
+    ``top_k_override`` is used by the retry-on-narrow-filter heuristic in
+    ``api_regulatory`` to ask for a bigger candidate pool when post-filtering
+    has thinned the result below what the user requested. Bypasses the
+    ``top_k`` config value but not the ``enabled`` kill-switch.
     """
     from core.rag_context import load_endpoint_config
 
@@ -45,7 +53,7 @@ def _semantic_regulatory_search(query: str) -> Tuple[List[Tuple[int, float]], Op
     if not cfg.get("enabled", True):
         return [], None, None
 
-    top_k = int(cfg.get("top_k", 20))
+    top_k = top_k_override if top_k_override is not None else int(cfg.get("top_k", 20))
     request_id = uuid.uuid4().hex[:16]
     try:
         from core.vector_store import get_vector_store
@@ -73,6 +81,51 @@ def _semantic_regulatory_search(query: str) -> Tuple[List[Tuple[int, float]], Op
 
     top = pairs[0][1] if pairs else None
     return pairs, request_id, top
+
+
+def _filter_sem_hits(
+    conn: sqlite3.Connection,
+    sem_hits: List[Tuple[int, float]],
+    *,
+    show_all: bool,
+    country: str,
+    category: str,
+    severity: str,
+    source: str,
+    limit: int,
+) -> List[Dict[str, Any]]:
+    """Hydrate ``sem_hits`` from SQLite and apply the metadata filters in
+    Python while preserving the semantic order. Extracted so the retry
+    branch in ``api_regulatory`` can reuse it without copy-paste.
+    """
+    if not sem_hits:
+        return []
+    id_list = [h[0] for h in sem_hits]
+    placeholders = ",".join("?" * len(id_list))
+    cur = conn.execute(
+        _SELECT_REGULATORY_COLUMNS + f" WHERE id IN ({placeholders})",
+        id_list,
+    )
+    rows_by_id = {row["id"]: row for row in cur.fetchall()}
+
+    items: List[Dict[str, Any]] = []
+    for reg_id, dist in sem_hits:
+        row = rows_by_id.get(reg_id)
+        if row is None:
+            # Vector hit with no matching SQLite row — Chroma is stale
+            # relative to the DB; skip rather than 500.
+            continue
+        if not show_all and float(row["confidence"] or 0) < MIN_CONFIDENCE:
+            continue
+        if country  and (row["country"]  or "").lower() != country.lower():  continue
+        if category and (row["category"] or "").lower() != category.lower(): continue
+        if severity and (row["severity"] or "").lower() != severity.lower(): continue
+        if source   and row["source_type"] != source: continue
+
+        items.append(_row_to_item(row, distance=dist))
+        if len(items) >= limit:
+            break
+    return items
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -175,37 +228,44 @@ def api_regulatory():
         sem_hits, request_id, top_distance = _semantic_regulatory_search(query)
 
         if sem_hits:
-            # Fetch full rows for the hit ids in one SELECT, then preserve
-            # the semantic order in Python (SQL IN clauses don't guarantee
-            # ordering).
-            id_list = [h[0] for h in sem_hits]
-            placeholders = ",".join("?" * len(id_list))
-            cur = conn.execute(
-                _SELECT_REGULATORY_COLUMNS + f" WHERE id IN ({placeholders})",
-                id_list,
+            items = _filter_sem_hits(
+                conn, sem_hits,
+                show_all=show_all, country=country, category=category,
+                severity=severity, source=source, limit=limit,
             )
-            rows_by_id = {row["id"]: row for row in cur.fetchall()}
 
-            items: List[Dict[str, Any]] = []
-            for reg_id, dist in sem_hits:
-                row = rows_by_id.get(reg_id)
-                if row is None:
-                    # Vector hit with no matching SQLite row — Chroma is
-                    # stale relative to the DB; skip rather than 500.
-                    continue
+            # Heuristic: if a metadata filter is active and post-filter
+            # row count dropped below `limit * retry_threshold`, the
+            # top-K shortlist was probably dominated by docs that don't
+            # match the filter. Rerun Chroma with a much larger candidate
+            # pool so narrow filters get a fair shot. Skipped when no
+            # filter is active (the slice is already canonical) or when
+            # retry_top_k <= top_k (operator opt-out by setting it to 0).
+            filters_active = bool(country or category or severity or source)
+            retried_top_k: Optional[int] = None
+            if filters_active:
+                from core.rag_context import load_endpoint_config
+                cfg = load_endpoint_config("regulatory_search")
+                threshold = float(cfg.get("retry_threshold", 0.5))
+                retry_top_k = int(cfg.get("retry_top_k", 80))
+                initial_top_k = int(cfg.get("top_k", 20))
 
-                # Apply remaining filters in Python so we keep the semantic
-                # ordering. SQL filters would re-rank by severity/confidence.
-                if not show_all and float(row["confidence"] or 0) < MIN_CONFIDENCE:
-                    continue
-                if country  and (row["country"]  or "").lower() != country.lower():  continue
-                if category and (row["category"] or "").lower() != category.lower(): continue
-                if severity and (row["severity"] or "").lower() != severity.lower(): continue
-                if source   and row["source_type"] != source: continue
-
-                items.append(_row_to_item(row, distance=dist))
-                if len(items) >= limit:
-                    break
+                under_served = len(items) < max(1, int(limit * threshold))
+                if under_served and retry_top_k > initial_top_k:
+                    sem_hits_retry, _, _ = _semantic_regulatory_search(
+                        query, top_k_override=retry_top_k,
+                    )
+                    # Only adopt the retry result if it actually gave us
+                    # a wider candidate pool — same-size pool means
+                    # Chroma had already returned everything and the
+                    # retry was an embedding call wasted.
+                    if len(sem_hits_retry) > len(sem_hits):
+                        items = _filter_sem_hits(
+                            conn, sem_hits_retry,
+                            show_all=show_all, country=country, category=category,
+                            severity=severity, source=source, limit=limit,
+                        )
+                        retried_top_k = retry_top_k
 
             conn.close()
             rag_info = {
@@ -214,6 +274,8 @@ def api_regulatory():
                 "hits":          len(items),
                 "top_distance":  round(top_distance, 4) if top_distance is not None else None,
             }
+            if retried_top_k is not None:
+                rag_info["retried_top_k"] = retried_top_k
             return jsonify({
                 "status":         "success",
                 "total":          len(items),
