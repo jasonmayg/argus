@@ -55,3 +55,16 @@ endpoints:
     # Skip alerts collection retrieval if its count is below this — avoids
     # injecting noise when the snapshot is sparse.
     alerts_min_count: 5
+
+  brief:
+    enabled: true
+    # Brief retrieves more news than chat — the LLM gets a single shot to
+    # produce a 3-5 sentence summary, so we want broader coverage even at
+    # the cost of some lower-relevance hits.
+    news_top_k: 8
+    alerts_top_k: 5
+    alerts_min_count: 5
+    # How many pipeline top-scored titles to splice into the retrieval
+    # query. 0 disables pipeline-derived terms; the query falls back to
+    # persona keywords only.
+    pipeline_terms_max: 3

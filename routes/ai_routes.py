@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from flask import Blueprint, jsonify, request
 
 from core.llm_router import call_llm
-from core.rag_context import build_chat_context
+from core.rag_context import build_brief_context, build_chat_context
 
 # ── Blueprint ─────────────────────────────────────────────────
 ai_bp = Blueprint("ai_routes", __name__)
@@ -197,9 +197,23 @@ def api_brief():
     except Exception:
         persona = "cash_manager"
     now_utc      = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    request_id   = uuid.uuid4().hex[:16]
     results      = _load_latest_results()
     pipeline_ctx = _results_summary_text(results) if results else "No pipeline data available yet."
-    news_ctx     = _news_summary_text(limit=10)
+    rag_ctx      = build_brief_context(
+        persona=persona,
+        pipeline_results=results,
+        request_id=request_id,
+        endpoint="api.brief",
+    )
+
+    if rag_ctx.used and rag_ctx.prompt_text:
+        retrieval_block = rag_ctx.prompt_text
+    else:
+        # Fall back to the pre-RAG static news summary so brief never goes
+        # context-free, even if Chroma is empty / disabled.
+        legacy_news = _news_summary_text(limit=10)
+        retrieval_block = legacy_news or "No retrieval block available."
 
     user_prompt = f"""Current timestamp: {now_utc}
 Active persona: {persona}
@@ -207,7 +221,7 @@ Active persona: {persona}
 Pipeline context:
 {pipeline_ctx}
 
-{news_ctx}
+{retrieval_block}
 
 Generate the treasury intelligence brief now."""
 
@@ -229,7 +243,19 @@ Generate the treasury intelligence brief now."""
                 signals  = json.loads(json_str).get("signals", [])
             except Exception:
                 pass
-        return jsonify({"status": "success", "brief": brief_text, "signals": signals, "generated_at": now_utc})
+        return jsonify({
+            "status":       "success",
+            "brief":        brief_text,
+            "signals":      signals,
+            "generated_at": now_utc,
+            "request_id":   request_id,
+            "citations":    [c.__dict__ for c in rag_ctx.citations],
+            "rag": {
+                "used":        rag_ctx.used,
+                "news_hits":   rag_ctx.news_hits,
+                "alerts_hits": rag_ctx.alerts_hits,
+            },
+        })
     except RuntimeError as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

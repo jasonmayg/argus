@@ -8,6 +8,7 @@ endpoint-specific prompting.
 
 Public surface:
     build_chat_context(query, request_id, ...) -> ChatContext
+    build_brief_context(persona, pipeline_results, request_id, ...) -> ChatContext
     load_endpoint_config(endpoint) -> dict
 
 A `ChatContext` carries both the LLM-facing prompt string and a structured
@@ -191,6 +192,171 @@ def build_chat_context(
         f"Cite items by tag ({available_tags}) when their content informs your answer. "
         "Do not invent tags that are not in the retrieval block above. "
         "If retrieval is empty or irrelevant, answer from general knowledge and say so."
+    )
+    return ChatContext(
+        prompt_text="\n\n".join(blocks),
+        citations=citations,
+        used=True,
+        news_hits=len(news_hits),
+        alerts_hits=len(alerts_hits),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Brief builder
+# ─────────────────────────────────────────────────────────────────────────
+_RISK_KEYWORDS: dict[str, str] = {
+    "market_risk":      "market volatility equity",
+    "credit_risk":      "credit default counterparty",
+    "liquidity_risk":   "liquidity funding cash flow",
+    "operational_risk": "operations system outage",
+    "political_risk":   "political geopolitical sanctions",
+    "regulatory_risk":  "regulatory compliance enforcement",
+    "reputation_risk":  "reputation scandal",
+    "systematic_risk":  "systemic macroeconomic recession",
+    "disaster_risk":    "disaster natural catastrophe",
+    "supply_risk":      "supply chain shortage",
+    "demand_risk":      "demand consumer spending",
+    "process_risk":     "process control failure",
+    "business_risk":    "business continuity",
+}
+
+_PERSONA_WEIGHTS_CACHE: Optional[dict] = None
+
+
+def _persona_query_terms(persona: str, top_n: int = 4) -> list[str]:
+    """Map persona → top-N risk category keyword strings, sorted by weight.
+
+    Reads only personas/defaults.yaml (not merged with user profiles —
+    the brief query just needs a stable signal of what this persona cares
+    about; profile-level tuning is the alert layer's concern, not RAG's).
+    """
+    global _PERSONA_WEIGHTS_CACHE
+    if _PERSONA_WEIGHTS_CACHE is None:
+        path = ROOT / "personas" / "defaults.yaml"
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                _PERSONA_WEIGHTS_CACHE = (yaml.safe_load(f) or {}).get("personas") or {}
+        except Exception:
+            _PERSONA_WEIGHTS_CACHE = {}
+
+    weights = (_PERSONA_WEIGHTS_CACHE.get(persona) or {}).get("risk_weights") or {}
+    if not weights:
+        return []
+    ranked = sorted(weights.items(), key=lambda kv: kv[1], reverse=True)
+    terms: list[str] = []
+    for cat, _w in ranked[:top_n]:
+        if cat in _RISK_KEYWORDS:
+            terms.append(_RISK_KEYWORDS[cat])
+    return terms
+
+
+def _pipeline_top_titles(pipeline_results: Optional[dict], max_n: int) -> list[str]:
+    """Extract the top-scored item titles from the pipeline so the brief
+    retrieval query is anchored on what the system itself flagged today."""
+    if not pipeline_results or max_n <= 0:
+        return []
+    try:
+        scored = (
+            (pipeline_results.get("stages") or {})
+            .get("analysis", {})
+            .get("analysis", {})
+            .get("scored_items") or []
+        )
+    except AttributeError:
+        return []
+    if not scored:
+        return []
+    ordered = sorted(scored, key=lambda x: x.get("total_score", 0), reverse=True)
+    titles: list[str] = []
+    for item in ordered[:max_n]:
+        t = (item.get("title") or "").strip()
+        if t:
+            titles.append(t)
+    return titles
+
+
+def build_brief_context(
+    persona: str,
+    pipeline_results: Optional[dict] = None,
+    request_id: Optional[str] = None,
+    endpoint: str = "api.brief",
+) -> ChatContext:
+    """Retrieve news + alerts relevant to today's pipeline state and persona.
+
+    The retrieval query is composed from:
+      1. Up to N pipeline top-scored item titles (most signal-rich source).
+      2. Persona top risk-category keywords (always present, even with no
+         pipeline data — keeps the brief useful on cold starts).
+
+    If both sources are empty (no pipeline, unknown persona), returns a
+    context with `used=False` so /api/brief falls back to its legacy
+    static news summary.
+    """
+    cfg = load_endpoint_config("brief")
+    if not cfg.get("enabled", True):
+        return ChatContext(prompt_text="", used=False)
+
+    news_k = int(cfg.get("news_top_k", 8))
+    alerts_k = int(cfg.get("alerts_top_k", 5))
+    alerts_min = int(cfg.get("alerts_min_count", 5))
+    pipeline_max = int(cfg.get("pipeline_terms_max", 3))
+
+    pipeline_terms = _pipeline_top_titles(pipeline_results, pipeline_max)
+    persona_terms = _persona_query_terms(persona, top_n=4)
+
+    query_parts: list[str] = []
+    query_parts.extend(pipeline_terms)
+    query_parts.extend(persona_terms)
+    query = " | ".join(query_parts).strip()
+    if not query:
+        return ChatContext(prompt_text="", used=False)
+
+    try:
+        store = get_vector_store()
+    except Exception:
+        return ChatContext(prompt_text="", used=False)
+
+    news_hits: list[SearchHit] = []
+    alerts_hits: list[SearchHit] = []
+    try:
+        if news_k > 0:
+            news_hits = store.search_news(
+                query, n_results=news_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        news_hits = []
+
+    try:
+        if alerts_k > 0 and store.count("alerts") >= alerts_min:
+            alerts_hits = store.search_alerts(
+                query, n_results=alerts_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        alerts_hits = []
+
+    if not news_hits and not alerts_hits:
+        return ChatContext(prompt_text="", used=False)
+
+    blocks: list[str] = []
+    citations: list[Citation] = []
+
+    if news_hits:
+        lines = [_news_line(i + 1, h) for i, h in enumerate(news_hits)]
+        blocks.append("Recent relevant news:\n" + "\n".join(lines))
+        citations.extend(_to_citation("news", h, f"N{i+1}") for i, h in enumerate(news_hits))
+
+    if alerts_hits:
+        lines = [_alert_line(i + 1, h) for i, h in enumerate(alerts_hits)]
+        blocks.append("Active alerts of interest:\n" + "\n".join(lines))
+        citations.extend(_to_citation("alerts", h, f"A{i+1}") for i, h in enumerate(alerts_hits))
+
+    blocks.append(
+        "Ground the brief in the items above where relevant. Do not list them —"
+        " synthesize them into the 3-5 sentence narrative. Skip any item that"
+        " doesn't materially affect this persona's posture."
     )
     return ChatContext(
         prompt_text="\n\n".join(blocks),
