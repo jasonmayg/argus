@@ -279,7 +279,7 @@ def _upsert_regulatory(
     means dual_write_regulatory upserts cleanly instead of leaving orphans.
     """
     now = datetime.now(timezone.utc).isoformat()
-    cur = conn.execute("""
+    conn.execute("""
         INSERT INTO regulatory_changes
             (source_type, source_id, title, url, published_at,
              country, category, severity,
@@ -324,16 +324,19 @@ def _upsert_regulatory(
     ))
     conn.commit()
 
-    # cur.lastrowid is the inserted id on INSERT; on the UPDATE branch it
-    # may be 0, so re-resolve via the unique key to keep the return stable.
-    reg_id = cur.lastrowid or 0
-    if not reg_id:
-        row = conn.execute(
-            "SELECT id FROM regulatory_changes WHERE source_type=? AND source_id=?",
-            (source_type, item["id"]),
-        ).fetchone()
-        reg_id = int(row[0]) if row else 0
-    return reg_id
+    # Don't trust cur.lastrowid here. On the ON CONFLICT DO UPDATE path,
+    # SQLite's last_insert_rowid() returns the most recent *successful
+    # insert* on this connection — which on a batch run is some earlier
+    # row, not the one we just updated. The Chroma mirror is keyed by
+    # ``reg_{id}``, so a stale lastrowid would write the vector doc under
+    # the wrong id and silently corrupt the index. Resolve by the unique
+    # (source_type, source_id) key every time; one extra SELECT per upsert
+    # is cheap and correctness-preserving.
+    row = conn.execute(
+        "SELECT id FROM regulatory_changes WHERE source_type=? AND source_id=?",
+        (source_type, item["id"]),
+    ).fetchone()
+    return int(row[0]) if row else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════

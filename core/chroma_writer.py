@@ -20,6 +20,7 @@ Every wrapper:
 from __future__ import annotations
 
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -28,7 +29,12 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "rag_config.yaml"
+# Honor RAG_CONFIG the same way core.vector_store does, so an operator who
+# points the vector store at an alternate config file doesn't end up with a
+# split-brain setup where reads use one config and dual-write kill switches
+# read another.
+_ROOT = Path(__file__).resolve().parent.parent
+_CONFIG_PATH = Path(os.getenv("RAG_CONFIG", _ROOT / "config" / "rag_config.yaml"))
 
 
 @lru_cache(maxsize=1)

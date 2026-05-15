@@ -300,3 +300,74 @@ class TestFailSoft:
             assert chroma_writer.dual_write_alerts("d", [{"title": "t"}]) == 0
             assert chroma_writer.dual_write_action_history({"recommendation": "r"}) is False
         assert sum(1 for r in caplog.records if "failed" in r.message) == 4
+
+
+# ────────────────────────────────────────────────────────────────
+# RAG_CONFIG environment-variable override — chroma_writer must
+# honor the same env var as core.vector_store so dual-write kill
+# switches and reads don't end up reading different files.
+# ────────────────────────────────────────────────────────────────
+
+class TestRagConfigEnv:
+    def test_env_var_overrides_default_config_path(self, monkeypatch, tmp_path):
+        """Set RAG_CONFIG to a custom yaml *before* importing, and
+        confirm the module reads our file (kill-switch off) instead of
+        the in-repo default (which has dual_write enabled)."""
+        custom_cfg = tmp_path / "custom_rag.yaml"
+        custom_cfg.write_text(textwrap.dedent("""
+            dual_write:
+              enabled: false
+        """).lstrip())
+
+        monkeypatch.setenv("RAG_CONFIG", str(custom_cfg))
+        # Drop any cached import so the new env var is read at module load.
+        sys.modules.pop("core.chroma_writer", None)
+        import core.chroma_writer as cw
+        cw.reset_config_cache()
+
+        assert cw._CONFIG_PATH == custom_cfg, (
+            "chroma_writer must honor RAG_CONFIG so it doesn't split-brain "
+            "from core.vector_store, which already honors it"
+        )
+        assert cw._enabled("news") is False  # picked up from custom file
+
+    def test_no_env_var_uses_repo_default(self, monkeypatch, tmp_path):
+        """Without RAG_CONFIG, the path falls back to the repo's
+        config/rag_config.yaml relative to the chroma_writer module."""
+        monkeypatch.delenv("RAG_CONFIG", raising=False)
+        sys.modules.pop("core.chroma_writer", None)
+        import core.chroma_writer as cw
+        # Path should resolve to <repo>/config/rag_config.yaml
+        assert cw._CONFIG_PATH.name == "rag_config.yaml"
+        assert cw._CONFIG_PATH.parent.name == "config"
+
+
+# ────────────────────────────────────────────────────────────────
+# Honest add_alerts — when the underlying bulk upsert fails, the
+# wrapper must report 0 mirrored, NOT len(ids). Pre-fix this was
+# the silent failure mode Copilot flagged.
+# ────────────────────────────────────────────────────────────────
+
+class _BulkUpsertFailingStore:
+    """Mimics VectorStore.add_alerts post-fix: bulk upsert internally
+    failed, so add_alerts() now returns 0 rather than len(ids)."""
+    def add_alerts(self, snapshot_date, alerts):
+        # The real implementation calls _bulk_upsert which returns False
+        # on failure and triggers the 0-return path.
+        return 0
+
+
+class TestAlertsHonestReturn:
+    def test_zero_returned_when_bulk_upsert_silently_fails(self, chroma_writer, monkeypatch):
+        """If VectorStore.add_alerts returns 0 because its internal bulk
+        upsert caught an exception, dual_write_alerts must propagate the
+        0 — the fail-soft contract says counters reflect *real* writes."""
+        monkeypatch.setattr(chroma_writer, "_store", lambda: _BulkUpsertFailingStore())
+        result = chroma_writer.dual_write_alerts(
+            "2026-05-14",
+            [{"title": "a"}, {"title": "b"}, {"title": "c"}],
+        )
+        assert result == 0, (
+            "wrapper must not invent a positive count when the underlying "
+            "store reports a silent failure"
+        )
