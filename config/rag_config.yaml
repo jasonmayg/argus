@@ -94,3 +94,18 @@ endpoints:
     # populated for at least this many runs — embeds otherwise return
     # noisy matches against a near-empty collection.
     history_min_count: 5
+
+  regulatory_search:
+    # Phase 2F: /api/regulatory?q=<text> uses Chroma for semantic ranking
+    # instead of SQL LIKE. With this off the endpoint falls back to a
+    # title/raw_summary LIKE scan so the UI keeps working.
+    enabled: true
+    top_k: 20
+    # If post-filter row count drops below `limit * retry_threshold` and
+    # a metadata filter (country/category/severity/source) is active, the
+    # endpoint reruns Chroma with `retry_top_k` candidates. This rescues
+    # narrow filters that would otherwise under-serve the user — e.g. a
+    # top-20 shortlist that happens to be all-USA when the user asked for
+    # ?country=Mexico. Set `retry_top_k: 0` to disable the heuristic.
+    retry_top_k: 80
+    retry_threshold: 0.5
