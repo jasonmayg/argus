@@ -28,7 +28,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
@@ -42,8 +42,22 @@ from core.llm_router import call_llm
 DB_PATH     = Path(os.getenv("ARGUS_NEWS_DB", "data/fed_news/argus_news.db"))
 BATCH_DELAY = 0.5
 
-GCS_BUCKET     = "your-gcs-bucket"
-GCS_RADAR_PATH = "news_google_macro_radar.csv"
+GCS_BUCKET = "your-gcs-bucket"
+
+# Map of (source_type label written to regulatory_changes, GCS filename).
+# Each filename must correspond to a `class: news, type: rss` source id in
+# AI_Treasury_Project/src/config/sources.yaml — that's the contract for
+# what CSV lands at gs://<bucket>/<prefix>/<filename> after daily fetch.
+# Order is only the iteration order; rows are deduped per source_type, so
+# items in different files with the same id never collide.
+EXTERNAL_NEWS_SOURCES: List[Tuple[str, str]] = [
+    ("google_radar", "news_google_macro_radar.csv"),
+    ("ecb_press",    "news_ecb_press.csv"),
+    ("boe_press",    "news_boe_press.csv"),
+    ("boj_press",    "news_boj_press.csv"),
+    ("fca_press",    "news_fca_press.csv"),
+    ("boc_press",    "news_boc_press.csv"),
+]
 
 # ── Regulatory categories ─────────────────────────────────────────────────
 REGULATORY_CATEGORIES = [
@@ -201,11 +215,19 @@ def _get_unprocessed_fed_news(conn: sqlite3.Connection, force: bool) -> List[Dic
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Source 2: Google Macro Radar (GCS)
+# Source 2: External news CSVs on GCS (Google Macro Radar + central bank
+# press releases pulled by AI_Treasury_Project's RSS adapter)
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _fetch_google_radar_news() -> List[Dict]:
-    """Download and parse Google Macro Radar CSV from GCS."""
+def _fetch_external_news_csv(filename: str) -> List[Dict]:
+    """Download and parse one news CSV from GCS.
+
+    Returns [] on any failure — caller iterates across multiple sources
+    and a single missing/broken CSV must not abort the whole batch.
+    All entries in EXTERNAL_NEWS_SOURCES share the same RSS-adapter
+    schema (id / title / link / published_at / summary / source), so
+    one parser handles all of them.
+    """
     try:
         from data_dashboard import (
             _get_gcs_bucket,
@@ -214,19 +236,19 @@ def _fetch_google_radar_news() -> List[Dict]:
         bucket = _get_gcs_bucket()
         prefix = _resolve_data_dashboard_prefix(bucket)
 
-        # Find the radar CSV
-        blob_path = f"{prefix}{GCS_RADAR_PATH}"
+        blob_path = f"{prefix}{filename}"
         blob = bucket.blob(blob_path)
         if not blob.exists():
-            # Try without prefix
-            blob = bucket.blob(GCS_RADAR_PATH)
+            # Some deployments write at the bucket root rather than under
+            # a data_dashboard prefix — try the bare filename too.
+            blob = bucket.blob(filename)
             if not blob.exists():
-                print(f"  [Radar] news_google_macro_radar.csv not found in GCS")
+                print(f"  [News] {filename} not found in GCS")
                 return []
 
         text = blob.download_as_text(encoding="utf-8")
         reader = csv.DictReader(io.StringIO(text))
-        items = []
+        items: List[Dict] = []
         for row in reader:
             title = (row.get("title") or "").strip()
             if not title:
@@ -237,28 +259,45 @@ def _fetch_google_radar_news() -> List[Dict]:
                 "url":          row.get("link", "") or "",
                 "published_at": row.get("published_at", "") or "",
                 "summary":      row.get("summary", "") or "",
-                "source":       row.get("source", "Google News") or "",
+                "source":       row.get("source", "") or "",
             })
-        print(f"  [Radar] Loaded {len(items)} items from GCS")
+        print(f"  [News] Loaded {len(items)} items from {filename}")
         return items
 
     except Exception as e:
-        print(f"  [Radar] GCS fetch error: {e}")
+        print(f"  [News] GCS fetch error for {filename}: {e}")
         return []
 
 
-def _get_unprocessed_radar(conn: sqlite3.Connection, force: bool) -> List[Dict]:
-    """Filter radar items not yet processed."""
-    all_items = _fetch_google_radar_news()
-    if not all_items or force:
-        return all_items
+def _get_unprocessed_external_news(
+    conn: sqlite3.Connection,
+    force: bool,
+) -> List[Tuple[str, Dict]]:
+    """Walk every CSV in EXTERNAL_NEWS_SOURCES and return a flat list of
+    (source_type, item) tuples for items not yet classified.
 
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT source_id FROM regulatory_changes WHERE source_type = 'google_radar'"
-    )
-    existing = {r[0] for r in cur.fetchall()}
-    return [item for item in all_items if item["id"] not in existing]
+    Dedup is per source_type — the regulatory_changes table has a
+    UNIQUE(source_type, source_id) constraint, so even if two CSVs
+    happen to emit colliding `id` strings, they get treated as
+    separate rows. That's correct: e.g. ECB and BoE could both publish
+    an item titled "Monetary Policy Statement" with id "mps", and we
+    want both, not one.
+    """
+    out: List[Tuple[str, Dict]] = []
+    for source_type, filename in EXTERNAL_NEWS_SOURCES:
+        items = _fetch_external_news_csv(filename)
+        if not items:
+            continue
+        if not force:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT source_id FROM regulatory_changes WHERE source_type = ?",
+                (source_type,),
+            )
+            existing = {r[0] for r in cur.fetchall()}
+            items = [i for i in items if i["id"] not in existing]
+        out.extend((source_type, item) for item in items)
+    return out
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -345,8 +384,9 @@ def _upsert_regulatory(
 
 async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
     """
-    Main entry point. Processes Fed news + Google Radar news.
-    Called by pipeline (AgentOrchestrator Stage 8) or CLI.
+    Main entry point. Processes Fed news (SQLite) + every CSV in
+    EXTERNAL_NEWS_SOURCES (GCS, central-bank press releases). Called by
+    pipeline (AgentOrchestrator Stage 8) or CLI.
     """
     if not DB_PATH.exists():
         return {"status": "error", "message": f"DB not found: {DB_PATH}"}
@@ -354,17 +394,24 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
     conn = sqlite3.connect(str(DB_PATH))
     init_db(conn)
 
-    # Collect items from both sources
+    # Collect items from both source families.
     print("\n[RegulatoryClassifier] Collecting news items...")
-    fed_items    = _get_unprocessed_fed_news(conn, force)
-    radar_items  = _get_unprocessed_radar(conn, force)
+    fed_items      = _get_unprocessed_fed_news(conn, force)
+    external_items = _get_unprocessed_external_news(conn, force)
 
-    print(f"  Fed news: {len(fed_items)} items to process")
-    print(f"  Google Radar: {len(radar_items)} items to process")
+    print(f"  Fed news (SQLite): {len(fed_items)} items to process")
+    # Per-source breakdown so an operator can see at a glance whether a
+    # CSV came back empty (likely a missing file in GCS) or just had no
+    # new rows since the last run.
+    by_source: Dict[str, int] = {}
+    for source_type, _ in external_items:
+        by_source[source_type] = by_source.get(source_type, 0) + 1
+    for source_type, _filename in EXTERNAL_NEWS_SOURCES:
+        print(f"  {source_type}: {by_source.get(source_type, 0)} items to process")
 
     all_items = (
         [("fed_news", i) for i in fed_items] +
-        [("google_radar", i) for i in radar_items]
+        external_items
     )[:limit]
 
     if not all_items:
