@@ -80,6 +80,13 @@ class DailyMonitor:
 
             guardian_result["status"] = "success"
             guardian_result["message"] = output
+
+            # Phase 2E: mirror the fresh snapshot into Chroma so semantic
+            # alert retrieval picks up new events without waiting for the
+            # next backfill run.
+            mirrored = self._mirror_alerts_to_chroma(verbose=verbose)
+            guardian_result["chroma_mirrored"] = mirrored
+
             return guardian_result
 
         except subprocess.TimeoutExpired:
@@ -94,6 +101,42 @@ class DailyMonitor:
             if verbose:
                 print(f"  Guardian job error: {e}")
             return guardian_result
+
+    def _mirror_alerts_to_chroma(self, verbose: bool = True) -> int:
+        """Read the freshly-produced Guardian snapshot and dual-write its
+        alerts to Chroma. Fail-soft: returns 0 on any error."""
+        snapshot_path = (
+            Path(__file__).parent / "guardian_poc" / "data" / "alerts_latest.json"
+        )
+        if not snapshot_path.exists():
+            return 0
+        try:
+            snap = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            if verbose:
+                print(f"  Chroma mirror: cannot read {snapshot_path.name} ({e})")
+            return 0
+
+        alerts = snap.get("alerts") or snap.get("scored_alerts") or []
+        snapshot_date = (
+            snap.get("generated_at", "")[:10]
+            or snap.get("date")
+            or datetime.now().strftime("%Y-%m-%d")
+        )
+        if not alerts:
+            return 0
+
+        try:
+            from core.chroma_writer import dual_write_alerts
+            n = dual_write_alerts(snapshot_date, alerts)
+        except Exception as e:
+            if verbose:
+                print(f"  Chroma mirror: dual-write failed ({e})")
+            return 0
+
+        if verbose and n:
+            print(f"  Chroma mirror: {n} alerts upserted (snapshot_date={snapshot_date})")
+        return n
 
     async def run(self, verbose: bool = True) -> Dict:
         """Execute daily monitoring.

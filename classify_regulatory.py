@@ -270,16 +270,39 @@ def _upsert_regulatory(
     source_type: str,
     item: Dict,
     result: Dict,
-) -> None:
+) -> int:
+    """Insert or update the regulatory_changes row and return its id.
+
+    Uses ON CONFLICT DO UPDATE (rather than INSERT OR REPLACE) so the
+    autoincrement primary key stays stable when a row is re-classified —
+    Chroma vector docs are keyed off this id (``reg_{id}``), and stability
+    means dual_write_regulatory upserts cleanly instead of leaving orphans.
+    """
     now = datetime.now(timezone.utc).isoformat()
     conn.execute("""
-        INSERT OR REPLACE INTO regulatory_changes
+        INSERT INTO regulatory_changes
             (source_type, source_id, title, url, published_at,
              country, category, severity,
              change_before, change_after, effective_date,
              treasury_impact, action_required, confidence,
              is_regulatory, raw_summary, classified_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(source_type, source_id) DO UPDATE SET
+            title           = excluded.title,
+            url             = excluded.url,
+            published_at    = excluded.published_at,
+            country         = excluded.country,
+            category        = excluded.category,
+            severity        = excluded.severity,
+            change_before   = excluded.change_before,
+            change_after    = excluded.change_after,
+            effective_date  = excluded.effective_date,
+            treasury_impact = excluded.treasury_impact,
+            action_required = excluded.action_required,
+            confidence      = excluded.confidence,
+            is_regulatory   = excluded.is_regulatory,
+            raw_summary     = excluded.raw_summary,
+            classified_at   = excluded.classified_at
     """, (
         source_type,
         item["id"],
@@ -300,6 +323,20 @@ def _upsert_regulatory(
         now,
     ))
     conn.commit()
+
+    # Don't trust cur.lastrowid here. On the ON CONFLICT DO UPDATE path,
+    # SQLite's last_insert_rowid() returns the most recent *successful
+    # insert* on this connection — which on a batch run is some earlier
+    # row, not the one we just updated. The Chroma mirror is keyed by
+    # ``reg_{id}``, so a stale lastrowid would write the vector doc under
+    # the wrong id and silently corrupt the index. Resolve by the unique
+    # (source_type, source_id) key every time; one extra SELECT per upsert
+    # is cheap and correctness-preserving.
+    row = conn.execute(
+        "SELECT id FROM regulatory_changes WHERE source_type=? AND source_id=?",
+        (source_type, item["id"]),
+    ).fetchone()
+    return int(row[0]) if row else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -336,9 +373,11 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
                 "message": "All items already classified"}
 
     print(f"\n[RegulatoryClassifier] Processing {len(all_items)} items...")
-    processed = 0
+    processed        = 0
     regulatory_count = 0
-    errors = 0
+    errors           = 0
+    chroma_mirrored  = 0
+    chroma_skipped   = 0
 
     for i, (source_type, item) in enumerate(all_items, 1):
         title = item["title"][:70]
@@ -361,8 +400,34 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
                     "action_required": "", "confidence": 0.0,
                 }
 
-            _upsert_regulatory(conn, source_type, item, result)
+            reg_id = _upsert_regulatory(conn, source_type, item, result)
             processed += 1
+
+            # Phase 2E: mirror to Chroma so /api/brief, /api/actions can
+            # retrieve this regulatory item without a backfill pass. The
+            # helper is fail-soft (returns False rather than raising), so
+            # we surface the boolean as a counter — silent skips are now
+            # visible in the per-run summary and the return dict.
+            if reg_id:
+                from core.chroma_writer import dual_write_regulatory
+                ok = dual_write_regulatory(reg_id, {
+                    "title":           item["title"],
+                    "url":             item.get("url", ""),
+                    "country":         result.get("country", "Global"),
+                    "category":        result.get("category", "General Regulatory"),
+                    "severity":        result.get("severity", "Low"),
+                    "change_before":   result.get("change_before", ""),
+                    "change_after":    result.get("change_after", ""),
+                    "effective_date":  result.get("effective_date", ""),
+                    "treasury_impact": result.get("treasury_impact", ""),
+                    "confidence":      float(result.get("confidence", 0.0)),
+                    "is_regulatory":   1 if result.get("is_regulatory") else 0,
+                    "source_type":     source_type,
+                })
+                if ok:
+                    chroma_mirrored += 1
+                else:
+                    chroma_skipped += 1
 
             if result.get("is_regulatory") and result.get("confidence", 0) >= 0.5:
                 regulatory_count += 1
@@ -380,15 +445,21 @@ async def classify_regulatory(force: bool = False, limit: int = 100) -> Dict:
             time.sleep(BATCH_DELAY)
 
     conn.close()
-    print(f"\n[RegulatoryClassifier] Done: {processed} processed, "
-          f"{regulatory_count} regulatory, {errors} errors")
+    print(
+        f"\n[RegulatoryClassifier] Done: {processed} processed, "
+        f"{regulatory_count} regulatory, {errors} errors, "
+        f"{chroma_mirrored} mirrored to Chroma "
+        f"({chroma_skipped} skipped/failed)"
+    )
 
     return {
-        "status":     "success",
-        "processed":  processed,
-        "regulatory": regulatory_count,
-        "errors":     errors,
-        "total":      len(all_items),
+        "status":          "success",
+        "processed":       processed,
+        "regulatory":      regulatory_count,
+        "errors":          errors,
+        "total":           len(all_items),
+        "chroma_mirrored": chroma_mirrored,
+        "chroma_skipped":  chroma_skipped,
     }
 
 

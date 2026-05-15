@@ -271,7 +271,12 @@ class VectorStore:
             }))
         if not ids:
             return 0
-        self._bulk_upsert("alerts", ids, docs, metas)
+        if not self._bulk_upsert("alerts", ids, docs, metas):
+            # Bulk upsert caught an exception inside Chroma; return 0 so
+            # callers don't report mirrored counts for a write that never
+            # happened. This preserves the fail-soft contract — the
+            # exception is already logged by _bulk_upsert.
+            return 0
         return len(ids)
 
     def add_action_history(self, action: dict) -> bool:
@@ -344,13 +349,19 @@ class VectorStore:
             print(f"[vector_store] upsert {name}/{id} failed: {e}", file=sys.stderr)
             return False
 
-    def _bulk_upsert(self, name: str, ids: list[str], docs: list[str], metas: list[dict]) -> None:
+    def _bulk_upsert(self, name: str, ids: list[str], docs: list[str], metas: list[dict]) -> bool:
+        """Returns True on success, False on any embedder/Chroma failure.
+        Callers that report mirrored counts (e.g. add_alerts) MUST gate
+        their return on this — otherwise a swallowed exception leaves the
+        wrapper claiming success it didn't deliver."""
         try:
             vecs, _ = self._embed(docs)
             self._get(name).upsert(ids=ids, documents=docs, embeddings=vecs, metadatas=metas)
+            return True
         except Exception as e:
             import sys
             print(f"[vector_store] bulk_upsert {name} ({len(ids)}) failed: {e}", file=sys.stderr)
+            return False
 
     def _search(self, name: str, query: str, n_results: Optional[int],
                 where: Optional[dict], request_id: Optional[str],
