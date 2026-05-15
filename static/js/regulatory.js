@@ -4,6 +4,11 @@
 
 let regFilters = { country: '', category: '', severity: '', q: '' };
 let _regSearchTimer = null;
+// Tracks the in-flight fetch so a slow earlier request can't overwrite
+// a newer one's results. Each loadRegulatory() call aborts the previous
+// AbortController before issuing its own — without this, fast typing
+// + variable network latency can land responses out of order.
+let _regInFlight = null;
 
 function setRegFilter(type, val, btn) {
     regFilters[type] = val;
@@ -41,9 +46,12 @@ function _ragStatusText(d) {
         return '⚠ semantic ranking off (config) · using keyword match';
     }
     if (rag.fallback === 'sql_like') {
+        // Always lead with the fallback mode so operators can distinguish
+        // "semantic returned empty" from "no rows at all"; trailing
+        // guidance text is still actionable for end users.
         return d.total
             ? `keyword match · ${d.total} hit${d.total === 1 ? '' : 's'} (no semantic match)`
-            : 'no matches — try fewer filters or different wording';
+            : 'keyword match · 0 hits — try fewer filters or different wording';
     }
     return '';
 }
@@ -52,6 +60,13 @@ async function loadRegulatory() {
     const list = document.getElementById('regList');
     if (!list) return;
     list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">Loading…</div>`;
+
+    // Cancel any prior in-flight fetch — fast typing + variable network
+    // latency would otherwise let a slow earlier response land after a
+    // newer one and overwrite the rendered results.
+    if (_regInFlight) _regInFlight.abort();
+    const ctrl = new AbortController();
+    _regInFlight = ctrl;
 
     const params = new URLSearchParams();
     if (regFilters.country)  params.set('country',  regFilters.country);
@@ -62,8 +77,8 @@ async function loadRegulatory() {
 
     try {
         const [sr, r] = await Promise.all([
-            fetch('/api/regulatory/summary'),
-            fetch(`/api/regulatory?${params}`),
+            fetch('/api/regulatory/summary', { signal: ctrl.signal }),
+            fetch(`/api/regulatory?${params}`, { signal: ctrl.signal }),
         ]);
         const [sd, d] = await Promise.all([sr.json(), r.json()]);
         if (sd.status === 'success') _renderRegFilters(sd);
@@ -143,8 +158,14 @@ async function loadRegulatory() {
             </div>`;
         }).join('');
     } catch(e) {
+        // AbortError = the user typed again and we cancelled this fetch
+        // ourselves. That's intentional, not a failure — leave the
+        // existing UI alone so the next fetch can replace it.
+        if (e.name === 'AbortError') return;
         list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">
             Failed to load: ${escapeHtml(e.message)}</div>`;
+    } finally {
+        if (_regInFlight === ctrl) _regInFlight = null;
     }
 }
 

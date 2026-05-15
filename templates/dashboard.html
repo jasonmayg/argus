@@ -489,16 +489,23 @@
             <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
                 <div style="flex-shrink:0;min-width:0;">
                     <div style="font-size:16px;font-weight:700;color:var(--text-main);white-space:nowrap;">⚖ Regulatory Changes Tracker</div>
+                    <!-- aria-live="polite" so screen readers announce the
+                         "Updated … · ✦ semantic · N hits" status that gets
+                         written here after each search. -->
                     <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;"
-                         id="regLastFetch">—</div>
+                         id="regLastFetch" aria-live="polite">—</div>
                 </div>
                 <input type="search" id="regSearchInput"
+                       aria-label="Search regulations"
                        placeholder="Search regulations by topic or keyword (e.g. capital controls, China, AML)"
                        autocomplete="off"
                        oninput="onRegSearchInput(this.value)"
+                       onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px var(--primary-glow)';"
+                       onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none';"
                        style="flex:1;min-width:0;font-size:12px;padding:8px 12px;
                               border:1px solid var(--border);border-radius:6px;
-                              font-family:var(--font-mono);background:white;outline:none;"/>
+                              font-family:var(--font-mono);background:white;outline:none;
+                              transition:border-color 0.15s,box-shadow 0.15s;"/>
                 <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
                     <span id="regTotalBadge" style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);">—</span>
                     <button class="btn btn-sm" onclick="loadRegulatory()">↻ Refresh</button>
