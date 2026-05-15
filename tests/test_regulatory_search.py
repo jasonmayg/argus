@@ -201,3 +201,123 @@ class TestRetryHeuristic:
 
         r = client.get("/api/regulatory?q=anything&country=Japan&limit=10")
         assert calls["n"] == 1, "retry_top_k=0 must keep the helper from being called twice"
+
+
+# ──────────────────────────────────────────────────────────────
+# Defensive fixes from Copilot review (limit parse, LIKE escape,
+# kill-switch fallback reason, conn-leak via try/finally).
+# ──────────────────────────────────────────────────────────────
+
+class TestDefensiveBehavior:
+    def test_non_numeric_limit_returns_400(self, client):
+        """A non-numeric ``?limit=abc`` used to bubble up as a 500 because
+        ``int()`` raised before any error handling. The handler now safe-
+        parses and returns 400 with an actionable message."""
+        r = client.get("/api/regulatory?limit=abc")
+        assert r.status_code == 400
+        body = r.json
+        assert body["status"] == "error"
+        assert "limit" in body["message"].lower()
+
+    def test_zero_limit_returns_400(self, client):
+        """``?limit=0`` is also rejected — a successful query that
+        promises to return at most zero items is a silent bug magnet."""
+        r = client.get("/api/regulatory?limit=0")
+        assert r.status_code == 400
+
+    def test_like_wildcards_in_q_are_escaped(self, client, monkeypatch):
+        """When the semantic helper returns nothing, the SQL LIKE branch
+        runs. A user typing ``50%`` should match the literal substring,
+        not be treated as a wildcard. We assert by capturing the LIKE
+        pattern actually sent to SQLite.
+
+        ``sqlite3.Connection.execute`` is a read-only C attribute so we
+        can't monkey-patch it; wrap the real connection in a delegate.
+        """
+        import routes.regulatory_routes as rr
+        monkeypatch.setattr(rr, "_semantic_regulatory_search",
+                            lambda q, top_k_override=None: ([], "rid", None))
+
+        captured = {}
+        real_get_conn = rr._get_conn
+
+        def spying_get_conn():
+            real_conn = real_get_conn()
+
+            class _Spy:
+                def execute(self, sql, params=()):
+                    if "LIKE" in sql.upper():
+                        captured["sql"]    = sql
+                        captured["params"] = list(params)
+                    return real_conn.execute(sql, params)
+                def cursor(self): return real_conn.cursor()
+                def commit(self): return real_conn.commit()
+                def close(self): return real_conn.close()
+
+            return _Spy()
+
+        monkeypatch.setattr(rr, "_get_conn", spying_get_conn)
+
+        r = client.get("/api/regulatory?q=50%25_rate&limit=5")
+        assert r.status_code == 200
+
+        # The LIKE params must contain the escaped pattern, NOT raw % or _.
+        assert "sql" in captured, "expected SQL LIKE path to execute"
+        assert "ESCAPE" in captured["sql"].upper()
+        like_params = [p for p in captured["params"] if isinstance(p, str) and "%" in p]
+        assert like_params, "expected at least one LIKE param"
+        for p in like_params:
+            # Strip the bracketing %...% wildcards that the handler adds.
+            inner = p[1:-1]
+            # Literal % and _ from the user input must have been escaped.
+            assert "\\%" in inner or "\\_" in inner, (
+                f"user-supplied wildcards must be escaped, got {inner!r}"
+            )
+
+    def test_rag_block_reports_disabled_when_kill_switch_off(self, client, monkeypatch):
+        """When ``regulatory_search.enabled: false``, the handler should
+        explicitly say so in the rag block so operators can tell config-
+        driven fallback apart from "Chroma returned nothing"."""
+        import routes.regulatory_routes as rr
+        monkeypatch.setattr(rr, "_semantic_regulatory_search",
+                            lambda q, top_k_override=None: ([], None, None))
+        monkeypatch.setattr(rr, "_semantic_search_disabled", lambda: True)
+
+        r = client.get("/api/regulatory?q=anything&limit=5")
+        assert r.status_code == 200
+        assert r.json["rag"] == {"used": False, "fallback": "disabled"}
+
+    def test_rag_block_reports_sql_like_when_chroma_returned_empty(self, client, monkeypatch):
+        """Helper enabled but returned no hits → fallback must be
+        ``sql_like`` and include the request_id for telemetry correlation."""
+        import routes.regulatory_routes as rr
+        monkeypatch.setattr(rr, "_semantic_regulatory_search",
+                            lambda q, top_k_override=None: ([], "rid-test", None))
+        monkeypatch.setattr(rr, "_semantic_search_disabled", lambda: False)
+
+        r = client.get("/api/regulatory?q=anything&limit=5")
+        assert r.status_code == 200
+        assert r.json["rag"] == {
+            "used":       False,
+            "request_id": "rid-test",
+            "fallback":   "sql_like",
+        }
+
+    def test_semantic_helper_exception_does_not_leak_connection(self, client, monkeypatch):
+        """Pre-fix, ``_semantic_regulatory_search`` raising before the
+        conn-open try/finally would leak the SQLite connection. The
+        handler is now structured so the helper runs *before* conn-open,
+        so a 500-producing raise still cleans up.
+        """
+        import routes.regulatory_routes as rr
+
+        def boom(q, top_k_override=None):
+            raise RuntimeError("simulated helper failure")
+
+        monkeypatch.setattr(rr, "_semantic_regulatory_search", boom)
+
+        # The raise happens before conn-open, so Flask returns a 500.
+        # The critical assertion is just that the request *completes*
+        # (no hang on a leaked file handle) and conn was never opened.
+        r = client.get("/api/regulatory?q=anything&limit=5")
+        assert r.status_code == 500

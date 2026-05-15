@@ -147,6 +147,29 @@ def _table_exists(conn: sqlite3.Connection) -> bool:
     return cur.fetchone() is not None
 
 
+def _escape_like(s: str) -> str:
+    """Escape SQLite LIKE metacharacters so user-supplied search text matches
+    literally instead of as a wildcard pattern. A query like ``50% rate`` or
+    ``a_b`` would otherwise silently mean "anything containing 50, then any
+    chars, then space rate" — surprising for an end-user search box. Use with
+    ``LIKE ? ESCAPE '\\'``."""
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _semantic_search_disabled() -> bool:
+    """True when ``endpoints.regulatory_search.enabled: false`` — used by the
+    handler to distinguish a config-driven fallback (``"disabled"``) from one
+    caused by an empty/errored Chroma result (``"sql_like"``)."""
+    try:
+        from core.rag_context import load_endpoint_config
+        cfg = load_endpoint_config("regulatory_search")
+        return cfg.get("enabled", True) is False
+    except Exception:
+        # If config can't be read, assume enabled — the helper itself will
+        # surface a real error via the warning log.
+        return False
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # GET /api/regulatory
 # ═══════════════════════════════════════════════════════════════════════════
@@ -199,35 +222,53 @@ def api_regulatory():
       ?all=1                  include non-regulatory items too
       ?limit=50               max results (default 50)
     """
-    conn = _get_conn()
-    if not conn:
-        return jsonify({"status": "error", "message": "Database not found"}), 500
-
-    if not _table_exists(conn):
-        conn.close()
-        return jsonify({
-            "status":  "success",
-            "items":   [],
-            "total":   0,
-            "message": "Run Daily Jobs to classify regulatory changes",
-        })
-
+    # ── Parse query params first (cheap, no DB needed). A bad `limit`
+    # should produce a 400, not a 500, and parsing before opening the
+    # connection means we don't have to remember to close it on this
+    # error path.
     show_all = request.args.get("all") == "1"
     country  = (request.args.get("country")  or "").strip()
     category = (request.args.get("category") or "").strip()
     severity = (request.args.get("severity") or "").strip()
     source   = (request.args.get("source")   or "").strip()
     query    = (request.args.get("q")        or "").strip()
-    limit    = min(int(request.args.get("limit", 50)), 200)
+    limit_raw = request.args.get("limit", 50)
+    try:
+        limit = min(int(limit_raw), 200)
+        if limit < 1:
+            raise ValueError("limit must be >= 1")
+    except (TypeError, ValueError):
+        return jsonify({
+            "status":  "error",
+            "message": f"Invalid 'limit' value {limit_raw!r}; expected a positive integer.",
+        }), 400
 
-    rag_info: Dict[str, Any] = {"used": False}
+    # ── Run semantic search BEFORE opening the SQLite conn — keeps the
+    # try/finally cleanup window as small as possible and means an
+    # exception in the helper can't leak a connection.
+    sem_hits: List[Tuple[int, float]] = []
     request_id: Optional[str] = None
-
-    # ── Branch 1: semantic search (query provided + Chroma healthy) ───
+    top_distance: Optional[float] = None
     if query:
         sem_hits, request_id, top_distance = _semantic_regulatory_search(query)
 
-        if sem_hits:
+    conn = _get_conn()
+    if not conn:
+        return jsonify({"status": "error", "message": "Database not found"}), 500
+
+    try:
+        if not _table_exists(conn):
+            return jsonify({
+                "status":  "success",
+                "items":   [],
+                "total":   0,
+                "message": "Run Daily Jobs to classify regulatory changes",
+            })
+
+        rag_info: Dict[str, Any] = {"used": False}
+
+        # ── Branch 1: semantic search returned hits ────────────────────
+        if query and sem_hits:
             items = _filter_sem_hits(
                 conn, sem_hits,
                 show_all=show_all, country=country, category=category,
@@ -267,7 +308,6 @@ def api_regulatory():
                         )
                         retried_top_k = retry_top_k
 
-            conn.close()
             rag_info = {
                 "used":          True,
                 "request_id":    request_id,
@@ -294,66 +334,80 @@ def api_regulatory():
         # collection). Fall through to the SQL LIKE path below so the
         # caller still gets keyword results.
 
-    # ── Branch 2: SQL path (no q, or q with no semantic hits) ─────────
-    conditions: List[str] = []
-    params: List[Any] = []
+        # ── Branch 2: SQL path (no q, or q with no semantic hits) ─────
+        conditions: List[str] = []
+        params: List[Any] = []
 
-    if not show_all:
-        conditions.append(f"confidence >= {MIN_CONFIDENCE}")
-    if country:
-        conditions.append("LOWER(country) = LOWER(?)")
-        params.append(country)
-    if category:
-        conditions.append("LOWER(category) = LOWER(?)")
-        params.append(category)
-    if severity:
-        conditions.append("LOWER(severity) = LOWER(?)")
-        params.append(severity)
-    if source:
-        conditions.append("source_type = ?")
-        params.append(source)
-    if query:
-        conditions.append("(LOWER(title) LIKE LOWER(?) OR LOWER(raw_summary) LIKE LOWER(?))")
-        like = f"%{query}%"
-        params.extend([like, like])
+        if not show_all:
+            conditions.append(f"confidence >= {MIN_CONFIDENCE}")
+        if country:
+            conditions.append("LOWER(country) = LOWER(?)")
+            params.append(country)
+        if category:
+            conditions.append("LOWER(category) = LOWER(?)")
+            params.append(category)
+        if severity:
+            conditions.append("LOWER(severity) = LOWER(?)")
+            params.append(severity)
+        if source:
+            conditions.append("source_type = ?")
+            params.append(source)
+        if query:
+            # ESCAPE '\' so user-supplied % / _ are matched literally.
+            conditions.append(
+                "(LOWER(title) LIKE LOWER(?) ESCAPE '\\' "
+                "OR LOWER(raw_summary) LIKE LOWER(?) ESCAPE '\\')"
+            )
+            like = f"%{_escape_like(query)}%"
+            params.extend([like, like])
 
-    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
-    cur = conn.execute(
-        _SELECT_REGULATORY_COLUMNS + f"""
-        {where}
-        ORDER BY
-            CASE severity WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
-            confidence DESC,
-            published_at DESC
-        LIMIT ?
-    """,
-        params + [limit],
-    )
+        cur = conn.execute(
+            _SELECT_REGULATORY_COLUMNS + f"""
+            {where}
+            ORDER BY
+                CASE severity WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
+                confidence DESC,
+                published_at DESC
+            LIMIT ?
+        """,
+            params + [limit],
+        )
 
-    items = [_row_to_item(row) for row in cur.fetchall()]
-    conn.close()
+        items = [_row_to_item(row) for row in cur.fetchall()]
 
-    # If we got here with a query but no semantic hits, mark rag.used=false
-    # but include the request_id so the operator can correlate with telemetry.
-    if query and request_id:
-        rag_info = {"used": False, "request_id": request_id, "fallback": "sql_like"}
+        # When the SQL path runs because of a query, surface *why* the
+        # semantic ranker didn't apply so clients/operators can tell the
+        # difference between "kill-switch is off" and "Chroma was healthy
+        # but returned nothing usable".
+        if query:
+            if _semantic_search_disabled():
+                rag_info = {"used": False, "fallback": "disabled"}
+            else:
+                rag_info = {
+                    "used":       False,
+                    "request_id": request_id,
+                    "fallback":   "sql_like",
+                }
 
-    response: Dict[str, Any] = {
-        "status":         "success",
-        "total":          len(items),
-        "generated_at":   datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "filters": {
-            "country":  country  or None,
-            "category": category or None,
-            "severity": severity or None,
-        },
-        "items": items,
-    }
-    if query:
-        response["query"] = query
-        response["rag"]   = rag_info
-    return jsonify(response)
+        response: Dict[str, Any] = {
+            "status":         "success",
+            "total":          len(items),
+            "generated_at":   datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "filters": {
+                "country":  country  or None,
+                "category": category or None,
+                "severity": severity or None,
+            },
+            "items": items,
+        }
+        if query:
+            response["query"] = query
+            response["rag"]   = rag_info
+        return jsonify(response)
+    finally:
+        conn.close()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
