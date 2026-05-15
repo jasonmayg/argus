@@ -87,12 +87,27 @@ COUNTRY_LIST = [
 ]
 
 # ── OpenAI system prompt ───────────────────────────────────────────────────
-REGULATORY_SYSTEM = """You are a treasury compliance analyst specializing in regulatory changes.
+REGULATORY_SYSTEM = """You are a treasury compliance analyst specializing in regulatory matters.
 
 Analyze the news item and return ONLY valid JSON — no prose, no markdown fences.
 
-Determine if this news represents a REGULATORY CHANGE that affects treasury operations
-(capital flows, payments, compliance requirements, banking rules, monetary policy changes).
+Determine if this news represents a REGULATORY ACTION that affects treasury operations.
+"Regulatory action" covers BOTH rule changes AND binding actions by an authority:
+  - Rule changes (new requirements, amended thresholds, revised guidance)
+  - Sanctions actions (OFAC SDN additions, asset blocks, designations of persons/entities)
+  - Sovereign debt operations (Treasury borrowing schedules, quarterly refunding
+    announcements, auction size changes, TBAC minutes/recommendations)
+  - Monetary policy decisions (rate moves, QE/QT changes, liquidity facility updates)
+  - Compliance / reporting requirement changes
+
+DO NOT classify as regulatory (return is_regulatory=false):
+  - Speeches, commencement addresses, conference remarks UNLESS they announce a specific
+    binding action with operational impact
+  - Section headers, page labels, or navigation chrome ("Remarks and Statements",
+    "View All Readouts", "Testimonies", "Statements & Remarks") — these are page
+    structure artifacts, not news items
+  - Convenings, meetings, conferences without a binding outcome
+  - General market commentary or analysis
 
 JSON schema (ALL fields required):
 {
@@ -100,12 +115,12 @@ JSON schema (ALL fields required):
   "country": string,           // from: USA, China, UK, Germany, France, Japan, Canada, Hong Kong, Singapore, Brazil, India, Mexico, Australia, EU, Global
   "category": string,          // from: Capital Controls, AML / KYC, Reporting Requirements, Monetary Policy, Banking Regulation, Cross-border Payments, Sanctions, Tax / FATCA, Cryptocurrency, Interest Rate Policy, Liquidity Requirements, General Regulatory
   "severity": string,          // High, Medium, Low
-  "change_before": string,     // what the rule/requirement WAS before (empty string if unknown)
-  "change_after": string,      // what the rule/requirement IS NOW (empty string if unknown/unclear)
+  "change_before": string,     // for rule changes: what the requirement WAS before; for action-type items (sanctions, debt ops) leave empty
+  "change_after": string,      // for rule changes: what the requirement IS NOW; for action-type items: the substance of the action (who/what was designated, auction size, rate decision)
   "effective_date": string,    // ISO date if mentioned, else empty string
   "treasury_impact": string,   // 1-2 sentences on operational impact for treasury
   "action_required": string,   // specific action treasury team should take, or empty string
-  "confidence": number         // 0.0-1.0 how confident you are this is a real regulatory change
+  "confidence": number         // 0.0-1.0 how confident you are this is a real regulatory action
 }
 
 If is_regulatory is false, still fill all fields with appropriate defaults (empty strings, "Low" severity, 0.0 confidence)."""
