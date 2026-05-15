@@ -196,6 +196,45 @@ class TestLogging:
 # Exception handling — a broken migration must be loud, not silent.
 # ──────────────────────────────────────────────────────────────
 
+class TestUniqueIndex:
+    """The migration must enforce one-row-per-news_id. _upsert_analysis's
+    SELECT id WHERE news_id=? branching depends on it; without the index,
+    a stray duplicate row would silently break insert-vs-update."""
+
+    def _index_exists(self, conn: sqlite3.Connection) -> bool:
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='index' AND name='idx_risk_analysis_news_id'"
+        )
+        return cur.fetchone() is not None
+
+    def test_index_created_on_fresh_db(self):
+        conn = sqlite3.connect(":memory:")
+        _init_risk_analysis_schema(conn)
+        assert self._index_exists(conn)
+
+    def test_index_created_on_legacy_db(self):
+        conn = sqlite3.connect(":memory:")
+        conn.execute(LEGACY_SQL)
+        _init_risk_analysis_schema(conn)
+        assert self._index_exists(conn)
+
+    def test_duplicate_news_id_insert_is_rejected(self):
+        """The whole point of the index: a second INSERT with the same
+        news_id must raise IntegrityError, not silently duplicate."""
+        conn = sqlite3.connect(":memory:")
+        _init_risk_analysis_schema(conn)
+        conn.execute(
+            "INSERT INTO risk_analysis (news_id, risk_category) VALUES (?, ?)",
+            (7, "A"),
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO risk_analysis (news_id, risk_category) VALUES (?, ?)",
+                (7, "B"),
+            )
+
+
 class TestExceptionHandling:
     def test_operational_error_is_logged_and_raised(self, caplog):
         """Simulate the ALTER TABLE failing (e.g. corrupted DB). The

@@ -359,15 +359,20 @@ def _init_risk_analysis_schema(conn: sqlite3.Connection) -> None:
 
     The table predates this script and was created out-of-band (no
     CREATE TABLE statement existed anywhere in the repo). The live schema
-    had only six columns, while _upsert_analysis writes twelve — every
-    run of classify_news.py raised ``OperationalError: table has no
-    column named news_score`` and the pipeline silently never produced a
-    single risk_analysis row.
+    had only six columns; the target schema is twelve (``id`` and
+    ``created_at`` are SQLite-managed, the other ten are written by
+    ``_upsert_analysis``). Every run of classify_news.py raised
+    ``OperationalError: table has no column named news_score`` and the
+    pipeline silently never produced a single risk_analysis row.
 
     Resolution: CREATE TABLE IF NOT EXISTS with the full target schema
     so fresh DBs come up correct, plus PRAGMA-driven ALTER TABLE for
-    pre-existing deployments that already have the partial table. Safe
-    to call on every invocation.
+    pre-existing deployments that already have the partial table. We
+    also create a UNIQUE index on ``news_id`` because ``_upsert_analysis``
+    relies on one-row-per-news_id semantics — without the index, a stray
+    duplicate row would silently break the ``SELECT id ... WHERE
+    news_id`` lookup that decides insert-vs-update. Safe to call on
+    every invocation.
 
     Logging:
       * INFO line per column added — so operators see *what* was
@@ -413,6 +418,19 @@ def _init_risk_analysis_schema(conn: sqlite3.Connection) -> None:
                 logger.info("risk_analysis: adding missing column %s %s", col, sql_type)
                 conn.execute(f"ALTER TABLE risk_analysis ADD COLUMN {col} {sql_type}")
                 added.append(col)
+
+        # Enforce one-row-per-news_id at the DB layer. _upsert_analysis does
+        # a SELECT id WHERE news_id=? to decide INSERT vs UPDATE; if duplicates
+        # ever sneaked in (e.g. a parallel run on a pre-migration DB), that
+        # decision becomes ambiguous. CREATE UNIQUE INDEX IF NOT EXISTS is
+        # idempotent and fails fast on legacy data that already violates the
+        # invariant — which is the right behavior: we want a loud error, not
+        # silent duplication.
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_risk_analysis_news_id "
+            "ON risk_analysis(news_id)"
+        )
+
         conn.commit()
     except sqlite3.OperationalError as exc:
         logger.error("risk_analysis schema init failed: %s", exc)
