@@ -16,8 +16,6 @@ function setRegFilter(type, val, btn) {
 // Debounce keystrokes so we don't fire a Chroma query on every character.
 // 250ms is short enough to feel responsive, long enough to coalesce typing.
 function onRegSearchInput(val) {
-    const status = document.getElementById('regSearchStatus');
-    if (status) status.textContent = val.trim() ? '⌛ typing…' : '';
     clearTimeout(_regSearchTimer);
     _regSearchTimer = setTimeout(() => {
         regFilters.q = val.trim();
@@ -26,8 +24,10 @@ function onRegSearchInput(val) {
 }
 
 // Translate the rag block from /api/regulatory into a one-line status the
-// user can actually act on. Per CLAUDE.md: "Never just report a dead-end
-// error — guide the user toward the next step."
+// user can actually act on. Returned as a subtitle suffix that gets
+// appended to the "Updated … UTC" line, so search state lives in the
+// header instead of consuming its own row. Per CLAUDE.md: "Never just
+// report a dead-end error — guide the user toward the next step."
 function _ragStatusText(d) {
     if (!d || !regFilters.q) return '';
     const rag = d.rag || {};
@@ -71,10 +71,13 @@ async function loadRegulatory() {
         const now = new Date().toISOString().replace('T', ' ').substr(0, 16);
         const fetchEl  = document.getElementById('regLastFetch');
         const badgeEl  = document.getElementById('regTotalBadge');
-        const statusEl = document.getElementById('regSearchStatus');
-        if (fetchEl) fetchEl.textContent = 'Updated ' + now + ' UTC';
+        const ragStatus = _ragStatusText(d);
+        if (fetchEl) {
+            // Search status rides on the subtitle line so it doesn't claim
+            // its own row in the UI. Empty when no query is active.
+            fetchEl.textContent = 'Updated ' + now + ' UTC' + (ragStatus ? ' · ' + ragStatus : '');
+        }
         if (badgeEl) badgeEl.textContent = (d.total || 0) + ' regulatory changes';
-        if (statusEl) statusEl.textContent = _ragStatusText(d);
 
         if (!d.items?.length) {
             const emptyMsg = regFilters.q
