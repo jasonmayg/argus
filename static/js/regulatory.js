@@ -2,7 +2,13 @@
    ARGUS — Regulatory Changes Tracker
    ============================================================ */
 
-let regFilters = { country: '', category: '', severity: '' };
+let regFilters = { country: '', category: '', severity: '', q: '' };
+let _regSearchTimer = null;
+// Tracks the in-flight fetch so a slow earlier request can't overwrite
+// a newer one's results. Each loadRegulatory() call aborts the previous
+// AbortController before issuing its own — without this, fast typing
+// + variable network latency can land responses out of order.
+let _regInFlight = null;
 
 function setRegFilter(type, val, btn) {
     regFilters[type] = val;
@@ -12,36 +18,91 @@ function setRegFilter(type, val, btn) {
     loadRegulatory();
 }
 
+// Debounce keystrokes so we don't fire a Chroma query on every character.
+// 250ms is short enough to feel responsive, long enough to coalesce typing.
+function onRegSearchInput(val) {
+    clearTimeout(_regSearchTimer);
+    _regSearchTimer = setTimeout(() => {
+        regFilters.q = val.trim();
+        loadRegulatory();
+    }, 250);
+}
+
+// Translate the rag block from /api/regulatory into a one-line status the
+// user can actually act on. Returned as a subtitle suffix that gets
+// appended to the "Updated … UTC" line, so search state lives in the
+// header instead of consuming its own row. Per CLAUDE.md: "Never just
+// report a dead-end error — guide the user toward the next step."
+function _ragStatusText(d) {
+    if (!d || !regFilters.q) return '';
+    const rag = d.rag || {};
+    if (rag.used) {
+        const parts = [`✦ semantic · ${d.total} hit${d.total === 1 ? '' : 's'}`];
+        if (rag.retried_top_k) parts.push(`expanded pool to ${rag.retried_top_k}`);
+        if (rag.top_distance != null) parts.push(`top ${rag.top_distance}`);
+        return parts.join(' · ');
+    }
+    if (rag.fallback === 'disabled') {
+        return '⚠ semantic ranking off (config) · using keyword match';
+    }
+    if (rag.fallback === 'sql_like') {
+        // Always lead with the fallback mode so operators can distinguish
+        // "semantic returned empty" from "no rows at all"; trailing
+        // guidance text is still actionable for end users.
+        return d.total
+            ? `keyword match · ${d.total} hit${d.total === 1 ? '' : 's'} (no semantic match)`
+            : 'keyword match · 0 hits — try fewer filters or different wording';
+    }
+    return '';
+}
+
 async function loadRegulatory() {
     const list = document.getElementById('regList');
     if (!list) return;
     list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">Loading…</div>`;
 
+    // Cancel any prior in-flight fetch — fast typing + variable network
+    // latency would otherwise let a slow earlier response land after a
+    // newer one and overwrite the rendered results.
+    if (_regInFlight) _regInFlight.abort();
+    const ctrl = new AbortController();
+    _regInFlight = ctrl;
+
     const params = new URLSearchParams();
     if (regFilters.country)  params.set('country',  regFilters.country);
     if (regFilters.category) params.set('category', regFilters.category);
     if (regFilters.severity) params.set('severity', regFilters.severity);
+    if (regFilters.q)        params.set('q',        regFilters.q);
     params.set('limit', '100');
 
     try {
         const [sr, r] = await Promise.all([
-            fetch('/api/regulatory/summary'),
-            fetch(`/api/regulatory?${params}`),
+            fetch('/api/regulatory/summary', { signal: ctrl.signal }),
+            fetch(`/api/regulatory?${params}`, { signal: ctrl.signal }),
         ]);
         const [sd, d] = await Promise.all([sr.json(), r.json()]);
         if (sd.status === 'success') _renderRegFilters(sd);
 
         const now = new Date().toISOString().replace('T', ' ').substr(0, 16);
-        const fetchEl = document.getElementById('regLastFetch');
-        const badgeEl = document.getElementById('regTotalBadge');
-        if (fetchEl) fetchEl.textContent = 'Updated ' + now + ' UTC';
+        const fetchEl  = document.getElementById('regLastFetch');
+        const badgeEl  = document.getElementById('regTotalBadge');
+        const ragStatus = _ragStatusText(d);
+        if (fetchEl) {
+            // Search status rides on the subtitle line so it doesn't claim
+            // its own row in the UI. Empty when no query is active.
+            fetchEl.textContent = 'Updated ' + now + ' UTC' + (ragStatus ? ' · ' + ragStatus : '');
+        }
         if (badgeEl) badgeEl.textContent = (d.total || 0) + ' regulatory changes';
 
         if (!d.items?.length) {
+            const emptyMsg = regFilters.q
+                ? `<div style="font-size:13px;margin-bottom:8px;">No matches for "${escapeHtml(regFilters.q)}"</div>
+                   <div style="font-size:11px;">Try fewer filters, broader wording, or clear the search box</div>`
+                : `<div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
+                   <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>`;
             list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted);">
                 <div style="font-size:24px;margin-bottom:12px;">⚖</div>
-                <div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
-                <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>
+                ${emptyMsg}
             </div>`;
             return;
         }
@@ -97,8 +158,14 @@ async function loadRegulatory() {
             </div>`;
         }).join('');
     } catch(e) {
+        // AbortError = the user typed again and we cancelled this fetch
+        // ourselves. That's intentional, not a failure — leave the
+        // existing UI alone so the next fetch can replace it.
+        if (e.name === 'AbortError') return;
         list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:11px;">
             Failed to load: ${escapeHtml(e.message)}</div>`;
+    } finally {
+        if (_regInFlight === ctrl) _regInFlight = null;
     }
 }
 
