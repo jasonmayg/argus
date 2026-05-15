@@ -2,7 +2,8 @@
    ARGUS — Regulatory Changes Tracker
    ============================================================ */
 
-let regFilters = { country: '', category: '', severity: '' };
+let regFilters = { country: '', category: '', severity: '', q: '' };
+let _regSearchTimer = null;
 
 function setRegFilter(type, val, btn) {
     regFilters[type] = val;
@@ -10,6 +11,41 @@ function setRegFilter(type, val, btn) {
         b.classList.toggle('active', b.dataset.filterVal === val);
     });
     loadRegulatory();
+}
+
+// Debounce keystrokes so we don't fire a Chroma query on every character.
+// 250ms is short enough to feel responsive, long enough to coalesce typing.
+function onRegSearchInput(val) {
+    const status = document.getElementById('regSearchStatus');
+    if (status) status.textContent = val.trim() ? '⌛ typing…' : '';
+    clearTimeout(_regSearchTimer);
+    _regSearchTimer = setTimeout(() => {
+        regFilters.q = val.trim();
+        loadRegulatory();
+    }, 250);
+}
+
+// Translate the rag block from /api/regulatory into a one-line status the
+// user can actually act on. Per CLAUDE.md: "Never just report a dead-end
+// error — guide the user toward the next step."
+function _ragStatusText(d) {
+    if (!d || !regFilters.q) return '';
+    const rag = d.rag || {};
+    if (rag.used) {
+        const parts = [`✦ semantic · ${d.total} hit${d.total === 1 ? '' : 's'}`];
+        if (rag.retried_top_k) parts.push(`expanded pool to ${rag.retried_top_k}`);
+        if (rag.top_distance != null) parts.push(`top ${rag.top_distance}`);
+        return parts.join(' · ');
+    }
+    if (rag.fallback === 'disabled') {
+        return '⚠ semantic ranking off (config) · using keyword match';
+    }
+    if (rag.fallback === 'sql_like') {
+        return d.total
+            ? `keyword match · ${d.total} hit${d.total === 1 ? '' : 's'} (no semantic match)`
+            : 'no matches — try fewer filters or different wording';
+    }
+    return '';
 }
 
 async function loadRegulatory() {
@@ -21,6 +57,7 @@ async function loadRegulatory() {
     if (regFilters.country)  params.set('country',  regFilters.country);
     if (regFilters.category) params.set('category', regFilters.category);
     if (regFilters.severity) params.set('severity', regFilters.severity);
+    if (regFilters.q)        params.set('q',        regFilters.q);
     params.set('limit', '100');
 
     try {
@@ -32,16 +69,22 @@ async function loadRegulatory() {
         if (sd.status === 'success') _renderRegFilters(sd);
 
         const now = new Date().toISOString().replace('T', ' ').substr(0, 16);
-        const fetchEl = document.getElementById('regLastFetch');
-        const badgeEl = document.getElementById('regTotalBadge');
+        const fetchEl  = document.getElementById('regLastFetch');
+        const badgeEl  = document.getElementById('regTotalBadge');
+        const statusEl = document.getElementById('regSearchStatus');
         if (fetchEl) fetchEl.textContent = 'Updated ' + now + ' UTC';
         if (badgeEl) badgeEl.textContent = (d.total || 0) + ' regulatory changes';
+        if (statusEl) statusEl.textContent = _ragStatusText(d);
 
         if (!d.items?.length) {
+            const emptyMsg = regFilters.q
+                ? `<div style="font-size:13px;margin-bottom:8px;">No matches for "${escapeHtml(regFilters.q)}"</div>
+                   <div style="font-size:11px;">Try fewer filters, broader wording, or clear the search box</div>`
+                : `<div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
+                   <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>`;
             list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted);">
                 <div style="font-size:24px;margin-bottom:12px;">⚖</div>
-                <div style="font-size:13px;margin-bottom:8px;">No regulatory changes found</div>
-                <div style="font-size:11px;">Run Daily Jobs or click ✦ Re-analyse</div>
+                ${emptyMsg}
             </div>`;
             return;
         }

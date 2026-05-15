@@ -496,6 +496,28 @@
                 </div>
             </div>
 
+            <!-- Semantic / keyword search (Phase 2F). Empty box = normal browse,
+                 typing triggers /api/regulatory?q=. UX-wise this needs no toggle
+                 because the backend transparently uses semantic ranking when
+                 available and falls back to LIKE when not — the search box just
+                 means "find me something." -->
+            <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+                <div style="position:relative;flex:1;max-width:520px;">
+                    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                                 font-size:12px;color:var(--text-muted);pointer-events:none;">⌕</span>
+                    <input type="search" id="regSearchInput"
+                           placeholder="Search regulations by topic or keyword (e.g. capital controls, China, AML)"
+                           autocomplete="off"
+                           oninput="onRegSearchInput(this.value)"
+                           style="width:100%;font-size:12px;padding:7px 10px 7px 28px;
+                                  border:1px solid var(--border);border-radius:6px;
+                                  font-family:var(--font-mono);background:white;outline:none;"/>
+                </div>
+                <div id="regSearchStatus"
+                     style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);
+                            min-height:14px;line-height:14px;"></div>
+            </div>
+
             <div style="margin-bottom:12px;">
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
                     <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);min-width:60px;">Country</span>
