@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -32,6 +33,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 # Load .env automatically when run as a script or imported
 try:
@@ -350,14 +353,109 @@ Classify this news item."""
 # DB helpers
 # ═══════════════════════════════════════════════════════════
 
+def _init_risk_analysis_schema(conn: sqlite3.Connection) -> None:
+    """Idempotently bring the risk_analysis table up to the columns this
+    module writes.
+
+    The table predates this script and was created out-of-band (no
+    CREATE TABLE statement existed anywhere in the repo). The live schema
+    had only six columns; the target schema is twelve (``id`` and
+    ``created_at`` are SQLite-managed, the other ten are written by
+    ``_upsert_analysis``). Every run of classify_news.py raised
+    ``OperationalError: table has no column named news_score`` and the
+    pipeline silently never produced a single risk_analysis row.
+
+    Resolution: CREATE TABLE IF NOT EXISTS with the full target schema
+    so fresh DBs come up correct, plus PRAGMA-driven ALTER TABLE for
+    pre-existing deployments that already have the partial table. We
+    also create a UNIQUE index on ``news_id`` because ``_upsert_analysis``
+    relies on one-row-per-news_id semantics — without the index, a stray
+    duplicate row would silently break the ``SELECT id ... WHERE
+    news_id`` lookup that decides insert-vs-update. Safe to call on
+    every invocation.
+
+    Logging:
+      * INFO line per column added — so operators see *what* was
+        backfilled the first time the migration runs against a stale
+        DB. Subsequent runs are silent at INFO and only emit DEBUG.
+      * DEBUG line with timing + the column set before/after.
+      * ERROR line + re-raise on any ``sqlite3.OperationalError``: a
+        broken migration must be loud, never silent.
+    """
+    t0 = time.perf_counter()
+    added: List[str] = []
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS risk_analysis (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                news_id           INTEGER NOT NULL,
+                risk_category     TEXT,
+                risk_score        INTEGER,
+                analysis_text     TEXT,
+                news_score        REAL,
+                data_score        REAL,
+                linked_indicators TEXT,
+                indicator_values  TEXT,
+                triggered_alerts  TEXT,
+                scored_at         TEXT,
+                created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(risk_analysis)")}
+        logger.debug("risk_analysis existing columns: %s", sorted(existing))
+
+        additions = [
+            ("news_score",        "REAL"),
+            ("data_score",        "REAL"),
+            ("linked_indicators", "TEXT"),
+            ("indicator_values",  "TEXT"),
+            ("triggered_alerts",  "TEXT"),
+            ("scored_at",         "TEXT"),
+        ]
+        for col, sql_type in additions:
+            if col not in existing:
+                logger.info("risk_analysis: adding missing column %s %s", col, sql_type)
+                conn.execute(f"ALTER TABLE risk_analysis ADD COLUMN {col} {sql_type}")
+                added.append(col)
+
+        # Enforce one-row-per-news_id at the DB layer. _upsert_analysis does
+        # a SELECT id WHERE news_id=? to decide INSERT vs UPDATE; if duplicates
+        # ever sneaked in (e.g. a parallel run on a pre-migration DB), that
+        # decision becomes ambiguous. CREATE UNIQUE INDEX IF NOT EXISTS is
+        # idempotent and fails fast on legacy data that already violates the
+        # invariant — which is the right behavior: we want a loud error, not
+        # silent duplication.
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_risk_analysis_news_id "
+            "ON risk_analysis(news_id)"
+        )
+
+        conn.commit()
+    except sqlite3.OperationalError as exc:
+        logger.error("risk_analysis schema init failed: %s", exc)
+        raise
+
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    logger.debug(
+        "risk_analysis schema init took %.1fms (%d column(s) added)",
+        elapsed_ms, len(added),
+    )
+
+
 def _get_unclassified(conn: sqlite3.Connection, force: bool = False) -> List[Dict]:
-    """Return news items that need classification."""
+    """Return news items that need classification.
+
+    Includes ``date`` and ``link`` so the downstream Chroma dual-write
+    (Phase 2E) can stamp the vector doc with proper publication metadata
+    instead of empty strings.
+    """
     cur = conn.cursor()
     if force:
-        cur.execute("SELECT id, title, content FROM news ORDER BY date DESC")
+        cur.execute("SELECT id, title, content, date, link FROM news ORDER BY date DESC")
     else:
         cur.execute("""
-            SELECT n.id, n.title, n.content
+            SELECT n.id, n.title, n.content, n.date, n.link
             FROM news n
             LEFT JOIN risk_analysis ra ON ra.news_id = n.id
             WHERE ra.news_id IS NULL
@@ -365,7 +463,10 @@ def _get_unclassified(conn: sqlite3.Connection, force: bool = False) -> List[Dic
                OR ra.risk_category = ''
             ORDER BY n.date DESC
         """)
-    return [{"id": r[0], "title": r[1], "content": r[2]} for r in cur.fetchall()]
+    return [
+        {"id": r[0], "title": r[1], "content": r[2], "date": r[3] or "", "link": r[4] or ""}
+        for r in cur.fetchall()
+    ]
 
 
 def _upsert_analysis(conn: sqlite3.Connection, news_id: int, result: Dict) -> None:
@@ -542,6 +643,7 @@ async def classify_all_news(force: bool = False) -> Dict:
         return {"status": "error", "message": f"DB not found: {DB_PATH}"}
 
     conn  = sqlite3.connect(str(DB_PATH))
+    _init_risk_analysis_schema(conn)
     items = _get_unclassified(conn, force=force)
 
     if not items:
