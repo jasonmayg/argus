@@ -51,12 +51,17 @@ GCS_BUCKET = "your-gcs-bucket"
 # Order is only the iteration order; rows are deduped per source_type, so
 # items in different files with the same id never collide.
 EXTERNAL_NEWS_SOURCES: List[Tuple[str, str]] = [
-    ("google_radar", "news_google_macro_radar.csv"),
-    ("ecb_press",    "news_ecb_press.csv"),
-    ("boe_press",    "news_boe_press.csv"),
-    ("boj_press",    "news_boj_press.csv"),
-    ("fca_press",    "news_fca_press.csv"),
-    ("boc_press",    "news_boc_press.csv"),
+    ("google_radar",   "news_google_macro_radar.csv"),
+    # US Treasury press releases (OFAC / sanctions / policy announcements).
+    # AI_Treasury_Project ships this as `type: treasury_press_releases_html`,
+    # not RSS, but the output CSV has the same column shape — title, link,
+    # published_at, summary — so the same parser handles it.
+    ("treasury_press", "news_treasury_press.csv"),
+    ("ecb_press",      "news_ecb_press.csv"),
+    ("boe_press",      "news_boe_press.csv"),
+    ("boj_press",      "news_boj_press.csv"),
+    ("fca_press",      "news_fca_press.csv"),
+    ("boc_press",      "news_boc_press.csv"),
 ]
 
 # ── Regulatory categories ─────────────────────────────────────────────────
