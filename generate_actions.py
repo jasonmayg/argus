@@ -540,8 +540,14 @@ async def generate_actions(
         "weights_used":   bool(weights),
     }
 
-    _save_actions(result)
-    _archive_to_chroma(result)
+    saved = _save_actions(result)
+    if saved:
+        # Only archive when the JSON cache is on disk. The cache is the
+        # source of truth Phase 2D's few-shot retrieval lines up against;
+        # if the write failed, mirroring to Chroma would leave the vector
+        # store ahead of the cache and serve few-shot examples the UI
+        # can't actually reference.
+        _archive_to_chroma(result)
     print(f"[generate_actions] Done. {len(country_groups_out)} countries, posture={posture}")
     return result
 
@@ -558,7 +564,14 @@ def _archive_to_chroma(result: Dict) -> None:
     why_now / pros / cons), keyed under add_action_history's slug rule
     so each invocation archives independently rather than overwriting.
     """
-    from core.chroma_writer import dual_write_action_history
+    try:
+        # Lazy import inside the try-block so a missing or broken
+        # chroma_writer module (or its transitive chromadb dependency)
+        # doesn't propagate out — fail-soft end to end.
+        from core.chroma_writer import dual_write_action_history
+    except Exception as e:
+        print(f"[generate_actions] Chroma archive unavailable ({e}); skipping")
+        return
 
     persona      = result.get("persona", "unknown")
     generated_at = result.get("generated_at", "")
@@ -595,15 +608,22 @@ def _archive_to_chroma(result: Dict) -> None:
         print(f"[generate_actions] Chroma actions_history: mirrored={ok}, skipped={fail}")
 
 
-def _save_actions(result: Dict) -> None:
+def _save_actions(result: Dict) -> bool:
+    """Persist the result to the JSON cache. Returns True on success so
+    the caller can gate downstream side-effects (Chroma archival) on it —
+    the JSON cache is the source of truth Phase 2D's few-shot retrieval
+    aligns against, and writing to Chroma when the cache write failed
+    would leave the vector store ahead of disk."""
     try:
         ACTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
         ACTIONS_PATH.write_text(
             json.dumps(result, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        return True
     except Exception as e:
         print(f"[generate_actions] Save error: {e}")
+        return False
 
 
 # ═══════════════════════════════════════════════════════════════

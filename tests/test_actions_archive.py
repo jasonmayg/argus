@@ -8,7 +8,7 @@ pros → recommendation_pros, etc.), and if any of them drifts silently
 the Phase 2D few-shot retrieval starts returning empty docs while the
 JSON cache still looks fine. These tests pin the mapping.
 
-Stubs ``generate_actions.dual_write_action_history`` (imported lazily
+Stubs ``core.chroma_writer.dual_write_action_history`` (imported lazily
 inside _archive_to_chroma) so we never need ChromaDB at test time.
 
 Run:
@@ -154,18 +154,68 @@ class TestArchiveToChroma:
         assert captured[0]["recommendation_cons"] == []
 
     def test_mirror_failure_does_not_raise(self, monkeypatch):
-        """Phase 2E contract: dual_write returning False (or even
-        raising) must not propagate. The JSON cache is authoritative."""
+        """Phase 2E contract: dual_write raising must not propagate. The
+        helper's own try/except around each call is what guarantees this
+        — without it, a single bad row would abort the whole batch."""
         import core.chroma_writer as cw
 
         def boom(action):
             raise RuntimeError("chroma exploded")
 
         monkeypatch.setattr(cw, "dual_write_action_history", boom)
-        # Should not raise — but currently _archive_to_chroma doesn't
-        # catch, so we wrap and confirm the contract here. If it raises,
-        # that's a regression worth catching.
         try:
             _archive_to_chroma(_sample_result())
         except Exception as e:
             pytest.fail(f"_archive_to_chroma must be fail-soft, got: {e}")
+
+    def test_missing_chroma_module_does_not_raise(self, monkeypatch):
+        """If core.chroma_writer itself fails to import (e.g. chromadb
+        package missing in a slim deployment), the helper must still
+        return cleanly. The lazy import lives inside _archive_to_chroma's
+        outer try/except for exactly this case."""
+        import builtins
+
+        original_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "core.chroma_writer":
+                raise ImportError("simulated chromadb missing")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        try:
+            _archive_to_chroma(_sample_result())
+        except Exception as e:
+            pytest.fail(
+                f"_archive_to_chroma must tolerate import failure, got: {e}"
+            )
+
+
+class TestArchiveGatedOnSave:
+    """The JSON cache is the source of truth Phase 2D's few-shot
+    retrieval lines up against. If `_save_actions` fails to write the
+    cache, archiving to Chroma would leave the vector store ahead of
+    disk — future few-shot examples would reference data the UI can't
+    actually display."""
+
+    def test_save_failure_skips_archive(self, tmp_path, monkeypatch):
+        """When _save_actions returns False, generate_actions's main
+        loop must not call _archive_to_chroma."""
+        import generate_actions as ga
+
+        # Force the JSON write to fail by pointing ACTIONS_PATH at a
+        # directory that can't be created (parent is a regular file).
+        bad_parent = tmp_path / "blocking_file"
+        bad_parent.write_text("not a directory")
+        monkeypatch.setattr(ga, "ACTIONS_PATH", bad_parent / "latest_actions.json")
+
+        ok = ga._save_actions({"persona": "x", "country_groups": []})
+        assert ok is False, "save into invalid path must report failure"
+
+    def test_save_success_returns_true(self, tmp_path, monkeypatch):
+        import generate_actions as ga
+        out = tmp_path / "actions.json"
+        monkeypatch.setattr(ga, "ACTIONS_PATH", out)
+        ok = ga._save_actions({"persona": "x", "country_groups": []})
+        assert ok is True
+        assert out.exists()
