@@ -328,8 +328,22 @@ class GuardianEngine:
             )
         return out
 
+    # NWS publishes a properties.severity field per alert, taking values
+    # Extreme / Severe / Moderate / Minor / Unknown. Phase 2.7 persona
+    # eval flagged that routine Minor advisories ("Small Craft Advisory",
+    # "Special Weather Statement") were polluting disaster_risk for
+    # risk_manager and treasury_ops — they're operational hazards but
+    # not treasury-relevant. We keep only Extreme / Severe by default;
+    # operators who need a wider net can override via cfg["severities"].
+    _NWS_DEFAULT_SEVERITIES = ("Extreme", "Severe")
+
     def _adapter_noaa_nws(self, source_key: str, cfg: dict[str, Any], max_records: int = 80) -> list[Event]:
         url = str(cfg.get("url") or "https://api.weather.gov/alerts/active")
+        # Allow YAML config to widen / narrow the severity filter without
+        # a code change. Falsy / missing → use the default whitelist.
+        allowed_severities = {
+            s.strip() for s in (cfg.get("severities") or self._NWS_DEFAULT_SEVERITIES) if s
+        }
         headers = {"User-Agent": "AlphabetTreasuryGuardian/1.0"}
         try:
             resp = self.session.get(url, timeout=self.timeout_sec, headers=headers)
@@ -338,8 +352,15 @@ class GuardianEngine:
         except Exception:
             return []
         out: list[Event] = []
-        for feature in data.get("features", [])[:max_records]:
+        for feature in data.get("features", []):
             props = feature.get("properties", {})
+            severity = (props.get("severity") or "").strip()
+            # The treasury-relevant signal is in Extreme/Severe storms
+            # affecting financial centers and port operations. Routine
+            # marine and forecast advisories (Minor/Moderate) are
+            # rejected here so persona_eval's alerts pool stays clean.
+            if severity not in allowed_severities:
+                continue
             title = (props.get("headline") or props.get("event") or "").strip()
             if not title:
                 continue
@@ -354,6 +375,8 @@ class GuardianEngine:
                     published_at=self._parse_datetime(props.get("sent") or props.get("onset")),
                 )
             )
+            if len(out) >= max_records:
+                break
         return out
 
     def _adapter_nasa_eonet(self, source_key: str, cfg: dict[str, Any], max_records: int = 80) -> list[Event]:
@@ -902,6 +925,16 @@ class GuardianEngine:
             return 0.7
         if source == "fred":
             return 0.55
+        if source == "ecb":
+            # ECB publishes FX reference rates daily for every monitored
+            # pair regardless of whether anything material changed. Phase
+            # 2.7 persona eval flagged that at base_severity=0.6 these
+            # routine publications dominate the top-N for every persona,
+            # crowding out true risk signal. A daily-rate publication is
+            # informational; only treat as alert-worthy at the floor.
+            # When the adapter learns to fire only on > N bps moves
+            # (a separate Phase 2.7 follow-up), this can be re-raised.
+            return 0.3
         return 0.6
 
     @staticmethod
