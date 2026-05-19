@@ -55,6 +55,11 @@ def _parse_args() -> argparse.Namespace:
                    help="Top-N alerts per persona (default: 20)")
     p.add_argument("--no-llm", action="store_true",
                    help="Skip Method B (LLM judge) — only run Method A")
+    p.add_argument("--include-all", action="store_true",
+                   help=("Skip production parity filtering (MIN_GUARDIAN_SCORE + "
+                         "weather/disaster excludes). Use for raw / diagnostic "
+                         "evaluation of the upstream feed, not for measuring "
+                         "what users actually see."))
     p.add_argument("--dry-run", action="store_true",
                    help="Print report to stdout, do not write files or DB rows")
     p.add_argument("--out-dir", type=str, default=str(OUT_DIR),
@@ -73,6 +78,7 @@ def main() -> int:
         return 3
 
     # ── Window ─────────────────────────────────────────────────
+    apply_filters = not args.include_all
     try:
         if args.since:
             since_dt = datetime.fromisoformat(args.since).replace(tzinfo=timezone.utc)
@@ -81,9 +87,13 @@ def main() -> int:
                 if args.until else datetime.now(timezone.utc)
             )
             days = max(1, (until_dt - since_dt).days)
-            window = data_loader.load_alerts_window(days=days, now=until_dt)
+            window = data_loader.load_alerts_window(
+                days=days, now=until_dt, apply_prod_filters=apply_filters,
+            )
         else:
-            window = data_loader.load_alerts_window(days=args.days)
+            window = data_loader.load_alerts_window(
+                days=args.days, apply_prod_filters=apply_filters,
+            )
     except Exception as e:
         log.error("failed to load window: %s", e)
         return 3
@@ -119,7 +129,7 @@ def main() -> int:
 
     # ── Method B ──────────────────────────────────────────────
     judge_results = {}
-    llm_failures = 0
+    failed_personas: set[str] = set()
     if not args.no_llm:
         log.info("Running LLM judge (2 runs per persona)...")
         for p in personas:
@@ -130,18 +140,20 @@ def main() -> int:
                 jr = llm_judge.evaluate_persona(p, scored, weights, runs=2)
             except Exception as e:
                 log.warning("  %s: judge exception %s", p, e)
-                jr = None
-                llm_failures += 1
-            if jr is None or all(r.parse_error for r in jr.runs):
-                llm_failures += 1
+                failed_personas.add(p)
+                continue
+            # `jr` is non-None here; treat "all runs unparseable" as
+            # the same failure mode as the exception branch above.
+            if all(r.parse_error for r in jr.runs):
                 log.warning("  %s: all runs failed to parse", p)
-            if jr is not None:
-                judge_results[p] = jr
-                log.info("  %s: %d consensus, %d disagreement",
-                         p, len(jr.consensus_adjustments),
-                         len(jr.disagreement_adjustments))
+                failed_personas.add(p)
+                continue
+            judge_results[p] = jr
+            log.info("  %s: %d consensus, %d disagreement",
+                     p, len(jr.consensus_adjustments),
+                     len(jr.disagreement_adjustments))
 
-    if not args.no_llm and llm_failures == len(personas):
+    if not args.no_llm and len(failed_personas) == len(personas):
         log.error("All LLM judge calls failed; aborting (run with --no-llm to skip Method B)")
         return 2
 

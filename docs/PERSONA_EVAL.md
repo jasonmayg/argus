@@ -1,8 +1,10 @@
 # Persona Weight Evaluation — Operations Guide
 
-> Engineer-facing guide for `scripts/persona_eval.py`. The design rationale
-> lives in `/path/to/Downloads/Argus_Phase2_7_PersonaEval_Design.md`; this
-> document covers *how to run it* and *how to read the output*.
+> Engineer-facing guide for `scripts/persona_eval.py`. The design
+> rationale (problem framing, method comparison, threshold choices)
+> is captured in `Argus_Phase2_7_PersonaEval_Design.md`, kept with the
+> other phase design docs outside this repo. This document covers
+> *how to run it* and *how to read the output*.
 
 ## 1. What it does
 

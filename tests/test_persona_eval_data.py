@@ -172,6 +172,66 @@ class TestSnapshotsDirMode:
         )
         assert win.kept_count == 1
 
+    def test_prod_filters_drop_below_min_score(self, tmp_path):
+        """Copilot PR #46 review: eval must mirror the production
+        scoring path's filters (MIN_GUARDIAN_SCORE + weather/disaster
+        excludes) so persona_eval measures the pool users actually see
+        — not the raw upstream feed."""
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        (snaps / "alerts_x.json").write_text(json.dumps({"alerts": [
+            _raw_alert(1, days_ago=1, score=10),  # below MIN=40
+            _raw_alert(2, days_ago=1, score=70),  # above
+        ]}))
+        win = data_loader.load_alerts_window(days=30, snapshots_dir=snaps, now=_now())
+        assert win.kept_count == 1
+        assert win.alerts[0].score == 70
+
+    def test_prod_filters_drop_disaster_category(self, tmp_path):
+        """Default exclude_groups=('weather', 'disaster') strips any
+        alert whose category contains 'disaster' so persona_eval's
+        Method-A top-N matches what _load_guardian_alerts surfaces."""
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        (snaps / "alerts_x.json").write_text(json.dumps({"alerts": [
+            _raw_alert(1, days_ago=1, category_label="Disaster Risk", score=70),
+            _raw_alert(2, days_ago=1, category_label="Liquidity Risk", score=70),
+        ]}))
+        win = data_loader.load_alerts_window(days=30, snapshots_dir=snaps, now=_now())
+        assert win.kept_count == 1
+        assert win.alerts[0].category == "Liquidity Risk"
+
+    def test_prod_filters_drop_noaa_sources_with_weather_advisory(self, tmp_path):
+        """NOAA-source alerts whose title looks like a routine advisory
+        (Small Craft Advisory etc.) are dropped — matching the prod
+        logic in generate_actions._load_guardian_alerts."""
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        (snaps / "alerts_x.json").write_text(json.dumps({"alerts": [
+            {"url": "https://x/1", "title": "Small Craft Advisory", "score": 80,
+             "source": "noaa_nws", "published_at": "2026-05-18", "country": "USA"},
+            {"url": "https://x/2", "title": "Major Hurricane Approaching", "score": 80,
+             "source": "noaa_nws", "published_at": "2026-05-18", "country": "USA"},
+        ]}))
+        win = data_loader.load_alerts_window(days=30, snapshots_dir=snaps, now=_now())
+        # Both excluded: noaa_nws source is in EXCLUDED_SOURCES, AND
+        # "Advisory" matches the title-keyword filter.
+        assert win.kept_count == 0
+
+    def test_include_all_disables_prod_filters(self, tmp_path):
+        """`apply_prod_filters=False` (and the CLI `--include-all`)
+        bypasses MIN_SCORE + exclude logic for raw / diagnostic runs."""
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        (snaps / "alerts_x.json").write_text(json.dumps({"alerts": [
+            _raw_alert(1, days_ago=1, score=5),    # would be dropped by MIN
+            _raw_alert(2, days_ago=1, category_label="Disaster Risk", score=70),
+        ]}))
+        win = data_loader.load_alerts_window(
+            days=30, snapshots_dir=snaps, now=_now(), apply_prod_filters=False,
+        )
+        assert win.kept_count == 2
+
     def test_only_alerts_glob_matches_picked_up(self, tmp_path):
         """A stray *.txt or differently-named file in snapshots/ must
         not be parsed as JSON — we look only for alerts_*.json."""
@@ -189,6 +249,11 @@ class TestSnapshotsDirMode:
 
 
 class TestScoreForPersona:
+    """These tests target the scoring formula reuse and ordering. They
+    use apply_prod_filters=False so production filters (MIN_SCORE +
+    weather/disaster excludes) don't interfere — the scoring layer
+    must be exercised independently of the filter layer."""
+
     def test_uses_production_compute_function(self, tmp_path):
         """Sanity: a high-liquidity-weight persona (cash_manager) must
         rank a Liquidity Risk alert above an unrelated alert. If this
@@ -198,7 +263,9 @@ class TestScoreForPersona:
             _raw_alert(1, days_ago=1, category_label="Liquidity Risk", score=50),
             _raw_alert(2, days_ago=1, category_label="Disaster Risk", score=50),
         ])
-        win = data_loader.load_alerts_window(days=30, snapshot_path=path, now=_now())
+        win = data_loader.load_alerts_window(
+            days=30, snapshot_path=path, now=_now(), apply_prod_filters=False,
+        )
         scored = data_loader.score_for_persona(win.alerts, "cash_manager")
         # cash_manager: liquidity_risk=1.6, disaster_risk=0.3 — liquidity must win
         assert scored[0].alert.category == "Liquidity Risk"
@@ -209,7 +276,9 @@ class TestScoreForPersona:
         across the board so the eval still produces SOMETHING (even if
         the row in the report will show 'unknown_persona' clearly)."""
         path = _snapshot(tmp_path, [_raw_alert(1, days_ago=1, score=42)])
-        win = data_loader.load_alerts_window(days=30, snapshot_path=path, now=_now())
+        win = data_loader.load_alerts_window(
+            days=30, snapshot_path=path, now=_now(), apply_prod_filters=False,
+        )
         scored = data_loader.score_for_persona(win.alerts, "nonexistent_persona")
         # unweighted means effective_score == base score
         assert scored[0].effective_score == 42.0
@@ -217,7 +286,9 @@ class TestScoreForPersona:
     def test_top_n_ids_preserves_score_order(self, tmp_path):
         alerts = [_raw_alert(i, days_ago=1, score=10 + i) for i in range(5)]
         path = _snapshot(tmp_path, alerts)
-        win = data_loader.load_alerts_window(days=30, snapshot_path=path, now=_now())
+        win = data_loader.load_alerts_window(
+            days=30, snapshot_path=path, now=_now(), apply_prod_filters=False,
+        )
         scored = data_loader.score_for_persona(win.alerts, "cash_manager")
         ids = data_loader.top_n_ids(scored, n=3)
         assert len(ids) == 3

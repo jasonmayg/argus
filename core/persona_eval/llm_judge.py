@@ -199,20 +199,32 @@ def _safe_float(v) -> Optional[float]:
 # Consensus
 # ──────────────────────────────────────────────────────────────────
 
-def _consensus(runs: List[JudgeSingleRunResult]) -> tuple[List[WeightAdjustment], List[Dict]]:
+def _consensus(
+    runs: List[JudgeSingleRunResult],
+    *,
+    expected_runs: Optional[int] = None,
+) -> tuple[List[WeightAdjustment], List[Dict]]:
     """Combine two runs into a single adjustment list.
 
     Rules:
-      * A category present in BOTH runs with the same direction →
-        consensus. Confidence = min of the two runs' confidences.
-        Suggested value = average.
-      * A category in BOTH runs but disagreeing on direction →
+      * A category present in ALL `expected_runs` with the same
+        direction → consensus. Confidence = min of the runs'
+        confidences. Suggested value = average.
+      * A category proposed by fewer than `expected_runs` runs →
+        disagreement (this includes the "one run parse-failed"
+        case — a single surviving high-confidence proposal must
+        NOT become a consensus auto-apply candidate).
+      * A category in all runs but disagreeing on direction →
         disagreement (do not auto-apply, flag for manual review).
-      * A category in only ONE run → disagreement (low confidence by
-        construction).
+
+    `expected_runs` defaults to `len(runs)` for back-compat; in
+    practice evaluate_persona passes the originally-requested run
+    count so that parse failures count as missing proposals rather
+    than disappearing from the denominator.
     """
     if not runs:
         return [], []
+    threshold = expected_runs if expected_runs is not None else len(runs)
 
     by_cat: Dict[str, List[WeightAdjustment]] = {}
     for r in runs:
@@ -223,11 +235,11 @@ def _consensus(runs: List[JudgeSingleRunResult]) -> tuple[List[WeightAdjustment]
     disagreement: List[Dict] = []
 
     for cat, adjs in by_cat.items():
-        if len(adjs) < len(runs):
+        if len(adjs) < threshold:
             # Category only proposed by some runs — not consensus.
             disagreement.append({
                 "category": cat,
-                "reason": f"only {len(adjs)}/{len(runs)} runs suggested adjustment",
+                "reason": f"only {len(adjs)}/{threshold} runs suggested adjustment",
                 "proposals": [
                     {"suggested": a.suggested, "confidence": a.confidence,
                      "rationale": a.rationale}
@@ -295,8 +307,14 @@ def evaluate_persona(
             continue
         parsed_runs.append(_parse_single_run(raw, current_weights))
 
+    # Pass the originally-requested run count as the consensus
+    # threshold. With only the valid runs, a single parse failure
+    # would let one surviving high-confidence proposal trivially
+    # pass `len(adjs) >= len(runs)` and become auto-apply — Copilot
+    # PR #46 review flagged this as bypassing the two-run check
+    # we documented in the design doc.
     valid = [r for r in parsed_runs if r.parse_error is None]
-    consensus, disagreement = _consensus(valid)
+    consensus, disagreement = _consensus(valid, expected_runs=runs)
     return JudgeResult(
         persona=persona_key,
         runs=parsed_runs,

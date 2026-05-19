@@ -126,27 +126,32 @@ class TestConsensus:
         assert any(d["category"] == "supply_risk"
                    for d in result.disagreement_adjustments)
 
-    def test_one_run_parse_failure_still_produces_result(self):
-        """If run 1 returned garbage, we treat run 2 as effectively a
-        single run → its suggestions go into disagreement (since
-        consensus needs both)."""
+    def test_one_run_parse_failure_yields_disagreement_not_consensus(self):
+        """Copilot PR #46 review: a single surviving proposal from a
+        2-run request must NOT become a consensus auto-apply candidate.
+        The design contract says consensus needs both runs to agree —
+        otherwise a parse failure + one confident hallucination would
+        bypass the two-run guard entirely.
+
+        Surviving proposal lands in disagreement so a human reviewer
+        sees 'only 1/2 runs proposed this' before considering it."""
         r1 = "this is not valid json"
         r2 = _judge_json([{
             "category": "political_risk", "current": 0.5, "suggested": 0.8,
-            "confidence": "medium", "rationale": "alone",
+            "confidence": "high", "rationale": "alone but confident",
         }])
         result = evaluate_persona(
             "fx_manager", [_alert(1)], {"political_risk": 0.5},
             runs=2, llm_caller=_scripted_caller([r1, r2]),
         )
         assert result.runs[0].parse_error is not None
-        # consensus needs N matching proposals where N = number of VALID runs.
-        # Only one valid run, one suggestion → it counts as consensus (1/1).
-        # That's by design: better to surface a low-confidence consensus
-        # than discard the only signal we have. Confidence stays "medium".
-        # If we change this to require both runs valid, update this test.
-        assert len(result.consensus_adjustments) == 1
-        assert result.consensus_adjustments[0].confidence == "medium"
+        # Surviving proposal must NOT become auto-apply consensus.
+        assert len(result.consensus_adjustments) == 0
+        # It must be visible to a human reviewer via the disagreement list.
+        assert len(result.disagreement_adjustments) == 1
+        d = result.disagreement_adjustments[0]
+        assert d["category"] == "political_risk"
+        assert "1/2" in d["reason"]
 
     def test_no_caller_default_uses_router(self, monkeypatch):
         """Verify the default seam wires through core.llm_router.

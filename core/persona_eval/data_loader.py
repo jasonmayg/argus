@@ -24,6 +24,7 @@ from typing import Dict, Iterable, List, Optional
 from generate_actions import (
     EXCLUDED_SOURCES,
     GUARDIAN_PATH,
+    MIN_GUARDIAN_SCORE,
     _compute_effective_score,
 )
 from personas import persona_loader
@@ -33,6 +34,15 @@ from personas import persona_loader
 # authoritative history — alerts_latest.json holds only the most
 # recent snapshot. For multi-day evaluation we walk the directory.
 GUARDIAN_SNAPSHOTS_DIR = Path("guardian_poc/data/snapshots")
+
+
+# Mirror the production exclude defaults so the evaluation measures the
+# alert pool users actually see in the /api/actions UI rather than the
+# raw Guardian feed (which is what _load_guardian_alerts in
+# generate_actions filters BEFORE applying persona weights). Without
+# matching these filters Phase 2.7 was measuring noise that prod users
+# would never encounter — Copilot review on PR #46 caught this.
+DEFAULT_EXCLUDE_GROUPS = ("weather", "disaster")
 
 
 @dataclass
@@ -133,6 +143,39 @@ def _within_window(alert: NormalizedAlert, window_start: datetime, window_end: d
     return window_start <= dt <= window_end
 
 
+def _passes_prod_filters(
+    alert: NormalizedAlert,
+    *,
+    min_score: float,
+    exclude_groups: tuple[str, ...],
+) -> bool:
+    """Mirror the filter logic generate_actions._load_guardian_alerts
+    applies before persona scoring runs in production. If the eval
+    doesn't match these, persona_eval measures a different population
+    than the production /api/actions path does, defeating the point.
+
+    Logic transcribed from generate_actions._load_guardian_alerts:
+      1. Drop below min_score
+      2. If "weather" excluded: drop NOAA sources AND alerts whose
+         title looks like a routine forecast/advisory
+      3. If "disaster" excluded: drop alerts whose category contains
+         "disaster"
+    """
+    if alert.score < min_score:
+        return False
+    if "weather" in exclude_groups:
+        if alert.source in EXCLUDED_SOURCES:
+            return False
+        title_lower = alert.title.lower()
+        if any(kw in title_lower for kw in
+               ("advisory", "watch issued", "warning issued", "forecast")):
+            return False
+    if "disaster" in exclude_groups:
+        if "disaster" in alert.category.lower():
+            return False
+    return True
+
+
 def _read_snapshot_file(path: Path) -> List[Dict]:
     """Best-effort read of one Guardian snapshot JSON. Returns the
     `alerts` list, or [] on any I/O / parse error — a single corrupt
@@ -150,6 +193,9 @@ def load_alerts_window(
     snapshot_path: Optional[Path] = None,
     snapshots_dir: Optional[Path] = None,
     now: Optional[datetime] = None,
+    min_score: Optional[float] = None,
+    exclude_groups: Optional[tuple[str, ...]] = None,
+    apply_prod_filters: bool = True,
 ) -> WindowSummary:
     """Read Guardian alerts and return everything within the window.
 
@@ -161,10 +207,20 @@ def load_alerts_window(
 
     The default path (#3) is what production callers want: each
     Guardian fetch writes a timestamped JSON to that dir, so multi-day
-    evaluation needs ALL of them, not just the most recent overwrite."""
+    evaluation needs ALL of them, not just the most recent overwrite.
+
+    Production-parity filtering (`apply_prod_filters=True` by default)
+    mirrors what generate_actions._load_guardian_alerts strips before
+    persona scoring runs: alerts below MIN_GUARDIAN_SCORE plus weather
+    + disaster groups. Pass `apply_prod_filters=False` (or `--include-
+    all` on the CLI) for raw / diagnostic evaluation that ignores prod
+    filtering — useful when you want to see what the LLM judge would
+    say about the full upstream feed."""
     now = now or datetime.now(timezone.utc)
     window_end = now
     window_start = window_end - timedelta(days=days)
+    effective_min_score = min_score if min_score is not None else MIN_GUARDIAN_SCORE
+    effective_excludes = exclude_groups if exclude_groups is not None else DEFAULT_EXCLUDE_GROUPS
 
     # ── Collect raw alerts from chosen source ───────────────────
     raw_list: List[Dict] = []
@@ -185,7 +241,7 @@ def load_alerts_window(
         elif GUARDIAN_PATH.exists():
             raw_list = _read_snapshot_file(GUARDIAN_PATH)
 
-    # ── Normalize, dedupe, window-filter ────────────────────────
+    # ── Normalize, dedupe, window-filter, prod-parity filter ────
     kept: List[NormalizedAlert] = []
     seen_ids: set[str] = set()
     for raw in raw_list:
@@ -195,6 +251,10 @@ def load_alerts_window(
         if a.alert_id in seen_ids:
             continue
         if not _within_window(a, window_start, window_end):
+            continue
+        if apply_prod_filters and not _passes_prod_filters(
+            a, min_score=effective_min_score, exclude_groups=effective_excludes,
+        ):
             continue
         seen_ids.add(a.alert_id)
         kept.append(a)
