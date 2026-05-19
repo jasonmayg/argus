@@ -76,3 +76,20 @@ class TestErrorPaths:
         r = tool.execute({"persona": "not_a_real_persona"})
         assert r.ok is False
         assert "not found" in r.error.lower()
+
+    def test_unsupported_region_rejected(self, tool):
+        """Copilot PR #45 review: an unknown region key used to silently
+        fall through to global, making the tool claim a region override
+        it didn't apply. Now it fails loudly listing the supported set."""
+        r = tool.execute({"persona": "cash_manager", "region": "eu"})
+        assert r.ok is False
+        assert "unsupported region" in r.error.lower()
+        # Error should help the LLM recover by listing valid options.
+        assert "us" in r.error
+        assert "japan" in r.error
+
+    def test_explicit_global_region_passes(self, tool):
+        """`region='global'` is a synonym for omitting the arg — it
+        must not be rejected by the unsupported-region validator."""
+        r = tool.execute({"persona": "cash_manager", "region": "global"})
+        assert r.ok is True

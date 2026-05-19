@@ -252,6 +252,122 @@ class TestErrorPaths:
 
 
 # ────────────────────────────────────────────────────────────────
+# Constructor validation (PR #45 Copilot review)
+# ────────────────────────────────────────────────────────────────
+
+class TestConstructorValidation:
+    """The runner builds its tool dict via ToolRegistry now, so tool
+    misconfiguration fails at construction with a clear error rather
+    than silently shadowing or producing empty-name lookups at runtime."""
+
+    def test_duplicate_tool_name_rejected(self):
+        client = _StubClient([])
+        with pytest.raises(ValueError, match="already registered"):
+            _runner(client, tools=[_Echo(), _Echo()])
+
+    def test_empty_name_rejected(self):
+        client = _StubClient([])
+        class _Anon(_Echo):
+            name = ""
+        with pytest.raises(ValueError, match="non-empty"):
+            _runner(client, tools=[_Anon()])
+
+
+# ────────────────────────────────────────────────────────────────
+# Exception forwarding bound (PR #45 Copilot review)
+# ────────────────────────────────────────────────────────────────
+
+class TestExceptionForwarding:
+    """When a buggy tool raises, the runner shows the LLM a short safe
+    summary — class name + clipped message — rather than the raw
+    exception which can carry stack traces, paths, or secrets."""
+
+    def test_tool_exception_message_is_truncated(self):
+        class _LongErrorTool(Tool):
+            name = "longerr"
+            description = "raises huge"
+            input_schema = {"type": "object"}
+            def execute(self, args):
+                raise RuntimeError("x" * 5000)   # absurdly long
+
+        client = _StubClient([
+            _resp("tool_use",
+                tool_uses=[{"name": "longerr", "input": {}, "id": "tu_1"}]),
+            _resp("end_turn", text="ack"),
+        ])
+        _runner(client, tools=[_LongErrorTool()]).run("go")
+        second = client.messages.calls[1]["messages"]
+        tr = second[-1]["content"][0]
+        assert tr["is_error"] is True
+        assert "RuntimeError" in tr["content"]
+        # The raw exception is 5000 chars; clipped to < 400 keeps
+        # context budget honest and prevents leaking long internals.
+        assert len(tr["content"]) < 400
+
+    def test_tool_exception_carries_class_name(self):
+        """Class name is the most actionable signal for the model
+        (rate-limit vs validation vs network) — always include it."""
+        class _SpecificError(Exception): pass
+
+        class _BoomTool(Tool):
+            name = "boom"
+            description = "boom"
+            input_schema = {"type": "object"}
+            def execute(self, args):
+                raise _SpecificError("kaboom")
+
+        client = _StubClient([
+            _resp("tool_use",
+                tool_uses=[{"name": "boom", "input": {}, "id": "tu_1"}]),
+            _resp("end_turn", text="ack"),
+        ])
+        _runner(client, tools=[_BoomTool()]).run("go")
+        second = client.messages.calls[1]["messages"]
+        tr = second[-1]["content"][0]
+        assert "_SpecificError" in tr["content"]
+
+
+# ────────────────────────────────────────────────────────────────
+# AgentResult.message vs .error contract (PR #45 Copilot review)
+# ────────────────────────────────────────────────────────────────
+
+class TestAgentResultContract:
+    """`message` is the canonical field, populated whenever status != ok.
+    `error` mirrors `message` so existing callers reading `result.error`
+    don't break. Pin both behaviors."""
+
+    def test_message_populated_on_max_turns(self):
+        loop = [
+            _resp("tool_use",
+                tool_uses=[{"name": "echo", "input": {"msg": "x"}, "id": f"tu_{i}"}])
+            for i in range(5)
+        ]
+        client = _StubClient(loop)
+        r = _runner(client, max_turns=2).run("loop")
+        assert r.status == "max_turns"
+        assert r.message and "max_turns" in r.message
+        assert r.error == r.message
+
+    def test_message_populated_on_budget_exceeded(self):
+        client = _StubClient([
+            _resp("tool_use",
+                tool_uses=[{"name": "echo", "input": {"msg": "x"}, "id": "tu_1"}],
+                tokens_in=200_000, tokens_out=0),
+        ])
+        r = _runner(client, max_total_tokens=100_000).run("burn")
+        assert r.status == "budget_exceeded"
+        assert r.message and "token" in r.message.lower()
+        assert r.error == r.message
+
+    def test_ok_run_leaves_message_none(self):
+        client = _StubClient([_resp("end_turn", text="Done.")])
+        r = _runner(client).run("hi")
+        assert r.status == "ok"
+        assert r.message is None
+        assert r.error is None
+
+
+# ────────────────────────────────────────────────────────────────
 # Cost estimator
 # ────────────────────────────────────────────────────────────────
 

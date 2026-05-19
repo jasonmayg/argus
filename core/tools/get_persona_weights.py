@@ -12,12 +12,17 @@ profile-override change picks up automatically.
 
 from __future__ import annotations
 
-import json
 from typing import Any, Dict
 
 from personas import persona_loader
 
 from .base import Tool, ToolResult
+
+# Pull the canonical region list from persona_loader so the tool stays
+# in sync if a new region is added there. Keep "global" out of the
+# user-facing example list since omitting the arg already means global.
+_SUPPORTED_REGIONS = tuple(r for r in persona_loader._KNOWN_REGIONS if r != "global")
+_SUPPORTED_REGIONS_TXT = ", ".join(_SUPPORTED_REGIONS)
 
 
 class GetPersonaWeights(Tool):
@@ -38,8 +43,9 @@ class GetPersonaWeights(Tool):
             "region": {
                 "type": "string",
                 "description": (
-                    "Optional region key for region_overrides (e.g. us, china, eu). "
-                    "Omit for the global persona defaults."
+                    "Optional region key for region_overrides. Supported: "
+                    f"{_SUPPORTED_REGIONS_TXT}. Omit (or use 'global') for the "
+                    "global persona defaults."
                 ),
             },
         },
@@ -51,6 +57,16 @@ class GetPersonaWeights(Tool):
         region = (args.get("region") or "").strip() or None
         if not persona:
             return ToolResult.failure("persona argument is required")
+
+        # Validate region against persona_loader's canonical set. Without
+        # this, an unsupported region (e.g. "eu") would silently fall
+        # through to global defaults — the tool would claim a region
+        # override that doesn't exist, misleading the LLM's reasoning.
+        if region and region != "global" and region not in persona_loader._KNOWN_REGIONS:
+            return ToolResult.failure(
+                f"unsupported region '{region}'. "
+                f"Supported: {_SUPPORTED_REGIONS_TXT}, or omit for global"
+            )
 
         try:
             if region:

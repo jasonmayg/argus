@@ -72,7 +72,22 @@ class AgentResult:
     cost_usd: float = 0.0
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
     request_id: str = ""
-    error: Optional[str] = None                  # populated when status='error'
+    # Populated whenever status != "ok": carries the budget-breach reason,
+    # max_turns ceiling note, or the upstream exception message. Callers
+    # rendering a UI for the user should display this verbatim alongside
+    # the partial output. Empty only when the run finished cleanly.
+    message: Optional[str] = None
+    # Deprecated alias for `message` — kept so any external caller already
+    # reading `result.error` doesn't break silently. Always equal to
+    # `message` after a run completes.
+    error: Optional[str] = None
+
+
+# Truncation budget for exception strings we forward to the LLM as
+# tool_result content. Long exception messages can balloon context and
+# may leak internal paths / config; we keep just enough for the model
+# to react sensibly, and log full detail to telemetry separately.
+_TOOL_EXC_MAX_CHARS = 200
 
 
 class AgentRunner:
@@ -90,11 +105,19 @@ class AgentRunner:
         max_response_tokens: int = 4096,
         invoked_by: str = "api",
     ) -> None:
+        # Reuse ToolRegistry's validation (non-empty + unique names)
+        # rather than rolling our own dict-build. A typo in a tool's
+        # `name` attribute or two tools sharing a name used to silently
+        # shadow one of them — refuse at construction instead.
+        from core.tools.base import ToolRegistry
+        registry = ToolRegistry()
+        for t in tools:
+            registry.register(t)
         self.agent_name          = agent_name
         self.client              = client
         self.model               = model
         self.system_prompt       = system_prompt
-        self.tools_by_name       = {t.name: t for t in tools}
+        self.tools_by_name       = registry.instances_for([t.name for t in tools])
         self.tool_specs          = [t.anthropic_spec for t in tools]
         self.max_turns           = max_turns
         self.max_total_tokens    = max_total_tokens
@@ -218,8 +241,20 @@ class AgentRunner:
                             # to return ToolResult.failure() on errors,
                             # never raise. If a tool implementation
                             # forgets and raises, recover here.
+                            # Forward only the exception class + a
+                            # truncated message to the LLM — raw repr
+                            # can carry stack traces, file paths, or
+                            # secrets that we don't want in conversation
+                            # context. Full detail is preserved in the
+                            # per-turn telemetry log below + the agent
+                            # log when this exception happened.
+                            logger.warning(
+                                "agent_runner: tool '%s' raised in agent '%s'",
+                                name, self.agent_name, exc_info=True,
+                            )
+                            short = f"{type(exc).__name__}: {str(exc)[:_TOOL_EXC_MAX_CHARS]}"
                             result = ToolResult.failure(
-                                f"tool '{name}' raised: {exc}"
+                                f"tool '{name}' raised: {short}"
                             )
 
                     tool_latency_ms = int((time.time() - t_tool) * 1000)
@@ -282,6 +317,10 @@ class AgentRunner:
             cost_usd=cost,
             tool_calls=tool_calls,
             request_id=request_id,
+            # `message` is the canonical field; `error` mirrors it for
+            # back-compat (the AgentResult contract used to use only
+            # `error` and we don't want existing callers to break).
+            message=error_message,
             error=error_message,
         )
 

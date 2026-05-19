@@ -16,7 +16,6 @@ import json
 import logging
 import os
 import sqlite3
-import sys
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
