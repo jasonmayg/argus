@@ -32,6 +32,21 @@ if str(ROOT) not in sys.path:
 
 
 # ─────────────────────────────────────────────────────────────────
+# Config isolation
+# ─────────────────────────────────────────────────────────────────
+# build_chat_context / build_brief_context read endpoint config through
+# a module-level cache (`core.rag_context._CONFIG_CACHE`). Mutating that
+# cache directly works but leaks across tests if any assertion fails
+# before a manual reset. Using monkeypatch.setattr means pytest restores
+# the original value automatically, even on failure — autouse so every
+# test in this file is isolated without per-test boilerplate.
+@pytest.fixture(autouse=True)
+def reset_rag_config_cache(monkeypatch):
+    import core.rag_context as rc
+    monkeypatch.setattr(rc, "_CONFIG_CACHE", None, raising=False)
+
+
+# ─────────────────────────────────────────────────────────────────
 # Fake vector store
 # ─────────────────────────────────────────────────────────────────
 
@@ -113,11 +128,7 @@ class TestChatContextIncludesRegulatory:
     ECB do") and have no way to know retrieval came back empty."""
 
     def test_regulatory_hits_are_queried(self):
-        from core.rag_context import build_chat_context, _CONFIG_CACHE
-        # Reset config cache so test sees its own config picture
-        import core.rag_context as rc
-        rc._CONFIG_CACHE = None
-
+        from core.rag_context import build_chat_context
         store = _FakeStore(regulatory=[_ecb_hit(), _ofac_hit()])
         with patch("core.rag_context.get_vector_store", return_value=store):
             ctx = build_chat_context("what did the ECB do recently?")
@@ -129,7 +140,6 @@ class TestChatContextIncludesRegulatory:
 
     def test_regulatory_renders_with_R_tag(self):
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
         store = _FakeStore(regulatory=[_ecb_hit()])
         with patch("core.rag_context.get_vector_store", return_value=store):
             ctx = rc.build_chat_context("ECB rate")
@@ -142,7 +152,6 @@ class TestChatContextIncludesRegulatory:
 
     def test_regulatory_citation_recorded(self):
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
         store = _FakeStore(regulatory=[_ofac_hit()])
         with patch("core.rag_context.get_vector_store", return_value=store):
             ctx = rc.build_chat_context("sanctions")
@@ -156,7 +165,6 @@ class TestChatContextIncludesRegulatory:
         Before this change, used=False meant /api/chat fell back to the
         legacy static summary, which loses the regulatory signal entirely."""
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
         store = _FakeStore(news=[], alerts=[], regulatory=[_ecb_hit()])
         with patch("core.rag_context.get_vector_store", return_value=store):
             ctx = rc.build_chat_context("ECB policy")
@@ -170,7 +178,6 @@ class TestChatContextIncludesRegulatory:
         """If all three collections return empty, used must still be False
         so the caller falls back to the legacy news summary."""
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
         store = _FakeStore(news=[], alerts=[], regulatory=[])
         with patch("core.rag_context.get_vector_store", return_value=store):
             ctx = rc.build_chat_context("anything")
@@ -183,7 +190,6 @@ class TestChatContextIncludesRegulatory:
         must not poison the others. If regulatory.search throws, news
         results must still surface."""
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
 
         class _PartialFailStore(_FakeStore):
             def search_regulatory(self, *_args, **_kwargs):
@@ -199,14 +205,15 @@ class TestChatContextIncludesRegulatory:
         assert ctx.regulatory_hits == 0
         assert ctx.used is True
 
-    def test_regulatory_top_k_zero_skips_collection(self):
+    def test_regulatory_top_k_zero_skips_collection(self, monkeypatch):
         """Operational kill switch: setting regulatory_top_k=0 in config
         must make the helper skip the search call entirely — no Chroma
         round-trip, no rag_queries telemetry write."""
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
-        # Inject config that disables regulatory
-        rc._CONFIG_CACHE = {
+        # Inject config that disables regulatory via monkeypatch so the
+        # cache is restored automatically at teardown, even if an
+        # assertion below fails.
+        monkeypatch.setattr(rc, "_CONFIG_CACHE", {
             "endpoints": {
                 "chat": {
                     "enabled": True,
@@ -214,7 +221,7 @@ class TestChatContextIncludesRegulatory:
                     "regulatory_top_k": 0, "alerts_min_count": 5,
                 }
             }
-        }
+        })
         store = _FakeStore(
             news=[_Hit("news_1", "Fed cuts", {}, 0.2)],
             regulatory=[_ecb_hit()],
@@ -225,7 +232,6 @@ class TestChatContextIncludesRegulatory:
         assert store.calls["regulatory"] == 0, \
             "regulatory_top_k=0 must skip the call entirely"
         assert ctx.regulatory_hits == 0
-        rc._CONFIG_CACHE = None  # cleanup
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -235,7 +241,6 @@ class TestChatContextIncludesRegulatory:
 class TestBriefContextIncludesRegulatory:
     def test_regulatory_hits_in_brief(self):
         import core.rag_context as rc
-        rc._CONFIG_CACHE = None
         store = _FakeStore(regulatory=[_ecb_hit()])
         # build_brief_context needs a persona for query terms; use fx_manager
         # which has known risk_categories mapped via _persona_query_terms.
