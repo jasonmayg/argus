@@ -308,12 +308,18 @@ def evaluate_persona(
 def _default_llm_caller(prompt: str, *, temperature: float, run_index: int) -> str:
     """Wire to core.llm_router. Phase 0 router resolves which provider
     actually serves the task — config/llm_routing.yaml maps
-    persona_eval → Claude Sonnet by default."""
+    persona_eval → Claude Sonnet by default.
+
+    max_tokens=3000 because the JSON output for one persona with 5
+    weight adjustments + per-alert reasoning + category_signals
+    consistently lands in the 2000-2500 range. First live runs at
+    max_tokens=1500 truncated mid-string for fx_manager / risk_manager;
+    3000 gives enough headroom without paying for unused space."""
     return call_llm(
         task="persona_eval",
         system=_SYSTEM,
         user=prompt,
         temperature=temperature,
-        max_tokens=1500,
+        max_tokens=3000,
         response_format="json",
     )
