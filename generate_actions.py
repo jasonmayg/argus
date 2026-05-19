@@ -540,20 +540,90 @@ async def generate_actions(
         "weights_used":   bool(weights),
     }
 
-    _save_actions(result)
+    saved = _save_actions(result)
+    if saved:
+        # Only archive when the JSON cache is on disk. The cache is the
+        # source of truth Phase 2D's few-shot retrieval lines up against;
+        # if the write failed, mirroring to Chroma would leave the vector
+        # store ahead of the cache and serve few-shot examples the UI
+        # can't actually reference.
+        _archive_to_chroma(result)
     print(f"[generate_actions] Done. {len(country_groups_out)} countries, posture={posture}")
     return result
 
 
-def _save_actions(result: Dict) -> None:
+def _archive_to_chroma(result: Dict) -> None:
+    """Mirror each generated action card into Chroma's actions_history
+    collection so Phase 2D's few-shot retrieval has fresh examples to
+    draw on next run. The JSON cache + SQLite remain the source of truth;
+    any Chroma failure is logged and swallowed (fail-soft, same contract
+    as the other dual_write_* hooks).
+
+    Translates the nested {category_card → action} shape into the flat
+    schema VectorStore.add_action_history expects (recommendation /
+    why_now / pros / cons), keyed under add_action_history's slug rule
+    so each invocation archives independently rather than overwriting.
+    """
+    try:
+        # Lazy import inside the try-block so a missing or broken
+        # chroma_writer module (or its transitive chromadb dependency)
+        # doesn't propagate out — fail-soft end to end.
+        from core.chroma_writer import dual_write_action_history
+    except Exception as e:
+        print(f"[generate_actions] Chroma archive unavailable ({e}); skipping")
+        return
+
+    persona      = result.get("persona", "unknown")
+    generated_at = result.get("generated_at", "")
+    ok = fail = 0
+    for cg in result.get("country_groups", []):
+        country = cg.get("country", "Global")
+        for card in cg.get("category_cards", []):
+            action_data = card.get("action") or {}
+            payload = {
+                "persona":             persona,
+                "country":             country,
+                "category":            card.get("category", "Unclassified"),
+                "top_title":           card.get("top_alert_title", ""),
+                "why_now":             action_data.get("why", ""),
+                "recommendation":      action_data.get("recommended_action", ""),
+                "recommendation_pros": action_data.get("pros", []),
+                "recommendation_cons": action_data.get("cons", []),
+                "effective_score":     card.get("effective_score"),
+                "generated_at":        generated_at,
+            }
+            try:
+                wrote = dual_write_action_history(payload)
+            except Exception as e:
+                # The downstream hook is supposed to be fail-soft already,
+                # but defence in depth: the JSON cache is the source of
+                # truth, the Chroma mirror is best-effort.
+                print(f"[generate_actions] Chroma archive error ({e}); continuing")
+                wrote = False
+            if wrote:
+                ok += 1
+            else:
+                fail += 1
+    if ok or fail:
+        print(f"[generate_actions] Chroma actions_history: mirrored={ok}, skipped={fail}")
+
+
+def _save_actions(result: Dict) -> bool:
+    """Persist the result to the JSON cache. Returns True on success so
+    the caller can gate downstream side-effects (Chroma archival) on it —
+    the JSON cache is the source of truth Phase 2D's few-shot retrieval
+    aligns against, and writing to Chroma when the cache write failed
+    would leave the vector store ahead of disk."""
     try:
         ACTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
         ACTIONS_PATH.write_text(
             json.dumps(result, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        return True
     except Exception as e:
         print(f"[generate_actions] Save error: {e}")
+        return False
 
 
 # ═══════════════════════════════════════════════════════════════
