@@ -1,0 +1,59 @@
+# ARGUS Phase 3 Agent Runtime Configuration
+#
+# Per-agent budgets and tool whitelists. The runner reads this file at
+# invocation time — change `max_cost_usd` / `max_turns` here to tune
+# per-agent guards without redeploying code.
+#
+# Phase 3A status: only the schema + default budgets ship. The three
+# named agents below reserve slots for Phase 3B (intelligence),
+# Phase 3C (response), and Phase 3D (actions). Their `tools` lists
+# include tools that don't exist yet — those entries are filtered out
+# at runtime so missing tools don't crash, but they document the
+# eventual surface.
+
+defaults:
+  provider:            anthropic
+  max_response_tokens: 4096        # per-turn output cap
+
+agents:
+  intelligence:
+    # Cross-source synthesis. Quality matters more than cost; Sonnet
+    # is the right default. Bump to Opus only when responses degrade.
+    model:            claude-sonnet-4-6
+    max_turns:        10
+    max_total_tokens: 100000
+    max_cost_usd:     0.50
+    tools:
+      - get_persona_weights
+      - get_fx_rate
+      # Phase 3B will add: search_news, search_alerts, search_regulatory,
+      # query_econ_indicator
+
+  response:
+    # Chat upgrade path. Latency-sensitive — keep budget tighter so a
+    # slow tool sequence falls back to the legacy RAG handler quickly.
+    model:            claude-sonnet-4-6
+    max_turns:        8
+    max_total_tokens: 60000
+    max_cost_usd:     0.30
+    tools:
+      - get_persona_weights
+      - get_fx_rate
+      # Phase 3C will add: search_news, search_alerts, ask_user_clarification
+
+  actions:
+    # Business decisions. Opus is justified — but the cap is higher to
+    # reflect that reviewing many alerts for consistency takes more turns.
+    model:            claude-opus-4-7
+    max_turns:        15
+    max_total_tokens: 150000
+    max_cost_usd:     1.00
+    tools:
+      - get_persona_weights
+      - get_fx_rate
+      # Phase 3D will add: get_cash_positions, get_historical_actions,
+      # score_action_coherence
+
+# Daily-cost ceiling for the platform. scripts/agent_usage_report.py
+# (lands in Phase 3E) reads this to decide when to alert.
+daily_alert_usd: 20
