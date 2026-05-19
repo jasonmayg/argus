@@ -41,6 +41,12 @@ tasks:
   recommendations:
     chain: [groq_llama_70b, openai_4o_mini]
 
+  # Persona weight evaluation — quality-sensitive, low volume (weekly).
+  # Two independent invocations per persona produce a consensus signal.
+  # Run cost is tiny so we pay for the best judge.
+  persona_eval:
+    chain: [anthropic_sonnet, openai_4o]
+
   # Catch-all for tasks not explicitly mapped above
   default:
     chain: [groq_llama_70b, openai_4o_mini, anthropic_haiku]
