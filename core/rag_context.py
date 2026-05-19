@@ -49,6 +49,8 @@ class ChatContext:
     used: bool = False           # True if RAG actually contributed text
     news_hits: int = 0
     alerts_hits: int = 0
+    regulatory_hits: int = 0     # ECB / BoE / OFAC etc. — they live in
+                                 # the regulatory collection, not news
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -108,6 +110,24 @@ def _alert_line(i: int, hit: SearchHit) -> str:
     return "".join(parts)
 
 
+def _regulatory_line(i: int, hit: SearchHit) -> str:
+    """Render a regulatory_changes hit. Surfacing country/category/severity
+    is more useful than the date here — regulatory items are rule-changes
+    or binding actions, and operators scan for jurisdiction + severity
+    first, not recency."""
+    m = hit.metadata or {}
+    title = _first_line(hit.document, 160)
+    parts = [f"[R{i}] {title}"]
+    bits = []
+    if m.get("country"):        bits.append(str(m["country"]))
+    if m.get("category"):       bits.append(str(m["category"]))
+    if m.get("severity"):       bits.append(str(m["severity"]))
+    if m.get("effective_date"): bits.append(f"eff={m['effective_date']}")
+    if bits:
+        parts.append("  (" + " | ".join(bits) + ")")
+    return "".join(parts)
+
+
 def _to_citation(coll: str, hit: SearchHit, label: str) -> Citation:
     m = hit.metadata or {}
     return Citation(
@@ -115,7 +135,8 @@ def _to_citation(coll: str, hit: SearchHit, label: str) -> Citation:
         id=hit.id,
         title=_first_line(hit.document, 200),
         url=m.get("url"),
-        date=m.get("date") or m.get("snapshot_date") or m.get("seendate"),
+        date=m.get("date") or m.get("snapshot_date")
+             or m.get("seendate") or m.get("effective_date"),
         score=m.get("risk_score") if m.get("risk_score") is not None else m.get("score"),
         distance=hit.distance,
     )
@@ -129,7 +150,12 @@ def build_chat_context(
     request_id: Optional[str] = None,
     endpoint: str = "api.chat",
 ) -> ChatContext:
-    """Retrieve from `news` and (optionally) `alerts` for a chat query.
+    """Retrieve from `news`, `alerts`, and `regulatory` for a chat query.
+
+    Regulatory is included because the bulk of Argus's structured signal
+    (ECB / BoE / BoJ / OFAC etc.) lives there — the `news` collection
+    currently only ingests Fed news, so without this any non-US monetary
+    or sanctions question would retrieve nothing relevant.
 
     Returns a ChatContext. If RAG is disabled in config, returns an empty
     ChatContext with `used=False` so callers can fall back to the legacy
@@ -141,6 +167,7 @@ def build_chat_context(
 
     news_k = int(cfg.get("news_top_k", 5))
     alerts_k = int(cfg.get("alerts_top_k", 3))
+    regulatory_k = int(cfg.get("regulatory_top_k", 3))
     alerts_min = int(cfg.get("alerts_min_count", 5))
 
     try:
@@ -150,6 +177,7 @@ def build_chat_context(
 
     news_hits: list[SearchHit] = []
     alerts_hits: list[SearchHit] = []
+    regulatory_hits: list[SearchHit] = []
     try:
         if news_k > 0:
             news_hits = store.search_news(
@@ -168,9 +196,18 @@ def build_chat_context(
     except Exception:
         alerts_hits = []
 
-    if not news_hits and not alerts_hits:
+    try:
+        if regulatory_k > 0:
+            regulatory_hits = store.search_regulatory(
+                query, n_results=regulatory_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        regulatory_hits = []
+
+    if not news_hits and not alerts_hits and not regulatory_hits:
         return ChatContext(prompt_text="", used=False,
-                           news_hits=0, alerts_hits=0)
+                           news_hits=0, alerts_hits=0, regulatory_hits=0)
 
     blocks: list[str] = []
     citations: list[Citation] = []
@@ -185,9 +222,15 @@ def build_chat_context(
         blocks.append("Retrieved alerts:\n" + "\n".join(lines))
         citations.extend(_to_citation("alerts", h, f"A{i+1}") for i, h in enumerate(alerts_hits))
 
+    if regulatory_hits:
+        lines = [_regulatory_line(i + 1, h) for i, h in enumerate(regulatory_hits)]
+        blocks.append("Retrieved regulatory changes:\n" + "\n".join(lines))
+        citations.extend(_to_citation("regulatory", h, f"R{i+1}") for i, h in enumerate(regulatory_hits))
+
     tag_examples: list[str] = []
-    if news_hits:   tag_examples.append("[N1]")
-    if alerts_hits: tag_examples.append("[A1]")
+    if news_hits:        tag_examples.append("[N1]")
+    if alerts_hits:      tag_examples.append("[A1]")
+    if regulatory_hits:  tag_examples.append("[R1]")
     available_tags = " / ".join(tag_examples) or "[N#]"
     blocks.append(
         f"Cite items by tag ({available_tags}) when their content informs your answer. "
@@ -200,6 +243,7 @@ def build_chat_context(
         used=True,
         news_hits=len(news_hits),
         alerts_hits=len(alerts_hits),
+        regulatory_hits=len(regulatory_hits),
     )
 
 
@@ -300,6 +344,7 @@ def build_brief_context(
 
     news_k = int(cfg.get("news_top_k", 8))
     alerts_k = int(cfg.get("alerts_top_k", 5))
+    regulatory_k = int(cfg.get("regulatory_top_k", 4))
     alerts_min = int(cfg.get("alerts_min_count", 5))
     pipeline_max = int(cfg.get("pipeline_terms_max", 3))
 
@@ -320,6 +365,7 @@ def build_brief_context(
 
     news_hits: list[SearchHit] = []
     alerts_hits: list[SearchHit] = []
+    regulatory_hits: list[SearchHit] = []
     try:
         if news_k > 0:
             news_hits = store.search_news(
@@ -338,7 +384,16 @@ def build_brief_context(
     except Exception:
         alerts_hits = []
 
-    if not news_hits and not alerts_hits:
+    try:
+        if regulatory_k > 0:
+            regulatory_hits = store.search_regulatory(
+                query, n_results=regulatory_k,
+                request_id=request_id, endpoint=endpoint,
+            )
+    except Exception:
+        regulatory_hits = []
+
+    if not news_hits and not alerts_hits and not regulatory_hits:
         return ChatContext(prompt_text="", used=False)
 
     blocks: list[str] = []
@@ -354,6 +409,11 @@ def build_brief_context(
         blocks.append("Active alerts of interest:\n" + "\n".join(lines))
         citations.extend(_to_citation("alerts", h, f"A{i+1}") for i, h in enumerate(alerts_hits))
 
+    if regulatory_hits:
+        lines = [_regulatory_line(i + 1, h) for i, h in enumerate(regulatory_hits)]
+        blocks.append("Relevant regulatory changes:\n" + "\n".join(lines))
+        citations.extend(_to_citation("regulatory", h, f"R{i+1}") for i, h in enumerate(regulatory_hits))
+
     blocks.append(
         "Ground the brief in the items above where relevant. Do not list them —"
         " synthesize them into the 3-5 sentence narrative. Skip any item that"
@@ -365,6 +425,7 @@ def build_brief_context(
         used=True,
         news_hits=len(news_hits),
         alerts_hits=len(alerts_hits),
+        regulatory_hits=len(regulatory_hits),
     )
 
 

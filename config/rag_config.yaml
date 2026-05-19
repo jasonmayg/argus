@@ -64,6 +64,12 @@ endpoints:
     enabled: true
     news_top_k: 5
     alerts_top_k: 3
+    # Regulatory items (ECB / BoE / BoJ / OFAC etc.) live in their own
+    # collection because they're rule-changes / binding actions, not news.
+    # But chat questions like "what did the ECB do recently?" need them,
+    # so we retrieve from both. Keep this small — regulatory hits are
+    # already a curated subset.
+    regulatory_top_k: 3
     # Skip alerts collection retrieval if its count is below this — avoids
     # injecting noise when the snapshot is sparse.
     alerts_min_count: 5
@@ -75,6 +81,7 @@ endpoints:
     # the cost of some lower-relevance hits.
     news_top_k: 8
     alerts_top_k: 5
+    regulatory_top_k: 4
     alerts_min_count: 5
     # How many pipeline top-scored titles to splice into the retrieval
     # query. 0 disables pipeline-derived terms; the query falls back to
