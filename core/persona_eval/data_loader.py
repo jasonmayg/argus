@@ -28,6 +28,12 @@ from generate_actions import (
 )
 from personas import persona_loader
 
+# Guardian POC writes one timestamped JSON per fetch to this directory
+# alongside overwriting alerts_latest.json. The directory is the
+# authoritative history — alerts_latest.json holds only the most
+# recent snapshot. For multi-day evaluation we walk the directory.
+GUARDIAN_SNAPSHOTS_DIR = Path("guardian_poc/data/snapshots")
+
 
 @dataclass
 class NormalizedAlert:
@@ -70,15 +76,23 @@ class WindowSummary:
 # ──────────────────────────────────────────────────────────────────
 
 def _alert_id(raw: Dict) -> str:
-    """Stable identifier for de-duplication and citation. URL is the
-    most stable when present; falls back to title prefix so two alerts
-    with identical titles collide (which is the right behavior — same
-    headline twice in a window is usually a republish, not new signal)."""
+    """Stable identifier for de-duplication and citation.
+
+    Uses (url + published_at) as a composite key rather than url alone:
+    Guardian re-emits the same source URL on every fetch (e.g. an ECB
+    FX-reference-rate endpoint shows up daily with the same URL), and
+    each fetch is a distinct event we want to keep. (url, published_at)
+    correctly collapses re-fetches of the same event while keeping
+    daily reports of the "same indicator" distinct.
+
+    Falls back to title prefix when URL is missing so headlineless
+    duplicates still collapse."""
     url = (raw.get("url") or "").strip()
+    pub_date = (raw.get("published_at") or raw.get("seendate") or "")[:10]
     if url:
-        return url
+        return f"{url}#{pub_date}" if pub_date else url
     title = (raw.get("title") or "").strip()
-    return f"title:{title[:120]}"
+    return f"title:{title[:120]}#{pub_date}"
 
 
 def _normalize(raw: Dict) -> Optional[NormalizedAlert]:
@@ -119,36 +133,59 @@ def _within_window(alert: NormalizedAlert, window_start: datetime, window_end: d
     return window_start <= dt <= window_end
 
 
+def _read_snapshot_file(path: Path) -> List[Dict]:
+    """Best-effort read of one Guardian snapshot JSON. Returns the
+    `alerts` list, or [] on any I/O / parse error — a single corrupt
+    file should never abort a multi-snapshot walk."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data.get("alerts") or []
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
 def load_alerts_window(
     days: int = 30,
     *,
     snapshot_path: Optional[Path] = None,
+    snapshots_dir: Optional[Path] = None,
     now: Optional[datetime] = None,
 ) -> WindowSummary:
-    """Read the Guardian snapshot, return a WindowSummary capturing what
-    survived filtering. `snapshot_path` overrideable for tests."""
-    path = Path(snapshot_path) if snapshot_path else GUARDIAN_PATH
+    """Read Guardian alerts and return everything within the window.
+
+    Source-of-truth precedence:
+      1. `snapshot_path`     — single file (used by tests + ad-hoc evals)
+      2. `snapshots_dir`     — walk every JSON in this directory
+      3. `GUARDIAN_SNAPSHOTS_DIR` (default) if it exists with files
+      4. `GUARDIAN_PATH` (alerts_latest.json) as last resort
+
+    The default path (#3) is what production callers want: each
+    Guardian fetch writes a timestamped JSON to that dir, so multi-day
+    evaluation needs ALL of them, not just the most recent overwrite."""
     now = now or datetime.now(timezone.utc)
     window_end = now
     window_start = window_end - timedelta(days=days)
 
-    if not path.exists():
-        return WindowSummary(
-            alerts=[], window_start=window_start.date().isoformat(),
-            window_end=window_end.date().isoformat(),
-            raw_count=0, kept_count=0,
-        )
+    # ── Collect raw alerts from chosen source ───────────────────
+    raw_list: List[Dict] = []
+    if snapshot_path is not None:
+        raw_list = _read_snapshot_file(Path(snapshot_path))
+    else:
+        dir_to_scan: Optional[Path] = None
+        if snapshots_dir is not None:
+            dir_to_scan = Path(snapshots_dir)
+        elif GUARDIAN_SNAPSHOTS_DIR.exists() and any(
+            GUARDIAN_SNAPSHOTS_DIR.glob("alerts_*.json")
+        ):
+            dir_to_scan = GUARDIAN_SNAPSHOTS_DIR
 
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return WindowSummary(
-            alerts=[], window_start=window_start.date().isoformat(),
-            window_end=window_end.date().isoformat(),
-            raw_count=0, kept_count=0,
-        )
+        if dir_to_scan is not None and dir_to_scan.exists():
+            for snap in sorted(dir_to_scan.glob("alerts_*.json")):
+                raw_list.extend(_read_snapshot_file(snap))
+        elif GUARDIAN_PATH.exists():
+            raw_list = _read_snapshot_file(GUARDIAN_PATH)
 
-    raw_list = data.get("alerts") or []
+    # ── Normalize, dedupe, window-filter ────────────────────────
     kept: List[NormalizedAlert] = []
     seen_ids: set[str] = set()
     for raw in raw_list:
