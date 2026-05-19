@@ -190,7 +190,7 @@ def _classify_item(title: str, summary: str, published_at: str = "") -> Optional
 Published: {published_at}
 Summary: {_clean_html(summary)[:400]}
 
-Classify this news item for regulatory changes affecting treasury operations."""
+Classify this news item for regulatory actions affecting treasury operations."""
 
     try:
         raw = call_llm(
