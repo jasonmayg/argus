@@ -541,8 +541,58 @@ async def generate_actions(
     }
 
     _save_actions(result)
+    _archive_to_chroma(result)
     print(f"[generate_actions] Done. {len(country_groups_out)} countries, posture={posture}")
     return result
+
+
+def _archive_to_chroma(result: Dict) -> None:
+    """Mirror each generated action card into Chroma's actions_history
+    collection so Phase 2D's few-shot retrieval has fresh examples to
+    draw on next run. The JSON cache + SQLite remain the source of truth;
+    any Chroma failure is logged and swallowed (fail-soft, same contract
+    as the other dual_write_* hooks).
+
+    Translates the nested {category_card → action} shape into the flat
+    schema VectorStore.add_action_history expects (recommendation /
+    why_now / pros / cons), keyed under add_action_history's slug rule
+    so each invocation archives independently rather than overwriting.
+    """
+    from core.chroma_writer import dual_write_action_history
+
+    persona      = result.get("persona", "unknown")
+    generated_at = result.get("generated_at", "")
+    ok = fail = 0
+    for cg in result.get("country_groups", []):
+        country = cg.get("country", "Global")
+        for card in cg.get("category_cards", []):
+            action_data = card.get("action") or {}
+            payload = {
+                "persona":             persona,
+                "country":             country,
+                "category":            card.get("category", "Unclassified"),
+                "top_title":           card.get("top_alert_title", ""),
+                "why_now":             action_data.get("why", ""),
+                "recommendation":      action_data.get("recommended_action", ""),
+                "recommendation_pros": action_data.get("pros", []),
+                "recommendation_cons": action_data.get("cons", []),
+                "effective_score":     card.get("effective_score"),
+                "generated_at":        generated_at,
+            }
+            try:
+                wrote = dual_write_action_history(payload)
+            except Exception as e:
+                # The downstream hook is supposed to be fail-soft already,
+                # but defence in depth: the JSON cache is the source of
+                # truth, the Chroma mirror is best-effort.
+                print(f"[generate_actions] Chroma archive error ({e}); continuing")
+                wrote = False
+            if wrote:
+                ok += 1
+            else:
+                fail += 1
+    if ok or fail:
+        print(f"[generate_actions] Chroma actions_history: mirrored={ok}, skipped={fail}")
 
 
 def _save_actions(result: Dict) -> None:
