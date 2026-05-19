@@ -251,9 +251,10 @@ Generate the treasury intelligence brief now."""
             "request_id":   request_id,
             "citations":    [c.__dict__ for c in rag_ctx.citations],
             "rag": {
-                "used":        rag_ctx.used,
-                "news_hits":   rag_ctx.news_hits,
-                "alerts_hits": rag_ctx.alerts_hits,
+                "used":            rag_ctx.used,
+                "news_hits":       rag_ctx.news_hits,
+                "alerts_hits":     rag_ctx.alerts_hits,
+                "regulatory_hits": rag_ctx.regulatory_hits,
             },
         })
     except RuntimeError as e:
@@ -272,8 +273,8 @@ You have deep expertise in:
 - FX & liquidity risk: currency volatility, cross-border flows
 - Treasury operations: cash management, hedging, funding gaps
 
-Use the pipeline and retrieved news/alerts to answer questions accurately.
-Tag citations inline using the [N#] / [A#] markers from the retrieval block.
+Use the pipeline and retrieved news/alerts/regulatory items to answer accurately.
+Tag citations inline using the [N#] / [A#] / [R#] markers from the retrieval block.
 If data is unavailable, say so and answer from general knowledge.
 Tone: precise, professional, concise. No disclaimers or filler."""
 
@@ -320,9 +321,10 @@ def api_chat():
             "request_id": request_id,
             "citations": [c.__dict__ for c in rag_ctx.citations],
             "rag": {
-                "used":        rag_ctx.used,
-                "news_hits":   rag_ctx.news_hits,
-                "alerts_hits": rag_ctx.alerts_hits,
+                "used":            rag_ctx.used,
+                "news_hits":       rag_ctx.news_hits,
+                "alerts_hits":     rag_ctx.alerts_hits,
+                "regulatory_hits": rag_ctx.regulatory_hits,
             },
         })
     except RuntimeError as e:
