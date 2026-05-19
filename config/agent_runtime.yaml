@@ -24,10 +24,12 @@ agents:
     max_total_tokens: 100000
     max_cost_usd:     0.50
     tools:
-      - get_persona_weights
+      - search_news
+      - search_alerts
+      - search_regulatory
+      - query_econ_indicator
       - get_fx_rate
-      # Phase 3B will add: search_news, search_alerts, search_regulatory,
-      # query_econ_indicator
+      - get_persona_weights
 
   response:
     # Chat upgrade path. Latency-sensitive — keep budget tighter so a
