@@ -3,6 +3,14 @@
 PR #47 合并后对 Guardian 噪音过滤做的第一次 rebaseline 分析。结论是噪音过滤
 本身有效，但同时暴露了一个更深的 source-coverage 问题需要后续处理。
 
+> **Update (2026-05-19 后续核实)** — 本文最初推测 "Guardian source coverage 不够"
+> 是 persona 区分度差的根因。当晚拿到 GCS 凭据实测后发现真相更具体：GCS bucket
+> 数据其实很丰富（每日 65 个 CSV，191 条真实新闻 alert），但 GCS → scored snapshot
+> 那一步在迁移中没有落地，所以所有 alert `category_label="Unclassified"` 且
+> `score=0`。修复 spec 见 `docs/GUARDIAN_SCORED_SNAPSHOT_HANDOFF.md`，需要
+> 与 AI_Treasury_Project 协调。本文以下分析仍然有效，但 "推荐后续" 一节请以
+> handoff doc 为准。
+
 ## TL;DR
 
 - ✅ PR #47 (ECB severity 0.6 → 0.3，NWS Severe/Extreme 白名单) 工作正常。
