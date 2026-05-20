@@ -1,6 +1,34 @@
 # ARGUS - Automated Risk Guardian for Universal Sensing
 # Complete Dependencies List
-# Updated: 2026-02-13
+# Updated: 2026-05-20
+
+# ============================================================================
+# PyTorch — CPU-only build (no GPU support baked in by design)
+# ============================================================================
+# `sentence-transformers` (below) depends on torch. On Linux, pip's default
+# resolution pulls the CUDA-enabled torch wheel (~2.5 GB) plus the nvidia-*
+# and triton stack (~6-8 GB more) — ~8-12 GB total. Small VMs run out of
+# disk before the install finishes.
+#
+# Argus only uses torch for `sentence-transformers` inference on the
+# all-MiniLM-L6-v2 embedding model, which runs fine on CPU. There's no
+# GPU code path in Argus. So we force the CPU wheel for everyone.
+#
+# How this works:
+#   * --extra-index-url adds PyTorch's CPU index to pip's search.
+#   * On Linux we PIN `torch==X.Y.Z+cpu` — the explicit `+cpu` local
+#     version forces pip to pick the CPU wheel from PyTorch's index
+#     rather than the manylinux1 CUDA wheel from PyPI. (PyPI's wheel
+#     has a more "compatible" wheel-tag and would otherwise win
+#     resolution even though `+cpu` is higher per PEP 440.)
+#   * On macOS / Windows the PyPI wheels are already CPU-only, so we
+#     keep the floor loose.
+#
+# Bumping torch: update `2.6.0+cpu` to the new pinned version. Find
+# the latest available at https://download.pytorch.org/whl/cpu/torch/.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu ; sys_platform == "linux"
+torch>=2.0       ; sys_platform != "linux"
 
 # ============================================================================
 # Core Web Framework & Server
@@ -30,7 +58,9 @@ chromadb>=0.5,<0.6        # Embedded vector store. Pinned below 1.x — 0.5 is
                           # the last series with a stable API; 1.x introduces
                           # breaking changes we'll adopt deliberately later.
 sentence-transformers>=2.7  # Local embedding model (all-MiniLM-L6-v2 default).
-                          # Pulls torch + transformers (~500MB on first install).
+                          # torch is constrained to the CPU wheel above so
+                          # sentence-transformers can't reintroduce a CUDA
+                          # build via transitive resolution.
 
 # ============================================================================
 # Data Processing & Storage
