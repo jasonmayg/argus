@@ -128,3 +128,42 @@ class TestFailureModes:
         r = tool.execute({"series_id": "us_cpi", "tail": "lots"})
         assert r.ok is False
         assert "tail" in r.error and "integer" in r.error
+
+
+class TestDateOrdering:
+    """Regression — AI_Treasury_Project writes econ-series CSVs in
+    DESCENDING date order (newest first). Older code took
+    `rows[-tail:]` assuming ascending, which silently returned the
+    OLDEST tail rows. Sort defensively so the tool always surfaces
+    the newest N observations regardless of writer order."""
+
+    def test_descending_input_returns_newest_in_tail(self, tool, monkeypatch):
+        """Mimic the actual GCS shape: row 0 is the newest, last row
+        is the oldest. `latest` / `prior` / `tail` must reflect that."""
+        monkeypatch.setattr(tool, "_fetch_series", lambda _id: [
+            {"date": "2026-05-15", "value": "1.50"},   # newest
+            {"date": "2026-05-14", "value": "1.48"},
+            {"date": "2026-05-13", "value": "1.47"},
+            {"date": "2026-04-07", "value": "1.20"},
+            {"date": "2026-04-06", "value": "1.18"},   # oldest
+        ])
+        r = tool.execute({"series_id": "us_cpi", "tail": 3})
+        assert r.ok is True
+        assert r.structured["latest"]["date"] == "2026-05-15"
+        assert r.structured["prior"]["date"] == "2026-05-14"
+        # Tail of 3 should be the THREE NEWEST, not the three oldest.
+        tail_dates = [r["date"] for r in r.structured["tail"]]
+        assert tail_dates == ["2026-05-13", "2026-05-14", "2026-05-15"]
+
+    def test_unsorted_input_still_picks_newest(self, tool, monkeypatch):
+        """Even if upstream order becomes randomized (sparse backfill,
+        partial replays), the tool sorts before picking."""
+        monkeypatch.setattr(tool, "_fetch_series", lambda _id: [
+            {"date": "2026-04-10", "value": "1.20"},
+            {"date": "2026-05-15", "value": "1.50"},   # actually newest
+            {"date": "2026-04-01", "value": "1.10"},
+            {"date": "2026-05-14", "value": "1.48"},
+        ])
+        r = tool.execute({"series_id": "us_cpi", "tail": 2})
+        tail_dates = [r["date"] for r in r.structured["tail"]]
+        assert tail_dates == ["2026-05-14", "2026-05-15"]

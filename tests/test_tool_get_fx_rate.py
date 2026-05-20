@@ -93,3 +93,45 @@ class TestExecute:
         assert r.ok is True
         assert "Prior" not in r.content
         assert r.structured["prior"] is None
+
+    def test_descending_input_still_picks_newest_as_latest(self, tool, monkeypatch):
+        """Regression — confirmed against today's GCS bucket
+        (2026-05-20): AI_Treasury_Project writes FX CSVs in
+        DESCENDING date order (newest first). Older code took
+        `rows[-1]` assuming ascending and surfaced the OLDEST date
+        as "Latest", which the IntelligenceAgent on the test deploy
+        flagged with a "date ordering appears inverted" note.
+
+        Tool must sort defensively so it works regardless of the
+        writer's order."""
+        # Mimic the GCS shape: newest at index 0, oldest at the end.
+        monkeypatch.setattr(tool, "_fetch_series", lambda _csv_id: [
+            {"date": "2026-05-15", "value": "1.1627"},   # newest
+            {"date": "2026-05-14", "value": "1.1678"},
+            {"date": "2026-05-13", "value": "1.1711"},
+            {"date": "2026-04-07", "value": "1.1571"},
+            {"date": "2026-04-06", "value": "1.1545"},   # oldest
+        ])
+        r = tool.execute({"from_ccy": "USD", "to_ccy": "EUR"})
+        assert r.ok is True
+        # Latest must be the NEW date (05-15), not the OLD date (04-06).
+        assert r.structured["latest"]["date"] == "2026-05-15"
+        assert r.structured["latest"]["value"] == "1.1627"
+        # Prior is the second-newest (05-14), not the second-oldest.
+        assert r.structured["prior"]["date"] == "2026-05-14"
+        assert r.structured["prior"]["value"] == "1.1678"
+
+    def test_unsorted_input_still_sorted_before_pick(self, tool, monkeypatch):
+        """Defence-in-depth: even if the upstream writer's order
+        becomes randomized (or sparse with backfills), the tool
+        still picks the newest by date."""
+        monkeypatch.setattr(tool, "_fetch_series", lambda _csv_id: [
+            {"date": "2026-05-10", "value": "1.10"},
+            {"date": "2026-05-15", "value": "1.16"},    # actually newest
+            {"date": "2026-04-01", "value": "1.05"},
+            {"date": "2026-05-12", "value": "1.13"},
+        ])
+        r = tool.execute({"from_ccy": "USD", "to_ccy": "EUR"})
+        assert r.ok is True
+        assert r.structured["latest"]["date"] == "2026-05-15"
+        assert r.structured["prior"]["date"] == "2026-05-12"
