@@ -115,6 +115,32 @@ class TestScoringInternals:
         explain_hits = [r for r in d.reasons if r == "verb:explain"]
         assert len(explain_hits) == 1
 
+    def test_overlapping_verbs_dedup(self):
+        """Regression — `_ANALYTICAL_VERBS` contains both 'how does'
+        and 'how do'. Naively iterating the list, a query containing
+        'how does' would also match 'how do' (substring) and add a
+        second verb point. Fix: walk longest-first and consume matched
+        spans. Pinning here so a future refactor can't silently
+        reintroduce the overlap and mis-route every 'how does X'
+        question into the expensive agent path on verb-double-count
+        alone."""
+        d = classify("how does interest rate policy work")
+        # 'how does' should fire once. 'how do' must NOT fire as a
+        # second verb hit — its span was consumed by 'how does'.
+        verb_hits = [r for r in d.reasons if r.startswith("verb:")]
+        assert "verb:how does" in verb_hits
+        assert "verb:how do" not in verb_hits
+
+    def test_cross_connective_preserves_word_boundary(self):
+        """Regression — the connective list includes ' vs ' WITH
+        spaces, specifically so it doesn't match inside 'verses' /
+        'diverse'. Earlier code stripped spaces before matching,
+        which broke that safeguard. Test that 'verses' doesn't
+        trigger a connective hit."""
+        d = classify("This verses our internal policy")
+        connective_hits = [r for r in d.reasons if r.startswith("connective:")]
+        assert connective_hits == []
+
     def test_cross_connective_caps_at_one(self):
         """Two connective hits should still only contribute +1 —
         signal is binary ('the question spans things')."""

@@ -281,8 +281,14 @@ Tone: precise, professional, concise. No disclaimers or filler."""
 def _response_agent_enabled() -> bool:
     """Feature flag for the Phase 3C ResponseAgent path. Off by
     default so production stays on the legacy single-shot RAG until
-    ops explicitly flip it. Read at request time (not module load)
-    so a deploy-time env change takes effect without restart."""
+    ops explicitly flip it.
+
+    Read fresh per-request rather than cached at module-load time.
+    Note: in a typical gunicorn deploy the env is fixed when the
+    worker starts, so flipping the flag still requires a worker
+    restart in production. The per-request read matters for tests
+    (which mutate os.environ) and for in-process flag tooling, not
+    for hot-flipping a running deploy."""
     return os.getenv("ARGUS_RESPONSE_AGENT_ENABLED", "").strip().lower() in (
         "1", "true", "yes", "on",
     )
@@ -400,6 +406,27 @@ def _api_chat_via_agent(user_msg: str, persona: str, history: List[Dict], decisi
         print(f"[chat] response_agent status=error msg={result.message!r}, falling back")
         return _api_chat_legacy(user_msg, persona, history)
 
+    # Derive the legacy-shaped `rag` block from the agent's
+    # actual tool calls. The agent might end_turn without invoking
+    # any retrieval tool (general-knowledge answer), in which case
+    # `rag.used` should be False — claiming `used: True` with all
+    # zeros would mislead anyone watching the /api/rag/stats
+    # dashboard. We count SUCCESSFUL search_* calls; a search that
+    # errored doesn't count as a hit because no document came back.
+    news_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_news" and tc.get("ok")
+    )
+    alerts_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_alerts" and tc.get("ok")
+    )
+    regulatory_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_regulatory" and tc.get("ok")
+    )
+    rag_used = (news_hits + alerts_hits + regulatory_hits) > 0
+
     return jsonify({
         "status":     "success",
         "reply":      result.answer,
@@ -410,10 +437,10 @@ def _api_chat_via_agent(user_msg: str, persona: str, history: List[Dict], decisi
         # citations are in result.tool_calls.
         "citations":  [],
         "rag": {
-            "used":            True,
-            "news_hits":       0,
-            "alerts_hits":     0,
-            "regulatory_hits": 0,
+            "used":            rag_used,
+            "news_hits":       news_hits,
+            "alerts_hits":     alerts_hits,
+            "regulatory_hits": regulatory_hits,
         },
         "agent": {
             "status":       result.status,

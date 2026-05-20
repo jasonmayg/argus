@@ -80,6 +80,12 @@ _CROSS_CONNECTIVES = (
 # canonical Argus universe (matches `countries.yaml` aliases +
 # known regulator + central bank short names). Kept lowercase for
 # substring match.
+#
+# We deliberately list ONLY the non-punctuated variants ("us", "uk")
+# rather than dotted forms ("u.s.", "u.k.") — the dotted forms can't
+# clean-match through `\b...\b` regex because `.` isn't a word
+# character, so a `\bu.s.\b` pattern never matches as written. The
+# non-punctuated forms cover the same usage in practice.
 _KNOWN_ENTITIES = (
     "fed", "federal reserve",
     "ecb", "european central bank",
@@ -92,8 +98,8 @@ _KNOWN_ENTITIES = (
     "world bank",
     "bis",
     "ofac",
-    "us", "u.s.", "united states", "usa",
-    "uk", "u.k.", "britain", "united kingdom",
+    "us", "united states", "usa",
+    "uk", "britain", "united kingdom",
     "eu", "europe", "eurozone", "germany", "france",
     "japan",
     "china",
@@ -105,11 +111,13 @@ _KNOWN_ENTITIES = (
     "australia",
 )
 
-# Length thresholds (characters). The two-tier check (one point for
-# medium, two for long) lets a long single-clause question — which
-# may be a simple "show me everything that..." — still route legacy,
-# while a long multi-clause question piles up enough additional
-# points to trip the threshold.
+# Length thresholds (characters). Two-tier scoring:
+#   medium (>= 80 chars)  → +1 (needs a SECOND signal to escalate)
+#   long   (>= 180 chars) → +2 (escalates on length alone — at that
+#                              point the user almost certainly wants
+#                              a substantive multi-step answer).
+# A short 79-char question pays no length cost regardless of how
+# elaborate it sounds, so simple lookups stay on legacy.
 _MEDIUM_LEN = 80
 _LONG_LEN   = 180
 
@@ -141,21 +149,28 @@ def classify(query: str) -> RoutingDecision:
         score += 1
         reasons.append(f"length>={_MEDIUM_LEN}")
 
-    # Analytical verbs — count distinct hits, not occurrences, so
-    # a query that says "explain how does this affect" doesn't get
-    # double-counted on "explain" + "how does".
-    seen_verbs: set[str] = set()
-    for v in _ANALYTICAL_VERBS:
-        if v in q and v not in seen_verbs:
-            seen_verbs.add(v)
+    # Analytical verbs — each conceptual verb contributes at most 1.
+    # We walk the verb list longest-first and CONSUME the matched
+    # span from a scratch copy of the query, so "how does" matching
+    # doesn't leave "how do" behind to match again on the next
+    # iteration. Without this, "how does X compare" used to score
+    # twice on verbs ("how do" + "how does") and could mis-route
+    # short questions into the expensive agent path.
+    verb_scratch = q
+    for v in sorted(_ANALYTICAL_VERBS, key=len, reverse=True):
+        if v in verb_scratch:
             score += 1
             reasons.append(f"verb:{v}")
+            verb_scratch = verb_scratch.replace(v, " ")
 
     # Cross-source connectives — at most 1 point even if multiple
     # are present (the signal is that the question spans things,
-    # which is binary).
+    # which is binary). We match the connective AS DEFINED (e.g.
+    # " vs " with spaces, not "vs") so the substring check isn't
+    # tripped by words like "verses" / "diverse". The label in
+    # `reasons` keeps the trimmed form for readability.
     for c in _CROSS_CONNECTIVES:
-        if c.strip() in q:
+        if c in q:
             score += 1
             reasons.append(f"connective:{c.strip()}")
             break
@@ -168,8 +183,11 @@ def classify(query: str) -> RoutingDecision:
     scratch = q
     hits: set[str] = set()
     for ent in sorted(_KNOWN_ENTITIES, key=len, reverse=True):
-        # Word-boundary match so "treasury" doesn't catch "treasuries"
-        # (which it should match) but "us" doesn't catch "use".
+        # `\b` boundary means "us" doesn't catch "use" / "user", but
+        # it ALSO means "treasury" doesn't catch "treasuries" — a
+        # known limitation we live with; the false-negative rate on
+        # plurals is acceptable vs the false-positive risk of
+        # substring matching.
         pattern = r"\b" + re.escape(ent) + r"\b"
         if re.search(pattern, scratch):
             hits.add(ent)

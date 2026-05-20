@@ -22,7 +22,6 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterable
-from unittest.mock import MagicMock
 
 import pytest
 
