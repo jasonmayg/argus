@@ -105,6 +105,11 @@ class QueryEconIndicator(Tool):
         if not rows:
             return ToolResult.failure(f"Series '{series_id}' returned no rows")
 
+        # AI_Treasury_Project's CSVs come back in DESCENDING date order
+        # (newest first). Older code took `rows[-tail:]` assuming
+        # ascending and was returning the OLDEST tail. Sort
+        # defensively so the LLM always sees the newest `tail` rows.
+        rows = sorted(rows, key=lambda r: (r.get("date") or r.get("DATE") or ""))
         recent = rows[-tail:]
         # Sample lines for the LLM. Series CSVs from AI_Treasury_Project
         # have at minimum (date, value) columns; some have extras we

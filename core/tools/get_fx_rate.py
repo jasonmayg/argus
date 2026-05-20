@@ -81,10 +81,15 @@ class GetFxRate(Tool):
         if not rows:
             return ToolResult.failure(f"Series '{csv_id}' returned no rows")
 
-        # FRED CSVs are sorted ascending by date in the AI_Treasury_Project
-        # writer. Take the last two so the LLM gets direction context.
-        last = rows[-1]
-        prior = rows[-2] if len(rows) >= 2 else None
+        # AI_Treasury_Project's writer produces CSVs in DESCENDING date
+        # order (newest first). Older code here assumed ascending and
+        # was returning the OLDEST two rows as "latest" + "prior" —
+        # confirmed against today's GCS bucket: eu_usdeur.csv begins
+        # with 2026-05-15 and ends with 2026-04-06. Sort defensively so
+        # this still works if the writer's order ever changes again.
+        sorted_rows = sorted(rows, key=lambda r: (r.get("date") or ""))
+        last = sorted_rows[-1]
+        prior = sorted_rows[-2] if len(sorted_rows) >= 2 else None
 
         latest_val = last.get("value", "")
         latest_dt = last.get("date", "")
