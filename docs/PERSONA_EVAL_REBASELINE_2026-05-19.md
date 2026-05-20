@@ -3,13 +3,19 @@
 PR #47 合并后对 Guardian 噪音过滤做的第一次 rebaseline 分析。结论是噪音过滤
 本身有效，但同时暴露了一个更深的 source-coverage 问题需要后续处理。
 
-> **Update (2026-05-19 后续核实)** — 本文最初推测 "Guardian source coverage 不够"
-> 是 persona 区分度差的根因。当晚拿到 GCS 凭据实测后发现真相更具体：GCS bucket
-> 数据其实很丰富（每日 65 个 CSV，191 条真实新闻 alert），但 GCS → scored snapshot
-> 那一步在迁移中没有落地，所以所有 alert `category_label="Unclassified"` 且
-> `score=0`。修复 spec 见 `docs/GUARDIAN_SCORED_SNAPSHOT_HANDOFF.md`，需要
-> 与 AI_Treasury_Project 协调。本文以下分析仍然有效，但 "推荐后续" 一节请以
-> handoff doc 为准。
+> **Update (2026-05-19 后续核实 + 架构纠正)** — 本文最初推测 "Guardian
+> source coverage 不够" 是 persona 区分度差的根因。当晚拿到 GCS 凭据实测
+> 后发现真相更具体：GCS bucket 数据其实很丰富（每日 65 个 CSV，191 条真实
+> 新闻 alert），但 GCS → scored snapshot 那一步在迁移中没有落地，所以所有
+> alert `category_label="Unclassified"` 且 `score=0`。
+>
+> **架构纠正**：classification 的责任在 Argus 而不是 AI_Treasury_Project ——
+> 上游只负责把 raw CSV 写到 GCS，Argus 读完之后自己跑 GuardianEngine。所以
+> 修复点是 `core/guardian_loader._read_alerts_from_gcs_raw_csvs`，不是上游
+> 协调。短期靠 PR #49 的 bridge 脚本 (`scripts/refresh_local_snapshot_from_gcs.py`)
+> 把 GCS → scored 流程跑起来；长期把 scoring 集成进 `core/guardian_loader`
+> 让 dashboard / /api/actions / persona_eval 自动受益。本文以下分析仍然
+> 有效，但 "推荐后续" 一节作废，以上述纠正为准。
 
 ## TL;DR
 
