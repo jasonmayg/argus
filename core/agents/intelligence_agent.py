@@ -162,10 +162,10 @@ def run_intelligence(
         import anthropic
         client = anthropic.Anthropic()
 
-    # request_id is allocated by the runner; we need it ahead of tool
-    # construction so search_* tools can stamp it on their rag_queries
-    # rows. The runner uses its own when it logs to agent_executions,
-    # so we generate one here matching that scheme.
+    # Pre-allocate request_id so the tool-side `rag_queries` rows and
+    # the runner-side `agent_executions` / `llm_calls` rows all share
+    # the same key. AgentRunner.run() accepts it and skips its own
+    # allocation when we pass one through.
     from core import agent_telemetry
     request_id = agent_telemetry.new_request_id()
 
@@ -182,12 +182,7 @@ def run_intelligence(
         max_cost_usd=max_cost_usd,
         invoked_by=invoked_by,
     )
-    # We pre-generated the request_id for tools; pass it through so
-    # the runner uses the same id for its telemetry rows. (Runner
-    # currently allocates its own; we accept that small redundancy
-    # — the tool-side rows still group by their stamped id, which
-    # is what matters for the rag_queries / agent_executions join.)
-    agent_result: AgentResult = runner.run(query)
+    agent_result: AgentResult = runner.run(query, request_id=request_id)
 
     return IntelligenceResult(
         status=agent_result.status,

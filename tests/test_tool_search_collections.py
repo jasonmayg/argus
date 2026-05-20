@@ -169,6 +169,25 @@ class TestSearchAlerts:
         assert "[A1]" in r.content
         assert "China" in r.content and "FX Volatility" in r.content
 
+    def test_invalid_top_k_returns_explicit_failure(self):
+        """Regression: an LLM-supplied non-numeric `top_k` must produce
+        a specific 'must be an integer' failure rather than a generic
+        'tool raised: ValueError' from int() blowing up."""
+        r = SearchAlerts().execute({"query": "x", "top_k": "ten"})
+        assert r.ok is False
+        assert "top_k" in r.error and "integer" in r.error
+
+    def test_min_score_zero_surfaces_in_empty_details(self):
+        """Regression: `min_score=0` is a valid filter ('any score');
+        the empty-results message must still mention it so the agent
+        knows the floor was applied. Previously a truthy check (`if
+        min_score:`) dropped it from the details string."""
+        store = _FakeStore()  # no hits
+        with patch("core.vector_store.get_vector_store", return_value=store):
+            r = SearchAlerts().execute({"query": "x", "min_score": 0})
+        assert r.ok is True
+        assert "score>=0" in r.content
+
 
 # ──────────────────────────────────────────────────────────────────
 # search_regulatory

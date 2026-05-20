@@ -35,8 +35,10 @@ _ALLOWED_PREFIXES = (
 )
 
 # Recent rows are the most useful signal; truncating keeps tool output
-# under the LLM's context budget. The agent can ask for more via
-# `tail` — but the structured payload always carries the full set.
+# under the LLM's context budget. `tail` controls how many rows the
+# agent sees in both `content` and `structured["tail"]`; `total_rows`
+# in the structured payload reports how many were available so the
+# agent can request a larger `tail` if it needs more history.
 _DEFAULT_TAIL = 10
 _MAX_TAIL = 60
 
@@ -84,7 +86,17 @@ class QueryEconIndicator(Tool):
                 f"Allowed: {', '.join(_ALLOWED_PREFIXES)}"
             )
 
-        tail = max(1, min(_MAX_TAIL, int(args.get("tail") or _DEFAULT_TAIL)))
+        raw_tail = args.get("tail")
+        if raw_tail in (None, ""):
+            tail = _DEFAULT_TAIL
+        else:
+            try:
+                tail = int(raw_tail)
+            except (TypeError, ValueError):
+                return ToolResult.failure(
+                    f"tail must be an integer between 1 and {_MAX_TAIL}, got {raw_tail!r}"
+                )
+        tail = max(1, min(_MAX_TAIL, tail))
 
         rows = self._fetch_series(series_id)
         if rows is None:

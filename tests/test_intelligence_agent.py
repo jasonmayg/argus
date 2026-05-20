@@ -181,3 +181,40 @@ class TestRunIntelligence:
         out = run_intelligence("x" * 20, client=_Boom())
         assert out.status == "error"
         assert out.message and "429" in out.message
+
+    def test_request_id_shared_between_tools_and_runner(self, monkeypatch):
+        """Regression: previously the agent pre-generated a request_id
+        for the tools but the runner allocated its own — the tool-side
+        `rag_queries` rows and the runner-side `agent_executions` row
+        could not be joined. After the fix the same id flows to both:
+          * tool constructors (.request_id attr)
+          * `runner.run(query, request_id=...)`
+          * the returned `IntelligenceResult.request_id`
+        """
+        seen = {}
+
+        # Patch AgentRunner.run so we can observe the kwarg without
+        # spinning up the full turn loop.
+        from core.agents import intelligence_agent as ia
+        from core.agent_runner import AgentResult
+
+        def _fake_run(self, user_message, *, request_id=None):
+            seen["runner_request_id"] = request_id
+            seen["tool_ids"] = [getattr(t, "request_id", None)
+                                for t in self.tools_by_name.values()
+                                if hasattr(t, "request_id")]
+            return AgentResult(
+                status="ok", output="x", turns_used=1,
+                tokens_in=0, tokens_out=0, cost_usd=0.0,
+                tool_calls=[], request_id=request_id or "",
+            )
+
+        monkeypatch.setattr(ia.AgentRunner, "run", _fake_run)
+        client = _StubClient([_resp("end_turn", text="x")])
+        out = ia.run_intelligence("a question that triggers the agent", client=client)
+
+        # Every search_* tool must carry the same id the runner saw.
+        assert seen["runner_request_id"]
+        assert all(tid == seen["runner_request_id"] for tid in seen["tool_ids"])
+        # And the id surfaces in the result the route returns.
+        assert out.request_id == seen["runner_request_id"]

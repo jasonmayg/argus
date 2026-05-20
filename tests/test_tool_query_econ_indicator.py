@@ -120,3 +120,11 @@ class TestFailureModes:
         r = tool.execute({"series_id": "us_cpi"})
         assert r.ok is False
         assert "gcs fetch failed" in r.error.lower()
+
+    def test_invalid_tail_returns_explicit_failure(self, tool):
+        """Regression: an LLM-supplied non-numeric `tail` must yield a
+        specific 'must be an integer' failure rather than a generic
+        'tool raised: ValueError' that the runner would have to wrap."""
+        r = tool.execute({"series_id": "us_cpi", "tail": "lots"})
+        assert r.ok is False
+        assert "tail" in r.error and "integer" in r.error

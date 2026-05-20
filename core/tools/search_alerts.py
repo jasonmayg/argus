@@ -53,7 +53,17 @@ class SearchAlerts(Tool):
         query = (args.get("query") or "").strip()
         if not query:
             return ToolResult.failure("query is required")
-        top_k = max(1, min(_MAX_TOP_K, int(args.get("top_k") or _DEFAULT_TOP_K)))
+        raw_top_k = args.get("top_k")
+        if raw_top_k in (None, ""):
+            top_k = _DEFAULT_TOP_K
+        else:
+            try:
+                top_k = int(raw_top_k)
+            except (TypeError, ValueError):
+                return ToolResult.failure(
+                    f"top_k must be an integer between 1 and {_MAX_TOP_K}, got {raw_top_k!r}"
+                )
+        top_k = max(1, min(_MAX_TOP_K, top_k))
         country = (args.get("country") or "").strip() or None
         min_score = args.get("min_score")
 
@@ -78,8 +88,11 @@ class SearchAlerts(Tool):
 
         if not hits:
             details = []
-            if country:   details.append(f"country={country}")
-            if min_score: details.append(f"score>={min_score}")
+            if country:           details.append(f"country={country}")
+            # `is not None` (not truthy) so an explicit min_score=0
+            # still surfaces in the explanation — a 0 floor is a valid
+            # request, not the same as "no filter set".
+            if min_score is not None: details.append(f"score>={min_score}")
             return ToolResult.success(
                 content=f"No alerts matched '{query}'"
                 + (f" ({', '.join(details)})" if details else "")

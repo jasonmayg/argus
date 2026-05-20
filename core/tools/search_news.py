@@ -61,7 +61,19 @@ class SearchNews(Tool):
         query = (args.get("query") or "").strip()
         if not query:
             return ToolResult.failure("query is required")
-        top_k = int(args.get("top_k") or _DEFAULT_TOP_K)
+        raw_top_k = args.get("top_k")
+        if raw_top_k in (None, ""):
+            top_k = _DEFAULT_TOP_K
+        else:
+            # Reject non-coercible values explicitly so the runner shows
+            # the model a specific "must be an integer" message instead
+            # of a generic "tool raised: ValueError" string.
+            try:
+                top_k = int(raw_top_k)
+            except (TypeError, ValueError):
+                return ToolResult.failure(
+                    f"top_k must be an integer between 1 and {_MAX_TOP_K}, got {raw_top_k!r}"
+                )
         top_k = max(1, min(_MAX_TOP_K, top_k))
         since = (args.get("since") or "").strip() or None
 

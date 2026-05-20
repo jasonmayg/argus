@@ -30,10 +30,17 @@ _MAX_QUERY_LEN = 2000
 
 @intelligence_bp.post("/api/intelligence/query")
 def intelligence_query():
-    if not request.is_json:
+    # `request.get_json(silent=True)` parses + returns None on any
+    # failure (wrong content-type, malformed JSON, missing body),
+    # so we get a single 400 path for every bad-input shape. Touching
+    # `request.json` directly raises BadRequest on malformed bodies
+    # and bypasses our JSON error handler.
+    body = request.get_json(silent=True)
+    if body is None:
         return jsonify({"status": "error", "message": "JSON body required"}), 400
+    if not isinstance(body, dict):
+        return jsonify({"status": "error", "message": "JSON body must be an object"}), 400
 
-    body = request.json or {}
     query = (body.get("query") or "").strip()
     if len(query) < _MIN_QUERY_LEN:
         return jsonify({

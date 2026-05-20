@@ -51,6 +51,28 @@ class TestValidation:
         r = client.post("/api/intelligence/query", data="not json")
         assert r.status_code == 400
 
+    def test_malformed_json_with_json_content_type_returns_400(self, client):
+        """Regression: a JSON content-type with a broken body used to
+        let Flask's `request.json` raise BadRequest and bypass our
+        JSON-payload error path. With `get_json(silent=True)` we
+        consistently return the same 400 JSON shape."""
+        r = client.post(
+            "/api/intelligence/query",
+            data="{not valid json,,,",
+            content_type="application/json",
+        )
+        assert r.status_code == 400
+        body = r.get_json()
+        assert body["status"] == "error"
+        assert "JSON" in body["message"]
+
+    def test_json_array_body_returns_400(self, client):
+        """A JSON array is valid JSON but not an object — must be
+        rejected before we try `body.get("query")`."""
+        r = client.post("/api/intelligence/query", json=["query"])
+        assert r.status_code == 400
+        assert "object" in r.get_json()["message"]
+
     def test_empty_query_returns_400(self, client):
         r = client.post("/api/intelligence/query", json={"query": ""})
         assert r.status_code == 400
