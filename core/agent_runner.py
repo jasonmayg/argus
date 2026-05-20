@@ -126,8 +126,19 @@ class AgentRunner:
         self.invoked_by          = invoked_by
 
     # ───────────────────────────────────────────────────────────
-    def run(self, user_message: str) -> AgentResult:
-        request_id = agent_telemetry.new_request_id()
+    def run(
+        self,
+        user_message: str,
+        *,
+        request_id: Optional[str] = None,
+    ) -> AgentResult:
+        # Allow callers (e.g. IntelligenceAgent) to pre-allocate the id
+        # so tool-side `rag_queries` rows and this run's
+        # `agent_executions` / `llm_calls` rows all share the same key.
+        # When omitted, the runner mints its own — preserving the
+        # original single-arg signature.
+        if request_id is None:
+            request_id = agent_telemetry.new_request_id()
         started_at = datetime.now(timezone.utc)
         messages: List[Dict[str, Any]] = [
             {"role": "user", "content": user_message},
