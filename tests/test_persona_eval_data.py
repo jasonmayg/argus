@@ -172,7 +172,12 @@ class TestSnapshotsDirMode:
         newest first."""
         snaps = tmp_path / "snapshots"
         snaps.mkdir()
-        old = _raw_alert(1, url="https://feed/x", days_ago=2, score=10)
+        # Both scores must clear MIN_GUARDIAN_SCORE (40) or the
+        # production-parity filter drops them before dedup runs —
+        # the dedup-ordering test would then pass trivially with
+        # win.kept_count == 0, hiding a regression. Copilot PR #51
+        # review caught this.
+        old = _raw_alert(1, url="https://feed/x", days_ago=2, score=42)
         new = _raw_alert(1, url="https://feed/x", days_ago=2, score=99)
         # Filename `alerts_20260518_*.json` < `alerts_20260519_*.json`
         # so the second file is the "newer" snapshot.
@@ -187,8 +192,8 @@ class TestSnapshotsDirMode:
         )
         assert win.kept_count == 1
         # The kept alert must be the NEW one (score 99), not the
-        # stale one (score 10). If the walk regresses to ascending
-        # order this test fails with score==10.
+        # stale one (score 42). If the walk regresses to ascending
+        # order this test fails with score==42.
         assert win.alerts[0].score == 99
 
     def test_corrupt_file_does_not_abort_walk(self, tmp_path):

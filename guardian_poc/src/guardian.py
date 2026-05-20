@@ -905,7 +905,10 @@ class GuardianEngine:
         }
         # Term map. Press release titles rarely contain risk_keywords.yaml
         # primary phrases ("foreign exchange", "currency devaluation"),
-        # so we keep a permissive vocab of single-word triggers here.
+        # so we keep a permissive vocab of short triggers here — mix of
+        # single words ("inflation", "yield") and short phrases
+        # ("monetary policy", "stress test", "capital requirements")
+        # that fire reliably on central-bank / supervisory headlines.
         # Multi-category triggers (a single needle → two categories) are
         # appended sequentially so a "stress test" headline lands as
         # BOTH credit_risk and regulatory_risk.
