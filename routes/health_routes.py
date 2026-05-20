@@ -19,7 +19,8 @@ store stack:
 HTTP status mapping:
   - 200 + status="ok"        — fully healthy
   - 200 + status="degraded"  — partial (e.g. one collection empty
-                                but the rest work)
+                                or one collection errors but the
+                                rest work)
   - 503 + status="down"      — chromadb / persist_dir missing,
                                 no RAG possible
 
@@ -35,13 +36,17 @@ import importlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
+import yaml
 from flask import Blueprint, jsonify
 
 logger = logging.getLogger(__name__)
 
 health_bp = Blueprint("health_routes", __name__)
+
+_ROOT = Path(__file__).resolve().parent.parent
+_RAG_CONFIG_PATH = Path(os.getenv("RAG_CONFIG", _ROOT / "config" / "rag_config.yaml"))
 
 
 def _check_module(name: str) -> Dict[str, Any]:
@@ -62,39 +67,57 @@ def _check_module(name: str) -> Dict[str, Any]:
         }
 
 
+def _resolve_configured_persist_dir() -> Path:
+    """Read the persist_dir the app would actually use.
+
+    Mirrors `core.vector_store.from_config` resolution order:
+      1. `RAG_CONFIG` env → path to a yaml file (default
+         `config/rag_config.yaml`)
+      2. `storage.persist_dir` key in that yaml, joined to repo root
+      3. Fallback: `data/chroma_db` under repo root.
+
+    We parse the yaml directly rather than importing `core.vector_store`
+    so this probe still works when the vector_store import chain
+    itself is broken (chromadb missing etc.). Returns the absolute
+    path regardless of whether the directory exists — the caller
+    checks existence.
+    """
+    rel = "data/chroma_db"
+    if _RAG_CONFIG_PATH.exists():
+        try:
+            with open(_RAG_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+            rel = (cfg.get("storage") or {}).get("persist_dir", rel)
+        except Exception as e:
+            logger.warning("rag_config parse failed: %s", e)
+    return (_ROOT / rel).resolve()
+
+
 def _check_persist_dir() -> Dict[str, Any]:
-    """Inspect the chroma persistence directory: does it exist, is
-    it non-empty? An empty dir means chromadb is installed but no
-    one has ingested data — RAG works but returns nothing."""
-    # Mirrors core.vector_store._load_config / from_config defaults.
-    # Hard-coding here rather than importing to keep the health
-    # endpoint independent of vector_store's import chain — if that
-    # chain itself is what's broken, we still want a useful answer.
-    root = Path(__file__).resolve().parent.parent
-    candidates = [
-        Path(os.getenv("ARGUS_CHROMA_DIR", "")).expanduser() if os.getenv("ARGUS_CHROMA_DIR") else None,
-        root / "data" / "chroma_db",
-    ]
-    for path in candidates:
-        if path is None:
-            continue
-        if path.exists():
-            try:
-                children = list(path.iterdir())
-                return {
-                    "path": str(path),
-                    "exists": True,
-                    "empty": len(children) == 0,
-                    "entries": len(children),
-                }
-            except OSError as e:
-                return {"path": str(path), "exists": True,
-                        "error": f"cannot list: {e}"}
-    return {
-        "path": str(candidates[-1]),
-        "exists": False,
-        "error": "persist_dir not found",
-    }
+    """Inspect the chroma persistence directory the app would use.
+    Returns the resolved path (whether it exists or not), so a
+    misconfigured `RAG_CONFIG` / `storage.persist_dir` doesn't
+    silently fall back to a default the app isn't actually using —
+    which used to make this probe report \"down at /default/path\"
+    even when the real config pointed elsewhere."""
+    path = _resolve_configured_persist_dir()
+    if not path.exists():
+        return {
+            "path": str(path),
+            "exists": False,
+            "error": "persist_dir not found",
+        }
+    try:
+        children = list(path.iterdir())
+        return {
+            "path":   str(path),
+            "exists": True,
+            "empty":  len(children) == 0,
+            "entries": len(children),
+        }
+    except OSError as e:
+        return {"path": str(path), "exists": True,
+                "error": f"cannot list: {e}"}
 
 
 def _check_vector_store() -> Dict[str, Any]:
@@ -112,78 +135,114 @@ def _check_vector_store() -> Dict[str, Any]:
         }
 
     out: Dict[str, Any] = {"instantiated": True, "collections": {}}
-    # We poke each well-known collection independently — one
-    # collection failing shouldn't mask the others' state. Failures
-    # are logged but the endpoint reply stays 200 / degraded.
+    # Poke each well-known collection independently — one collection
+    # failing must not mask the others' state. Use the public
+    # `store.count(name)` API rather than reaching into `_get` so
+    # this probe survives internal refactors of VectorStore.
     for name in ("news", "alerts", "regulatory"):
         try:
-            collection = store._get(name)
-            count = collection.count()
-            out["collections"][name] = {"count": int(count)}
+            out["collections"][name] = {"count": int(store.count(name))}
         except Exception as e:
+            logger.warning("health probe: collection %s count failed: %s",
+                           name, e)
             out["collections"][name] = {
                 "error": f"{type(e).__name__}: {str(e)[:160]}",
             }
     return out
 
 
+def _classify_state(payload: Dict[str, Any], failed: List[str]) -> tuple[str, int]:
+    """Map the gathered probe results into (status, http_code).
+
+    Rules:
+      * chromadb / persist_dir / vector_store missing or failed → down (503)
+      * any collection errors                                    → degraded (200)
+      * empty collections (count == 0)                           → degraded (200)
+      * sentence_transformers missing alone                      → down (503)
+        (RAG fundamentally needs the embedder for new queries —
+        existing indexed docs return as cached hits, but new ones
+        won't embed; treat as down so monitoring escalates)
+      * everything else                                          → ok (200)
+    """
+    hard_down = {"chromadb", "persist_dir", "vector_store", "sentence_transformers"}
+    if hard_down & set(failed):
+        return "down", 503
+
+    vs = payload.get("vector_store") or {}
+    collections = vs.get("collections") or {}
+    if any("error" in info for info in collections.values()):
+        return "degraded", 200
+    if payload.get("empty_collections"):
+        return "degraded", 200
+    return "ok", 200
+
+
 @health_bp.get("/api/health/rag")
 def health_rag():
     """GET /api/health/rag — structured snapshot of the vector
     store deployment. Use after a deploy to confirm chromadb +
-    persist_dir + collection counts are sane."""
-    payload: Dict[str, Any] = {}
-    failed: List[str] = []
+    persist_dir + collection counts are sane.
 
-    # Module checks
-    payload["chromadb"] = _check_module("chromadb")
-    if not payload["chromadb"]["installed"]:
-        failed.append("chromadb")
+    Wrapped in a top-level try/except so monitoring tooling always
+    gets a parseable JSON body back, never an HTML 500 from Flask's
+    default error handler — the whole point of a health probe is
+    that you can curl it and reliably scrape `status` / `checks_failed`."""
+    try:
+        payload: Dict[str, Any] = {}
+        failed: List[str] = []
 
-    payload["sentence_transformers"] = _check_module("sentence_transformers")
-    if not payload["sentence_transformers"]["installed"]:
-        failed.append("sentence_transformers")
+        # Module checks
+        payload["chromadb"] = _check_module("chromadb")
+        if not payload["chromadb"]["installed"]:
+            failed.append("chromadb")
 
-    # Filesystem
-    payload["persist_dir"] = _check_persist_dir()
-    if not payload["persist_dir"].get("exists"):
-        failed.append("persist_dir")
+        payload["sentence_transformers"] = _check_module("sentence_transformers")
+        if not payload["sentence_transformers"]["installed"]:
+            failed.append("sentence_transformers")
 
-    # If the prerequisites passed, attempt to actually instantiate.
-    if not failed:
-        payload["vector_store"] = _check_vector_store()
-        if not payload["vector_store"].get("instantiated"):
-            failed.append("vector_store")
+        # Filesystem
+        payload["persist_dir"] = _check_persist_dir()
+        if not payload["persist_dir"].get("exists"):
+            failed.append("persist_dir")
+
+        # If the hard prerequisites passed, attempt to actually
+        # instantiate the store. Treat sentence_transformers as
+        # "hard" too — see _classify_state docstring.
+        if not any(f in failed for f in ("chromadb", "persist_dir")):
+            payload["vector_store"] = _check_vector_store()
+            if not payload["vector_store"].get("instantiated"):
+                failed.append("vector_store")
+            else:
+                empty_cols = [
+                    name for name, info in payload["vector_store"]["collections"].items()
+                    if info.get("count") == 0
+                ]
+                if empty_cols:
+                    payload["empty_collections"] = empty_cols
+                error_cols = [
+                    name for name, info in payload["vector_store"]["collections"].items()
+                    if "error" in info
+                ]
+                if error_cols:
+                    payload["collection_errors"] = error_cols
         else:
-            # Empty collections are "degraded" not "down" — RAG
-            # tools will return helpful "no hits" messages, the
-            # agent path still works.
-            empty_cols = [
-                name for name, info in payload["vector_store"]["collections"].items()
-                if info.get("count") == 0
-            ]
-            if empty_cols:
-                payload["empty_collections"] = empty_cols
-    else:
-        # Skip the vector_store probe because the prerequisites
-        # already prove it can't work — don't add cascading
-        # noise to the response.
-        payload["vector_store"] = {
-            "skipped": True,
-            "reason": f"prerequisites failed: {', '.join(failed)}",
-        }
+            payload["vector_store"] = {
+                "skipped": True,
+                "reason":  f"prerequisites failed: {', '.join(failed)}",
+            }
 
-    # Status + HTTP code
-    if not failed and not payload.get("empty_collections"):
-        status = "ok"
-        http_code = 200
-    elif "chromadb" in failed or "persist_dir" in failed or "vector_store" in failed:
-        status = "down"
-        http_code = 503
-    else:
-        status = "degraded"
-        http_code = 200
+        status, http_code = _classify_state(payload, failed)
+        payload["status"]        = status
+        payload["checks_failed"] = failed
+        return jsonify(payload), http_code
 
-    payload["status"]        = status
-    payload["checks_failed"] = failed
-    return jsonify(payload), http_code
+    except Exception as exc:
+        # Catastrophic failure — something inside the probe raised
+        # despite each helper's own try/except. Return a structured
+        # JSON 503 anyway so cron / dashboards keep working.
+        logger.exception("health_rag unexpected error")
+        return jsonify({
+            "status":        "down",
+            "checks_failed": ["probe_internal_error"],
+            "error":         f"{type(exc).__name__}: {str(exc)[:200]}",
+        }), 503

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from flask import Flask
@@ -174,26 +174,47 @@ class TestDegradedStates:
         # parse counts to know what's missing.
         assert set(body["empty_collections"]) == {"news", "alerts", "regulatory"}
 
-    def test_sentence_transformers_missing_alone_is_degraded(self, client):
-        """If chromadb is installed but sentence-transformers isn't,
-        the box can serve cached data (existing embeddings) — degraded,
-        not down. Treat as warning, not blocker."""
-        # NOTE: this is "skipped" right now because the current
-        # implementation classifies any failed prerequisite as down.
-        # If we want to relax that, the test (and the logic) change
-        # together. Leaving the assertion at "down" matches current
-        # behavior so future relaxation breaks the test deliberately.
+    def test_sentence_transformers_missing_is_down(self, client):
+        """Embedder absence is treated as `down`. Cached collections
+        could still serve hits in theory, but every new query
+        Argus runs needs to embed input text — without the embedder,
+        the RAG path is fundamentally broken for fresh requests.
+        503 lets a load balancer / monitor escalate appropriately."""
         with patch("routes.health_routes._check_module",
                    side_effect=[_ok_module(),
                                 _missing_module("sentence_transformers")]), \
              patch("routes.health_routes._check_persist_dir",
                    return_value=_ok_persist_dir()):
             r = client.get("/api/health/rag")
+        assert r.status_code == 503
         body = r.get_json()
+        assert body["status"] == "down"
         assert "sentence_transformers" in body["checks_failed"]
-        # Currently flagged as 'down' because the prerequisite missed.
-        # If we later relax this to 'degraded', revisit.
-        assert body["status"] in ("down", "degraded")
+
+    def test_one_collection_error_is_degraded(self, client):
+        """When most collections succeed but one fails with an error
+        (e.g. a corrupt segment), the box is partially usable —
+        degraded, not down. Surface the error list in
+        `collection_errors` so ops can target the fix."""
+        bad_vs = {
+            "instantiated": True,
+            "collections": {
+                "news":       {"count": 100},
+                "alerts":     {"count": 50},
+                "regulatory": {"error": "CorruptSegment: index file unreadable"},
+            },
+        }
+        with patch("routes.health_routes._check_module",
+                   side_effect=[_ok_module(), _ok_module()]), \
+             patch("routes.health_routes._check_persist_dir",
+                   return_value=_ok_persist_dir()), \
+             patch("routes.health_routes._check_vector_store",
+                   return_value=bad_vs):
+            r = client.get("/api/health/rag")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body["status"] == "degraded"
+        assert "regulatory" in body.get("collection_errors", [])
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -202,17 +223,21 @@ class TestDegradedStates:
 
 class TestContract:
     def test_endpoint_does_not_crash_when_everything_broken(self, client):
-        """Defence in depth — even if every probe raises (truly
-        catastrophic), the endpoint must return SOMETHING parseable
-        rather than 500. A monitoring system should always get a
-        JSON answer back."""
+        """Catastrophic failure path — a probe helper unexpectedly
+        raises. The endpoint MUST still return a JSON envelope with
+        `status` + `checks_failed` so monitoring scrapes never hit
+        Flask's default HTML 500 page. The route's top-level
+        try/except handles this; if someone removes it, this test
+        fails."""
         with patch("routes.health_routes._check_module",
                    side_effect=Exception("boom in checker")):
             r = client.get("/api/health/rag")
-        # Either a structured 503 response, or worst case a Flask
-        # internal 500 — both indicate a serious bug. We assert it
-        # doesn't return data that would mislead a monitor.
-        assert r.status_code in (200, 500, 503)
+        # Must be structured JSON 503 — not an HTML 500.
+        assert r.status_code == 503
+        assert r.is_json, "endpoint returned non-JSON (probably HTML 500)"
+        body = r.get_json()
+        assert body["status"] == "down"
+        assert "probe_internal_error" in body["checks_failed"]
 
     def test_response_payload_always_has_status_and_checks_failed(self, client):
         """`status` + `checks_failed` are the two fields monitoring
