@@ -178,15 +178,14 @@ class TestEventConversion:
         assert events[0].event_id.startswith("title:")
         assert "Some headline" in events[0].event_id
 
-    def test_summary_carries_country_and_category_hints(self):
-        """Regression — this is the actual unlock for the bridge.
-        Without synthetic country + category hints in `summary` the
-        engine's `_detect_countries` / `_infer_categories` can't fire
-        on a bare press-release title and the script produces ~1
-        scored alert. The smoke run that produces 162 alerts depends
-        entirely on this injection. Pinning here so a refactor of
-        `_convert_to_events` can't silently turn the bridge back
-        into "1 alert mode" without breaking a test."""
+    def test_summary_carries_country_hint(self):
+        """Regression — country injection is what lets the engine's
+        `_detect_countries` fire on press-release titles that don't
+        mention the country by name. Without this the alert drops
+        before it even reaches scoring. Category hints used to be
+        injected here too but were removed 2026-05-20 because they
+        short-circuited `_detect_categories` and bypassed the
+        multi-category fan-out in `_infer_categories` source_defaults."""
         raw = [{
             "title": "Policy statement released",
             "url": "https://example.com/x",
@@ -198,18 +197,18 @@ class TestEventConversion:
         assert len(events) == 1
         # Country hint flows in for engine country detection.
         assert "USA" in events[0].summary
-        # Category-trigger phrase for the Fed source flows in.
-        # The exact phrase comes from _SOURCE_CATEGORY_HINTS["fed"];
-        # we check for the canonical category term rather than the
-        # full string so the assertion survives copy-edit of the hint.
-        assert "interest rate" in events[0].summary.lower()
+        # Category hints intentionally NOT injected — see the
+        # comment in _convert_to_events for the why.
+        assert "interest rate" not in events[0].summary.lower()
+        assert "monetary policy" not in events[0].summary.lower()
 
     def test_summary_drops_unknown_country_marker(self):
         """If the GCS row tags `country="Unknown"` (USGS / some ECB
         items in today's bucket), we must NOT plant "Unknown" into
         the summary — `_detect_countries` doesn't match "Unknown"
         anyway, but more importantly we don't want "Unknown" to leak
-        into other text matches downstream."""
+        into other text matches downstream. With category hints gone,
+        an Unknown-country alert produces an empty summary."""
         raw = [{
             "title": "Earthquake near Anchorage",
             "url": "https://example.com/q",
@@ -218,10 +217,10 @@ class TestEventConversion:
             "published_at": "2026-05-19T12:00:00+00:00",
         }]
         events = bridge._convert_to_events(raw)
-        # Should still have the source's category hint ("earthquake"
-        # for usgs) but no "Unknown" string.
         assert "Unknown" not in events[0].summary
-        assert "earthquake" in events[0].summary.lower()
+        # No category hint either — summary is empty for this row,
+        # which is fine: the title still flows to score_events.
+        assert events[0].summary == ""
 
     def test_summary_empty_for_fully_unrecognized_source(self):
         """A source with no entry in either map and country='Unknown'

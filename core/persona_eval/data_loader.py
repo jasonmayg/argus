@@ -236,7 +236,13 @@ def load_alerts_window(
             dir_to_scan = GUARDIAN_SNAPSHOTS_DIR
 
         if dir_to_scan is not None and dir_to_scan.exists():
-            for snap in sorted(dir_to_scan.glob("alerts_*.json")):
+            # Walk newest-first so the dedup pass below keeps the
+            # most recent occurrence of each (url, date). Without this,
+            # older snapshots from before a scoring change (e.g. the
+            # bridge's switch to a neutral persona on 2026-05-20) keep
+            # masking newer ones with the same alert_id, silently
+            # leaving persona_eval on stale data.
+            for snap in sorted(dir_to_scan.glob("alerts_*.json"), reverse=True):
                 raw_list.extend(_read_snapshot_file(snap))
         elif GUARDIAN_PATH.exists():
             raw_list = _read_snapshot_file(GUARDIAN_PATH)

@@ -69,34 +69,24 @@ _SOURCE_NORMALIZATION = {
 }
 
 
-# Synthetic summary hints. Press-release titles are short and rarely
-# contain the country name or risk-category keywords, so the
-# `GuardianEngine._detect_countries` / `_detect_categories` regex
-# matching drops 99%+ of GCS events before scoring even starts.
+# Synthetic summary hints — country only. We paste the GCS-tagged
+# country into the Event's summary so `_detect_countries` picks it
+# up (press-release titles rarely mention the country by name).
 #
-# To unblock this without modifying the engine, we paste a one-line
-# "{country}. {category-trigger-phrase}." into each Event's `summary`.
-# `score_events` concatenates `title + "\n" + summary` for keyword
-# detection, so:
-#   * country detection picks up "United States" / "United Kingdom" etc.
-#   * `_infer_categories` term_map matches against e.g. "interest rate"
-#     for central banks, "regulation" for FCA, "earthquake" for USGS
+# Category hints were removed on 2026-05-20 because they hit
+# `_detect_categories` primary keywords ("interest rate", etc.)
+# which short-circuits the engine's category resolution chain and
+# bypasses `_infer_categories` source_defaults. Without category
+# hints the chain runs:
+#   1. `_detect_categories(title only)` — typically returns []
+#      for short press-release headlines
+#   2. `_infer_categories(title, source)` — fires source_defaults
+#      (e.g. fed → ["market_risk", "regulatory_risk"]) so each
+#      press release fans out into multiple categories. That
+#      fan-out is what gives persona weights room to discriminate.
 #
-# Phrasing here MUST be in lower-case alias forms that match
-# `guardian_poc/config/countries.yaml` + `risk_keywords.yaml`. The
-# bridge falls back to no-hint when the source isn't known — those
-# events still flow through `_detect_categories` and may match
-# nothing, which is the same fate they'd have without this script.
-_SOURCE_CATEGORY_HINTS = {
-    "ecb":            "interest rate monetary policy",
-    "fed":            "interest rate monetary policy",
-    "boe":            "interest rate monetary policy",
-    "boj":            "interest rate monetary policy",
-    "bank_of_canada": "interest rate monetary policy",
-    "treasury":       "interest rate liquidity",
-    "fca":            "regulation compliance",
-    "usgs":           "earthquake",
-}
+# Phrasing here MUST match `guardian_poc/config/countries.yaml`
+# country names / aliases.
 
 # Output paths.
 LATEST_PATH    = ROOT / "guardian_poc" / "data" / "alerts_latest.json"
@@ -164,15 +154,14 @@ def _convert_to_events(raw_alerts):
             published = datetime.now(timezone.utc)
             dropped_bad_date += 1
         norm_source = _normalize_source(raw.get("source") or "")
-        # Build synthetic summary so GuardianEngine country / category
-        # detection has more text to chew on than just a short headline.
-        # See _SOURCE_CATEGORY_HINTS comment for the why.
+        # Country hint into summary so _detect_countries fires on
+        # press-release titles that don't mention the country.
+        # See the _SOURCE_CATEGORY_HINTS removal comment above for
+        # why we deliberately don't inject category hints.
         country_hint = (raw.get("country") or "").strip()
         if country_hint and country_hint.lower() == "unknown":
             country_hint = ""
-        category_hint = _SOURCE_CATEGORY_HINTS.get(norm_source, "")
-        summary_parts = [p for p in (country_hint, category_hint) if p]
-        summary = ". ".join(summary_parts)
+        summary = country_hint
         kept.append(Event(
             source=norm_source,
             event_id=(raw.get("url") or f"title:{title[:200]}"),
@@ -243,8 +232,12 @@ def _build_snapshot(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--persona", default="treasury_ops",
-                        help="Persona key for scoring (default: treasury_ops)")
+    parser.add_argument("--persona", default="neutral",
+                        help=("Persona key for scoring (default: neutral, all "
+                              "weights = 1.0). The bridge stores baseline scores "
+                              "so `_compute_effective_score` downstream can apply "
+                              "the actual user persona's weights cleanly. Override "
+                              "only if you know you want pre-weighted output."))
     parser.add_argument("--threshold", type=float, default=40.0,
                         help="Alert trigger threshold (informational only — written into snapshot)")
     parser.add_argument("--dry-run", action="store_true",

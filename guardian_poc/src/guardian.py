@@ -871,42 +871,84 @@ class GuardianEngine:
     def _infer_categories(self, text: str, source: str) -> list[tuple[str, bool]]:
         # Fallback mapping prevents empty dashboards when external sources use phrasing
         # that does not exactly match keyword lists.
+        #
+        # Most central banks straddle market policy and prudential
+        # supervision; we surface BOTH so persona weights for
+        # market_risk vs regulatory_risk produce different top-Ns.
+        # Bank of Japan stays single-category because BoJ press
+        # releases historically run heavily on monetary policy and
+        # adding regulatory dilutes signal. FCA UK is supervision-only.
+        # U.S. Treasury straddles market policy (debt issuance, rates)
+        # and sanctions / political tools.
         source_defaults: dict[str, list[str]] = {
-            "world_bank": ["market_risk"],
-            "fred": ["market_risk", "liquidity_risk"],
-            "fiscal_data": ["liquidity_risk"],
-            "bank_of_canada": ["market_risk"],
-            "imf": ["market_risk"],
-            "ecb": ["market_risk"],
-            "bis": ["systematic_risk"],
-            "eia": ["market_risk", "supply_risk"],
-            "usgs": ["disaster_risk"],
-            "reliefweb": ["disaster_risk"],
-            "nasa_eonet": ["disaster_risk"],
-            "noaa_nws": ["disaster_risk"],
-            "openfema": ["disaster_risk"],
-            "ofac_sls": ["political_risk", "regulatory_risk"],
-            "uk_sanctions": ["political_risk", "regulatory_risk"],
-            "un_sanctions": ["political_risk", "regulatory_risk"],
+            "world_bank":     ["market_risk", "credit_risk"],
+            "fred":           ["market_risk", "liquidity_risk"],
+            "fiscal_data":    ["liquidity_risk"],
+            "bank_of_canada": ["market_risk", "regulatory_risk"],
+            "imf":            ["market_risk", "credit_risk"],
+            "ecb":            ["market_risk", "regulatory_risk"],
+            "fed":            ["market_risk", "regulatory_risk"],
+            "boe":            ["market_risk", "regulatory_risk"],
+            "boj":            ["market_risk"],
+            "fca":            ["regulatory_risk", "operational_risk"],
+            "treasury":       ["market_risk", "political_risk"],
+            "bis":            ["systematic_risk", "regulatory_risk"],
+            "eia":            ["market_risk", "supply_risk"],
+            "usgs":           ["disaster_risk"],
+            "reliefweb":      ["disaster_risk"],
+            "nasa_eonet":     ["disaster_risk"],
+            "noaa_nws":       ["disaster_risk"],
+            "openfema":       ["disaster_risk"],
+            "ofac_sls":       ["political_risk", "regulatory_risk"],
+            "uk_sanctions":   ["political_risk", "regulatory_risk"],
+            "un_sanctions":   ["political_risk", "regulatory_risk"],
         }
+        # Term map. Press release titles rarely contain risk_keywords.yaml
+        # primary phrases ("foreign exchange", "currency devaluation"),
+        # so we keep a permissive vocab of single-word triggers here.
+        # Multi-category triggers (a single needle → two categories) are
+        # appended sequentially so a "stress test" headline lands as
+        # BOTH credit_risk and regulatory_risk.
         term_map: list[tuple[str, str]] = [
-            ("inflation", "market_risk"),
-            ("cpi", "market_risk"),
-            ("interest", "market_risk"),
-            ("yield", "market_risk"),
-            ("liquidity", "liquidity_risk"),
-            ("default", "credit_risk"),
-            ("downgrade", "credit_risk"),
-            ("sanction", "political_risk"),
-            ("tariff", "political_risk"),
-            ("regulation", "regulatory_risk"),
-            ("compliance", "regulatory_risk"),
-            ("earthquake", "disaster_risk"),
-            ("flood", "disaster_risk"),
-            ("wildfire", "disaster_risk"),
-            ("hurricane", "disaster_risk"),
-            ("supply", "supply_risk"),
-            ("shipping", "supply_risk"),
+            ("inflation",       "market_risk"),
+            ("cpi",             "market_risk"),
+            ("interest",        "market_risk"),
+            ("yield",           "market_risk"),
+            # Central-bank vocabulary that hits press releases.
+            ("monetary policy", "market_risk"),
+            ("rate decision",   "market_risk"),
+            ("fomc",            "market_risk"),
+            ("liquidity",       "liquidity_risk"),
+            # Credit / supervisory vocab.
+            ("default",         "credit_risk"),
+            ("downgrade",       "credit_risk"),
+            ("stress test",     "credit_risk"),
+            ("stress test",     "regulatory_risk"),    # also a supervisory action
+            ("capital requirements", "regulatory_risk"),
+            ("supervision",     "regulatory_risk"),
+            ("supervisory",     "regulatory_risk"),
+            # Political / sanctions.
+            ("sanction",        "political_risk"),
+            ("tariff",          "political_risk"),
+            # Regulatory.
+            ("regulation",      "regulatory_risk"),
+            ("compliance",      "regulatory_risk"),
+            ("enforcement",     "regulatory_risk"),
+            ("fines",           "regulatory_risk"),
+            ("tokenisation",    "regulatory_risk"),  # FCA/BoE crypto focus
+            ("tokenization",    "regulatory_risk"),
+            ("stablecoin",      "regulatory_risk"),
+            ("digital asset",   "regulatory_risk"),
+            # Operational.
+            ("outage",          "operational_risk"),
+            ("cyber",           "operational_risk"),
+            # Disaster.
+            ("earthquake",      "disaster_risk"),
+            ("flood",           "disaster_risk"),
+            ("wildfire",        "disaster_risk"),
+            ("hurricane",       "disaster_risk"),
+            ("supply",          "supply_risk"),
+            ("shipping",        "supply_risk"),
         ]
         out_keys: list[str] = []
         for needle, key in term_map:
