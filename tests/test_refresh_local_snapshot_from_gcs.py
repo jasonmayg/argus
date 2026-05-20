@@ -178,6 +178,66 @@ class TestEventConversion:
         assert events[0].event_id.startswith("title:")
         assert "Some headline" in events[0].event_id
 
+    def test_summary_carries_country_and_category_hints(self):
+        """Regression — this is the actual unlock for the bridge.
+        Without synthetic country + category hints in `summary` the
+        engine's `_detect_countries` / `_infer_categories` can't fire
+        on a bare press-release title and the script produces ~1
+        scored alert. The smoke run that produces 162 alerts depends
+        entirely on this injection. Pinning here so a refactor of
+        `_convert_to_events` can't silently turn the bridge back
+        into "1 alert mode" without breaking a test."""
+        raw = [{
+            "title": "Policy statement released",
+            "url": "https://example.com/x",
+            "source": "Federal Reserve",
+            "country": "USA",
+            "published_at": "2026-05-19T12:00:00+00:00",
+        }]
+        events = bridge._convert_to_events(raw)
+        assert len(events) == 1
+        # Country hint flows in for engine country detection.
+        assert "USA" in events[0].summary
+        # Category-trigger phrase for the Fed source flows in.
+        # The exact phrase comes from _SOURCE_CATEGORY_HINTS["fed"];
+        # we check for the canonical category term rather than the
+        # full string so the assertion survives copy-edit of the hint.
+        assert "interest rate" in events[0].summary.lower()
+
+    def test_summary_drops_unknown_country_marker(self):
+        """If the GCS row tags `country="Unknown"` (USGS / some ECB
+        items in today's bucket), we must NOT plant "Unknown" into
+        the summary — `_detect_countries` doesn't match "Unknown"
+        anyway, but more importantly we don't want "Unknown" to leak
+        into other text matches downstream."""
+        raw = [{
+            "title": "Earthquake near Anchorage",
+            "url": "https://example.com/q",
+            "source": "USGS",
+            "country": "Unknown",
+            "published_at": "2026-05-19T12:00:00+00:00",
+        }]
+        events = bridge._convert_to_events(raw)
+        # Should still have the source's category hint ("earthquake"
+        # for usgs) but no "Unknown" string.
+        assert "Unknown" not in events[0].summary
+        assert "earthquake" in events[0].summary.lower()
+
+    def test_summary_empty_for_fully_unrecognized_source(self):
+        """A source with no entry in either map and country='Unknown'
+        produces an empty summary — that's fine, the event just
+        falls back to title-only matching (likely drops in
+        `_detect_categories`, but we don't crash)."""
+        raw = [{
+            "title": "Random item",
+            "url": "https://example.com/r",
+            "source": "Some Unknown Outlet",
+            "country": "Unknown",
+            "published_at": "2026-05-19T12:00:00+00:00",
+        }]
+        events = bridge._convert_to_events(raw)
+        assert events[0].summary == ""
+
 
 class TestSnapshotShape:
     """The output dict must keep the exact field names downstream code
