@@ -85,7 +85,10 @@ class TestPublishedAtParsing:
         dt = bridge._parse_published_at("Mon, 18 May 2026 09:06:58 +0100")
         assert dt is not None
         assert dt.tzinfo is not None
-        # 2026-05-18 09:06:58 +0100 → 2026-05-18 08:06:58 UTC
+        # The parser preserves the source's UTC offset rather than
+        # normalizing — +0100 stays +0100. Downstream `_recency_score`
+        # does tz-aware arithmetic so the absolute instant is what
+        # matters; the offset itself is just informational.
         assert dt.utcoffset().total_seconds() == 3600
 
     def test_rfc_2822_gmt(self):
@@ -199,7 +202,7 @@ class TestSnapshotShape:
 
     def test_required_top_level_keys(self):
         out = bridge._build_snapshot(
-            [self._scored_alert()], persona="treasury_ops",
+            [self._scored_alert()], event_count=1, persona="treasury_ops",
             threshold=40.0, source_ref="gs://bucket/path",
         )
         for k in ("generated_at_utc", "persona", "threshold",
@@ -213,7 +216,7 @@ class TestSnapshotShape:
         """Downstream code keys off `score`, `category_label`, etc. —
         renaming any of these would silently empty out persona_eval."""
         out = bridge._build_snapshot(
-            [self._scored_alert()], persona="treasury_ops",
+            [self._scored_alert()], event_count=1, persona="treasury_ops",
             threshold=40.0, source_ref="",
         )
         a = out["alerts"][0]
@@ -226,7 +229,7 @@ class TestSnapshotShape:
         a datetime; json.dumps would TypeError. Confirm we coerce
         to an ISO string."""
         out = bridge._build_snapshot(
-            [self._scored_alert()], persona="treasury_ops",
+            [self._scored_alert()], event_count=1, persona="treasury_ops",
             threshold=40.0, source_ref="",
         )
         assert isinstance(out["alerts"][0]["published_at"], str)
@@ -240,5 +243,74 @@ class TestSnapshotShape:
             self._scored_alert(score=45.0),
             self._scored_alert(score=30.0),
             self._scored_alert(score=70.0),
-        ], persona="treasury_ops", threshold=40.0, source_ref="")
+        ], event_count=3, persona="treasury_ops",
+            threshold=40.0, source_ref="")
         assert out["triggered_count"] == 2
+
+    def test_event_count_distinct_from_alert_count_on_fanout(self):
+        """Regression: a single Guardian Event can fan out into
+        multiple ScoredAlerts (multi-country detection, multi-category
+        matching). event_count tracks *input events* — what the
+        upstream signal volume was — while alert_count tracks
+        scored items. Conflating them masks fan-out in the dashboard
+        metrics."""
+        # 1 input event, 3 scored alerts (e.g. matched 3 countries).
+        out = bridge._build_snapshot(
+            [self._scored_alert(), self._scored_alert(country="UK"),
+             self._scored_alert(country="Japan")],
+            event_count=1, persona="treasury_ops",
+            threshold=40.0, source_ref="",
+        )
+        assert out["event_count"] == 1
+        assert out["alert_count"] == 3
+
+    def test_event_count_zero_with_zero_alerts(self):
+        """Defensive: 0/0 is a real state (rare but possible when the
+        engine score floor filters everything out). Must not crash."""
+        out = bridge._build_snapshot(
+            [], event_count=0, persona="treasury_ops",
+            threshold=40.0, source_ref="",
+        )
+        assert out["event_count"] == 0
+        assert out["alert_count"] == 0
+        assert out["triggered_count"] == 0
+        assert out["alerts"] == []
+
+
+class TestPersonaValidation:
+    """The script accepts --persona but doesn't validate against the
+    actual personas.yaml. `engine.score_events` then KeyErrors on the
+    unknown key with no useful message. Regression-test that we
+    catch this at the script level with a clear error + exit 3."""
+
+    def test_unknown_persona_logged_and_exits_3(self, monkeypatch, caplog):
+        """Run main() with --persona on something not in personas.yaml
+        and assert: (a) script returns 3, not crashes, (b) the error
+        message lists the valid persona keys so the user can fix the
+        typo without grepping config."""
+        import sys
+        # Stub GCS so the upstream load returns a usable event.
+        monkeypatch.setattr(
+            "core.guardian_loader._load_guardian_snapshot_from_gcs",
+            lambda: {
+                "ok": True,
+                "snapshot": {
+                    "alerts": [{
+                        "title": "x", "url": "u", "source": "Federal Reserve",
+                        "country": "USA",
+                        "published_at": "2026-05-19T00:00:00+00:00",
+                    }],
+                },
+                "snapshot_ref": "gs://stub",
+            },
+        )
+        argv = ["refresh_local_snapshot_from_gcs.py",
+                "--persona", "does_not_exist", "--dry-run"]
+        monkeypatch.setattr(sys, "argv", argv)
+        with caplog.at_level("ERROR"):
+            rc = bridge.main()
+        assert rc == 3
+        # Confirm the error tells the user what *was* valid.
+        joined = " ".join(r.message for r in caplog.records)
+        assert "does_not_exist" in joined
+        assert "treasury_ops" in joined or "cash_manager" in joined

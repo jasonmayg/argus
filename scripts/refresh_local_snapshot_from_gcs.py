@@ -188,10 +188,27 @@ def _convert_to_events(raw_alerts):
     return kept
 
 
-def _build_snapshot(scored, persona: str, threshold: float, source_ref: str) -> dict:
+def _build_snapshot(
+    scored,
+    *,
+    event_count: int,
+    persona: str,
+    threshold: float,
+    source_ref: str,
+) -> dict:
     """Serialize the ScoredAlert list into the JSON shape
     `guardian_poc/data/alerts_latest.json` has historically used —
     the shape `core/persona_eval/data_loader._normalize` consumes.
+
+    `event_count` is the count of input Guardian Events (pre-scoring).
+    `alert_count` is the count of ScoredAlerts (post-scoring). These
+    diverge whenever a single Event fans out to multiple alerts —
+    e.g. a press release that mentions both "USA" and "UK", or one
+    that matches both market_risk and regulatory_risk keywords.
+    Dashboards historically chart event_count as "how much raw signal
+    came in" and alert_count as "how many scored items downstream
+    consumers see," so treating them as the same number was masking
+    the fan-out behavior.
     """
     now_utc = datetime.now(timezone.utc)
     now_local = now_utc.astimezone()
@@ -213,7 +230,7 @@ def _build_snapshot(scored, persona: str, threshold: float, source_ref: str) -> 
         "threshold":          threshold,
         "data_mode":          "bridge_gcs_raw_to_scored",
         "source_ref":         source_ref,
-        "event_count":        len(scored),
+        "event_count":        event_count,
         "alert_count":        len(scored),
         "triggered_count":    triggered,
         "llm_status":         None,
@@ -274,6 +291,17 @@ def main() -> int:
         LOG.exception("GuardianEngine init failed: %s", e)
         return 3
 
+    # Validate persona up-front. `engine.score_events` does
+    # `self.personas[persona]` which KeyErrors on unknown keys —
+    # crashing with a traceback isn't useful. Listing the valid keys
+    # also lets a user catch a typo without grepping the YAML.
+    if args.persona not in engine.personas:
+        LOG.error(
+            "unknown --persona %r. Valid personas: %s",
+            args.persona, ", ".join(sorted(engine.personas.keys())),
+        )
+        return 3
+
     scored = engine.score_events(events, persona=args.persona)
     LOG.info("scored %d alerts (from %d events)", len(scored), len(events))
     if not scored:
@@ -285,7 +313,10 @@ def main() -> int:
         return 2
 
     out = _build_snapshot(
-        scored, persona=args.persona, threshold=args.threshold,
+        scored,
+        event_count=len(events),
+        persona=args.persona,
+        threshold=args.threshold,
         source_ref=gcs_result.get("snapshot_ref") or "",
     )
 
