@@ -114,12 +114,12 @@ class TestSearchNews:
 
     def test_request_id_threaded_to_telemetry(self):
         """Tools accept a request_id from the agent so per-tool rag
-        rows join the agent_executions row in /api/rag/stats."""
+        rows join the agent_executions row in /api/admin/rag/stats."""
         store = _FakeStore()
         with patch("core.vector_store.get_vector_store", return_value=store):
             SearchNews(request_id="abc123").execute({"query": "x"})
         assert store.calls[0]["request_id"] == "abc123"
-        # endpoint string is what /api/rag/stats groups by
+        # endpoint string is what /api/admin/rag/stats groups by
         assert "agent.intelligence" in store.calls[0]["endpoint"]
 
     def test_empty_results_returns_helpful_message(self):
