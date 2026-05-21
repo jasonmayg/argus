@@ -1,28 +1,51 @@
 # ARGUS Phase 2 RAG / Vector Store Configuration
 
 embedder:
-  # Default provider for all embed() calls. Override per-call via
-  # core.embedder.get_embedder("<name>") if a specific scenario needs the
-  # fallback (e.g. quality-sensitive backfill).
-  default: sentence_transformer
+  # Default provider for all embed() calls. OpenAI is the primary
+  # for deployed environments — no local model download, no torch /
+  # CUDA disk-space cost (the issue we hit on the small VM 2026-05-20),
+  # and text-embedding-3-small is ~$0.02 / 1M tokens which is
+  # essentially free at Argus's volume. Override per-call via
+  # core.embedder.get_embedder("<name>") if a specific scenario needs
+  # the fallback (e.g. quality-sensitive backfill, offline dev).
+  default: openai
 
-  # If the default embedder raises EmbedderError, embed_with_fallback() tries
-  # this provider. Set to null to disable fallback.
-  fallback: openai
+  # If the default embedder raises EmbedderError, embed_with_fallback()
+  # tries this provider. Set to null to disable fallback.
+  #
+  # IMPORTANT — cross-provider caveat: OpenAI (1536-dim) and
+  # sentence-transformers (384-dim) emit vectors in different shapes
+  # and different semantic spaces. Chroma collections pin dimension on
+  # first write, so:
+  #   * If chroma was bootstrapped with OpenAI and OpenAI later goes
+  #     down, ST fallback for WRITES will error (dim mismatch on
+  #     insert). Ingestion halts during the outage — that's expected.
+  #   * QUERIES during an OpenAI outage will also fail similarly.
+  #
+  # The fallback's real value is the dev-laptop case: someone running
+  # Argus offline without an OPENAI_API_KEY can still ingest + search
+  # against an ST-only chroma store. For prod boxes, the fallback
+  # never fires unless OpenAI is unreachable, in which case we accept
+  # ingestion-pause as the right behavior.
+  #
+  # When switching providers on an existing deploy, drop the chroma
+  # collections and re-embed — mixing dims in one collection isn't
+  # supported.
+  fallback: sentence_transformer
 
   providers:
-    sentence_transformer:
-      type: sentence_transformer
-      model: all-MiniLM-L6-v2
-      # Bump version when retraining or swapping model files. The new value
-      # propagates into Chroma metadata so chroma_audit.py can flag rows that
-      # were embedded with the old model.
-      version: v1
-
     openai:
       type: openai
       model: text-embedding-3-small
       api_key_env: OPENAI_API_KEY
+      version: v1
+
+    sentence_transformer:
+      type: sentence_transformer
+      model: all-MiniLM-L6-v2
+      # Bump version when retraining or swapping model files. The new
+      # value propagates into Chroma metadata so chroma_audit.py can
+      # flag rows that were embedded with the old model.
       version: v1
 
 storage:
