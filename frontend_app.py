@@ -25,6 +25,7 @@ from routes.regulatory_routes import regulatory_bp
 from routes.actions_routes import actions_bp      # ← 新增
 from routes.rag_stats_routes import rag_stats_bp
 from routes.intelligence_routes import intelligence_bp
+from routes.health_routes import health_bp
 
 
 def create_app() -> Flask:
@@ -43,6 +44,7 @@ def create_app() -> Flask:
     app.register_blueprint(actions_bp)            # ← 新增
     app.register_blueprint(rag_stats_bp)
     app.register_blueprint(intelligence_bp)
+    app.register_blueprint(health_bp)
 
     return app
 
