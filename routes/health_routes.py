@@ -67,20 +67,30 @@ def _check_module(name: str) -> Dict[str, Any]:
         }
 
 
-def _read_embedder_config() -> Dict[str, Any]:
-    """Read the embedder section from rag_config.yaml so the probe
-    knows which provider is configured as default + fallback. Reads
-    the file directly (no import of core.embedder) so the probe
-    doesn't itself crash if the embedder import chain is broken."""
+def _read_rag_config() -> Dict[str, Any]:
+    """Parse `rag_config.yaml` once per probe call. Both the embedder
+    check and the persist_dir check read keys from this file —
+    previously each opened + parsed the yaml independently, doing 2×
+    the file I/O per request. Consolidated here so a probe request
+    parses the config exactly once.
+
+    Returns `{}` on any read / parse failure so callers can `.get()`
+    safely without guarding."""
     if not _RAG_CONFIG_PATH.exists():
         return {}
     try:
         with open(_RAG_CONFIG_PATH, "r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
+            return yaml.safe_load(f) or {}
     except Exception as e:
         logger.warning("rag_config parse failed: %s", e)
         return {}
-    return cfg.get("embedder") or {}
+
+
+def _read_embedder_config() -> Dict[str, Any]:
+    """Embedder block from rag_config.yaml. Returns `{}` if absent.
+    Thin wrapper around `_read_rag_config` for back-compat with
+    callers / tests that expect just the embedder section."""
+    return _read_rag_config().get("embedder") or {}
 
 
 def _check_embedder(name: str, providers_cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -137,14 +147,8 @@ def _resolve_configured_persist_dir() -> Path:
     path regardless of whether the directory exists — the caller
     checks existence.
     """
-    rel = "data/chroma_db"
-    if _RAG_CONFIG_PATH.exists():
-        try:
-            with open(_RAG_CONFIG_PATH, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            rel = (cfg.get("storage") or {}).get("persist_dir", rel)
-        except Exception as e:
-            logger.warning("rag_config parse failed: %s", e)
+    cfg = _read_rag_config()
+    rel = (cfg.get("storage") or {}).get("persist_dir", "data/chroma_db")
     return (_ROOT / rel).resolve()
 
 
