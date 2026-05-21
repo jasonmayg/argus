@@ -60,6 +60,41 @@ Then open http://localhost:5050 in your browser.
 
 > **Production:** Linux/macOS use `gunicorn --bind 0.0.0.0:5050 "frontend_app:create_app()"`. Windows users should use `waitress` (Gunicorn does not run on Windows) — see [Section 9](#9-deployment-guidelines) for full deployment setup.
 
+### ⚠️ Upgrading an existing deploy — chroma data migration
+
+The default embedder is now **OpenAI `text-embedding-3-small`** (1536-dim).
+Previously it was the local sentence-transformers `all-MiniLM-L6-v2` (384-dim).
+Chroma collections pin their vector dimension on the first insert, so the
+two embedders' outputs **cannot coexist in the same collection**.
+
+If you're pulling the latest code onto a deploy that has been running with
+the old embedder, drop the chroma store and re-ingest before serving traffic:
+
+```bash
+# On the server, after `git pull`:
+rm -rf data/chroma_db/
+
+# Restart the app so the next request rebuilds the collections at 1536-dim.
+sudo systemctl restart argus    # or whatever you use to bounce gunicorn
+
+# Re-ingest from source data:
+#   - For news / regulatory / actions_history collections, run your usual
+#     backfill (e.g. `python scripts/chroma_backfill.py` if present).
+#   - For Guardian alerts, the dual-write path (`core/chroma_writer.py`)
+#     repopulates as new snapshots flow in via daily_monitor.
+
+# Verify:
+curl -s http://localhost:5050/api/health/rag | jq '.embedder, .vector_store.collections'
+# Expect: embedder.default_name = "openai", collections counts > 0.
+```
+
+For a **fresh deploy** (chroma_db doesn't exist yet), no migration is
+needed — first writes establish dimension as 1536 cleanly.
+
+If you want to keep using sentence-transformers locally without the
+network cost, set `embedder.default: sentence_transformer` in
+`config/rag_config.yaml`. The provider abstraction supports either.
+
 ---
 
 ## Table of Contents
