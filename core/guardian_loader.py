@@ -7,6 +7,7 @@ module rather than embedding data logic inline.
 
 import csv
 import json
+import logging
 import os
 import re
 import subprocess
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Any
 
 import unicodedata
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -681,6 +684,40 @@ def _raw_alerts_to_guardian_events(raw_alerts):
     return events
 
 
+# Module-level GuardianEngine cache. Instantiating the engine costs 3
+# yaml loads (countries / risk_keywords / personas) + a requests.Session
+# construction. Without caching, every `_load_guardian_snapshot_from_gcs`
+# call repeats the work — dashboard refresh + /api/actions + health
+# probe firing concurrently was producing measurable yaml-parse thrash.
+# `score_events` doesn't mutate engine state so a process-level shared
+# instance is safe across requests within a single gunicorn worker.
+_GUARDIAN_ENGINE_CACHE: Any = None
+
+
+def _get_guardian_engine() -> Any:
+    """Lazy-initialize + cache a GuardianEngine. Raises on init
+    failure — caller wraps in try/except. Cache is process-local
+    (gunicorn forks each worker, so no cross-process state to worry
+    about)."""
+    global _GUARDIAN_ENGINE_CACHE
+    if _GUARDIAN_ENGINE_CACHE is None:
+        from guardian_poc.src.guardian import GuardianEngine
+        config_dir = Path(__file__).resolve().parent.parent / "guardian_poc" / "config"
+        _GUARDIAN_ENGINE_CACHE = GuardianEngine(
+            countries_cfg = str(config_dir / "countries.yaml"),
+            keywords_cfg  = str(config_dir / "risk_keywords.yaml"),
+            personas_cfg  = str(config_dir / "personas.yaml"),
+        )
+    return _GUARDIAN_ENGINE_CACHE
+
+
+def _reset_guardian_engine_cache() -> None:
+    """Test hook — clears the cached engine so a test can swap config
+    files and re-instantiate. Don't call from production code."""
+    global _GUARDIAN_ENGINE_CACHE
+    _GUARDIAN_ENGINE_CACHE = None
+
+
 def _score_raw_gcs_alerts(raw_alerts: list[dict], persona: str = "neutral") -> list[dict]:
     """Run GCS raw alerts through GuardianEngine.score_events and
     return a list of scored alert dicts matching the shape downstream
@@ -697,32 +734,35 @@ def _score_raw_gcs_alerts(raw_alerts: list[dict], persona: str = "neutral") -> l
     conversion crash) — callers fall back to unscored data or a
     local snapshot. The whole function body is wrapped in try/except
     because any uncaught raise here would break the dashboard /
-    /api/actions / persona_eval all at once."""
+    /api/actions / persona_eval all at once. Failures are LOGGED at
+    WARNING so silent regressions surface in stderr / cron output."""
     if not raw_alerts:
         return []
     try:
         from dataclasses import asdict
-        from datetime import datetime
-        from guardian_poc.src.guardian import GuardianEngine
+        from datetime import datetime as _dt
 
         events = _raw_alerts_to_guardian_events(raw_alerts)
         if not events:
             return []
-
-        config_dir = Path(__file__).resolve().parent.parent / "guardian_poc" / "config"
-        engine = GuardianEngine(
-            countries_cfg = str(config_dir / "countries.yaml"),
-            keywords_cfg  = str(config_dir / "risk_keywords.yaml"),
-            personas_cfg  = str(config_dir / "personas.yaml"),
-        )
+        engine = _get_guardian_engine()
         scored = engine.score_events(events, persona=persona)
-    except Exception:
+    except Exception as exc:
+        # Log + return [] rather than re-raise. Caller falls back to
+        # unscored data. We log the type + truncated message so the
+        # specific failure (e.g. yaml parse error, persona missing,
+        # category config drift) is diagnosable from the gunicorn
+        # log without crashing the request.
+        logger.warning(
+            "_score_raw_gcs_alerts failed (%s: %s) — falling back to unscored",
+            type(exc).__name__, str(exc)[:200],
+        )
         return []
 
     out = []
     for sa in scored:
         d = asdict(sa)
-        if isinstance(d.get("published_at"), datetime):
+        if isinstance(d.get("published_at"), _dt):
             d["published_at"] = d["published_at"].isoformat()
         out.append(d)
     return out

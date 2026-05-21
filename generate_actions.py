@@ -116,12 +116,24 @@ def _load_guardian_alerts_raw() -> List[Dict]:
             alerts = (gcs["snapshot"] or {}).get("alerts") or []
             if alerts:
                 return alerts
-    except Exception:
-        # Guardian_loader import or call failed — fall through to
-        # local file. We don't log here because guardian_loader has
-        # its own logging and this path is hit on every actions
-        # generation; logging twice creates noise.
-        pass
+            # GCS ok but no alerts — not necessarily a failure (empty
+            # partition, data-collection lag). Soft note so the
+            # silent-fallback isn't opaque on prod boxes.
+            print("[generate_actions] guardian_loader returned ok with "
+                  "0 alerts — trying local file fallback")
+        elif gcs.get("message"):
+            # GCS not ok — guardian_loader's `message` field has the
+            # diagnostic. Log once so the fallback path is observable.
+            print(f"[generate_actions] guardian_loader GCS path "
+                  f"unavailable ({gcs.get('message')!r}) — trying "
+                  "local file fallback")
+    except Exception as exc:
+        # Loader call itself raised — distinct from GCS being
+        # unreachable (the message branch above). Usually means a
+        # code-level issue (config drift, missing dep) so log louder.
+        print(f"[generate_actions] guardian_loader call raised "
+              f"({type(exc).__name__}: {str(exc)[:160]}) — trying "
+              "local file fallback")
 
     # Local file fallback. Kept for offline dev and emergency cases
     # where GCS is unreachable.

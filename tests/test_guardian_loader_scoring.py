@@ -234,6 +234,46 @@ class TestScoreRawGcsAlerts:
                                            "published_at": "2026-05-19"}])
         assert out == []
 
+    def test_failure_logs_a_warning(self, caplog):
+        """Regression (self-review 2026-05-21) — silent failures
+        used to leave operators guessing why the dashboard went
+        empty. Each scoring failure must produce a WARNING with the
+        exception class + truncated message so the gunicorn / cron
+        log captures it for diagnosis."""
+        from core import guardian_loader as gl
+        with patch.object(gl, "_raw_alerts_to_guardian_events",
+                          side_effect=RuntimeError("kaboom")):
+            with caplog.at_level("WARNING", logger="core.guardian_loader"):
+                gl._score_raw_gcs_alerts([{"title": "x", "source": "fed"}])
+        joined = " ".join(r.message for r in caplog.records)
+        assert "RuntimeError" in joined
+        assert "kaboom" in joined
+
+
+class TestGuardianEngineCaching:
+    """Regression (self-review 2026-05-21) — earlier B1 instantiated
+    GuardianEngine inside `_score_raw_gcs_alerts`, re-loading 3 yaml
+    files on every /api/actions / dashboard request. The cache reuses
+    the engine across calls within a single gunicorn worker."""
+
+    def test_engine_instantiated_only_once_across_calls(self):
+        from core import guardian_loader as gl
+        gl._reset_guardian_engine_cache()
+        first  = gl._get_guardian_engine()
+        second = gl._get_guardian_engine()
+        assert first is second, (
+            "_get_guardian_engine returned a fresh instance — cache "
+            "didn't hold, every request would re-load 3 yaml files"
+        )
+
+    def test_reset_cache_clears_singleton(self):
+        """The reset hook lets tests swap config without state leak."""
+        from core import guardian_loader as gl
+        first = gl._get_guardian_engine()
+        gl._reset_guardian_engine_cache()
+        second = gl._get_guardian_engine()
+        assert first is not second
+
 
 # ──────────────────────────────────────────────────────────────────
 # Integration with generate_actions._load_guardian_alerts_raw
