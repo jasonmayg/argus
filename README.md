@@ -745,6 +745,93 @@ waitress-serve --listen=0.0.0.0:5050 --threads=8 --call frontend_app:create_app
 
 To run it as a long-lived service, register it with `nssm` (https://nssm.cc) or Windows Task Scheduler with the trigger "At system startup". Keep `--threads` between 4 and 16; the pipeline contends on `shared_storage/` writes at higher counts.
 
+#### 9.3.1 Running Gunicorn under systemd (Linux)
+
+On a Linux server, the production pattern is to wrap Gunicorn in a `systemd` unit so it auto-restarts and survives reboots. Save the following as `/etc/systemd/system/argus.service`, adjusting `User` and the `argus` install path:
+
+```ini
+[Unit]
+Description=Argus Risk Intelligence Platform (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=argus                          # Or whichever user owns the install
+Group=argus
+WorkingDirectory=/home/argus/argus
+ExecStart=/home/argus/argus/.venv/bin/gunicorn -c gunicorn.conf.py "frontend_app:create_app()"
+Restart=on-failure
+RestartSec=3
+
+# Environment variables — see below for three options
+# Option A: inline (current Argus practice; explicit, visible in `systemctl cat`)
+Environment="OPENAI_API_KEY=sk-..."
+Environment="ANTHROPIC_API_KEY=sk-ant-..."
+Environment="GUARDIAN_GCS_BUCKET=your-gcs-bucket"
+Environment="GOOGLE_APPLICATION_CREDENTIALS=/home/argus/argus/service-account.json"
+# Optional, only if exposing /api/admin/* to the public internet:
+# Environment="ARGUS_ADMIN_TOKEN=..."
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable + start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable argus
+sudo systemctl start argus
+sudo systemctl status argus
+```
+
+##### Three ways to pass env vars under systemd
+
+`python-dotenv` loads `.env` from the **current working directory** at process start (see `frontend_app.py:7-11`). Under systemd that requires `WorkingDirectory=` to point at the repo root — the .env file itself is otherwise invisible to the service. Three patterns, pick one:
+
+| Option | How | Pros | Cons |
+|---|---|---|---|
+| **A. Inline `Environment=`** | `Environment="KEY=val"` per line in the unit file | One source of truth visible in `systemctl cat`; secrets never live in the repo dir; no dependency on `python-dotenv` | Updating a secret requires editing the unit file + `daemon-reload` + restart; service file readable by anyone in the right group |
+| **B. `EnvironmentFile=`** | Point systemd at `.env` directly | Edit a plain file, `systemctl restart` is enough; secrets stay in one place | systemd's syntax is stricter than python-dotenv (no `#` comments inside values, no quoted multi-line values); `.env` must have tight file permissions (`chmod 600`) |
+| **C. Bare `.env` + `WorkingDirectory=`** | Let `python-dotenv` find `.env` in `WorkingDirectory` | Same workflow as local dev (`cp .env.example .env`); same loader regardless of how Flask is launched | Requires `python-dotenv` installed in the venv; surprises if `WorkingDirectory` ever drifts |
+
+Argus's current production deploy uses **Option A** — env values inline in the service file. That keeps secrets out of the repo dir entirely and the unit file becomes the audit trail.
+
+##### Adding new env vars (e.g. `ARGUS_ADMIN_TOKEN`)
+
+If a new env var ships (PR #58 added `ARGUS_ADMIN_TOKEN` for `/api/admin/*` rate-gating, for example):
+
+```bash
+# Generate a secret value
+TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+
+# Edit the service file
+sudo systemctl edit --full argus
+# Add inside the [Service] block:
+#   Environment="ARGUS_ADMIN_TOKEN=<paste $TOKEN here>"
+
+# Reload + restart
+sudo systemctl daemon-reload
+sudo systemctl restart argus
+
+# Verify
+sudo systemctl status argus              # service healthy
+curl -H "X-Admin-Token: $TOKEN" \
+     http://localhost:5050/api/admin/agents | jq '.agents | length'
+```
+
+##### Permissions to watch
+
+```bash
+# Unit file should be root-owned, group-readable
+sudo chown root:root /etc/systemd/system/argus.service
+sudo chmod 644 /etc/systemd/system/argus.service
+
+# If you DO use `.env` (Options B / C), tighten it
+chmod 600 /home/argus/argus/.env
+chown argus:argus /home/argus/argus/.env
+```
+
 ### 9.4 CORS Configuration
 
 CORS is enabled globally in `create_app()` via `flask-cors`:
