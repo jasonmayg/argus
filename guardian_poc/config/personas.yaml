@@ -79,3 +79,27 @@ personas:
       demand_risk: 1.0
       process_risk: 1.1
       business_risk: 1.2
+  # `neutral` is a no-op persona used by `scripts/refresh_local_snapshot_from_gcs.py`
+  # to score events without baking a persona's category weights into
+  # the stored alert score. The bridge needs the snapshot's `score`
+  # field to represent baseline severity × recency × country only —
+  # `generate_actions._compute_effective_score` then applies the
+  # real persona's weights downstream. Using treasury_ops here used
+  # to double-weight regulatory_risk in every downstream persona's
+  # top-N because 1.5 × 1.x clamps to 100 for all four personas.
+  neutral:
+    alert_threshold: 40
+    risk_weights:
+      market_risk: 1.0
+      credit_risk: 1.0
+      liquidity_risk: 1.0
+      operational_risk: 1.0
+      political_risk: 1.0
+      regulatory_risk: 1.0
+      reputation_risk: 1.0
+      systematic_risk: 1.0
+      disaster_risk: 1.0
+      supply_risk: 1.0
+      demand_risk: 1.0
+      process_risk: 1.0
+      business_risk: 1.0

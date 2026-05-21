@@ -160,6 +160,42 @@ class TestSnapshotsDirMode:
         assert win.kept_count == 1
         assert win.raw_count == 2
 
+    def test_dedup_prefers_newest_snapshot(self, tmp_path):
+        """Regression — when a scoring change ships (e.g. the bridge's
+        switch to a neutral persona on 2026-05-20), today's snapshot
+        will have a different `score` value than yesterday's for the
+        same (url, date) alert. The window walk MUST keep the newest
+        version, otherwise persona_eval silently runs on stale scores.
+
+        Filename ordering encodes the production timestamp convention
+        (`alerts_YYYYMMDD_HHMMSS.json`), so sorting in reverse picks
+        newest first."""
+        snaps = tmp_path / "snapshots"
+        snaps.mkdir()
+        # Both scores must clear MIN_GUARDIAN_SCORE (40) or the
+        # production-parity filter drops them before dedup runs —
+        # the dedup-ordering test would then pass trivially with
+        # win.kept_count == 0, hiding a regression. Copilot PR #51
+        # review caught this.
+        old = _raw_alert(1, url="https://feed/x", days_ago=2, score=42)
+        new = _raw_alert(1, url="https://feed/x", days_ago=2, score=99)
+        # Filename `alerts_20260518_*.json` < `alerts_20260519_*.json`
+        # so the second file is the "newer" snapshot.
+        (snaps / "alerts_20260518_120000.json").write_text(
+            json.dumps({"alerts": [old]})
+        )
+        (snaps / "alerts_20260519_120000.json").write_text(
+            json.dumps({"alerts": [new]})
+        )
+        win = data_loader.load_alerts_window(
+            days=30, snapshots_dir=snaps, now=_now(),
+        )
+        assert win.kept_count == 1
+        # The kept alert must be the NEW one (score 99), not the
+        # stale one (score 42). If the walk regresses to ascending
+        # order this test fails with score==42.
+        assert win.alerts[0].score == 99
+
     def test_corrupt_file_does_not_abort_walk(self, tmp_path):
         snaps = tmp_path / "snapshots"
         snaps.mkdir()
