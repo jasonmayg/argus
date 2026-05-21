@@ -17,10 +17,13 @@ Data sources (all in `data/fed_news/argus_news.db`):
   - `llm_calls`        — per-turn LLM call records, joins by request_id
   - `rag_queries`      — per-tool RAG retrieval, joins by request_id
 
-The endpoint is intentionally unauthenticated for now — matches the
-existing pattern (`/api/health/rag`, `/api/rag/stats`). Public deploys
-should put this behind a reverse-proxy auth or restrict its CIDR.
-Documented in §13 of the Phase 3 design doc as a follow-up.
+All `/api/admin/*` endpoints (this file plus `health_routes` and
+`rag_stats_routes`) live under one operator-only namespace. They're
+**off by default for public deploys**: if `ARGUS_ADMIN_TOKEN` is
+set in the env, every request must carry a matching
+`X-Admin-Token` header or get a 401. Local dev / private networks
+leave the env unset and skip the check — same ergonomics as
+before. See `_require_admin_token()` below.
 """
 
 from __future__ import annotations
@@ -53,24 +56,62 @@ _MAX_RECENT = 200
 _DEFAULT_RECENT = 25
 
 
-def _connect() -> Optional[sqlite3.Connection]:
-    """Open a read-only-ish connection to the telemetry sqlite db.
-    Returns None when the file doesn't exist yet — that's the
-    pre-first-agent-run state, which downstream callers handle
-    gracefully."""
+class _DbMissingError(Exception):
+    """Raised when the telemetry sqlite file doesn't exist yet — a
+    legitimate pre-first-run state. Handlers translate this to a 200
+    with an informative message rather than a 5xx."""
+
+
+def _connect() -> sqlite3.Connection:
+    """Open a read-only connection to the telemetry sqlite db.
+
+    Raises:
+        _DbMissingError — the file simply doesn't exist (pre-first-
+            agent-run state). Handlers should map this to 200 + empty
+            body so monitoring doesn't fire on a clean install.
+        Other exceptions propagate up. The Copilot review caught that
+        the old "return None on any error" conflated 'missing file'
+        with 'exists but corrupt / permissions denied' — the latter
+        is a real operational failure that needs to surface as 5xx,
+        not silently look like 'no data yet'.
+    """
     if not _DB_PATH.exists():
-        return None
-    try:
-        # SQLite URI mode + ro=1 enforces read-only at the driver
-        # level — defence in depth so an admin endpoint bug can't
-        # accidentally wipe telemetry.
-        uri = f"file:{_DB_PATH}?mode=ro"
-        conn = sqlite3.connect(uri, uri=True)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except Exception as e:
-        logger.warning("admin: cannot open telemetry db: %s", e)
-        return None
+        raise _DbMissingError(f"telemetry db not present yet: {_DB_PATH}")
+    # SQLite URI mode + ro=1 enforces read-only at the driver level —
+    # defence in depth so a bug in this endpoint can't accidentally
+    # wipe telemetry. We do NOT swallow exceptions here: a
+    # permissions / corruption error should bubble to the handler,
+    # which logs + returns 500.
+    uri = f"file:{_DB_PATH}?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _require_admin_token() -> Optional[tuple]:
+    """Optional in-app guard for the admin surface. When the env var
+    `ARGUS_ADMIN_TOKEN` is set, every request must carry an
+    `X-Admin-Token` header that matches; otherwise return a 401 tuple
+    `(response, code)` the handler can use as an early-return.
+    Returns `None` when the request is authorized (or when no token
+    is configured — preserves the no-auth default for local dev and
+    private deploys).
+
+    Copilot review on PR #58 flagged that the admin endpoints expose
+    sensitive fields (request_id, tool_calls_json, error_message,
+    output_preview) and could be forgotten behind a reverse proxy on
+    a public deploy. This is a defence-in-depth shim — set the env
+    var when going public, leave unset on private networks."""
+    expected = os.getenv("ARGUS_ADMIN_TOKEN", "").strip()
+    if not expected:
+        return None    # no auth configured → allow
+    provided = (request.headers.get("X-Admin-Token") or "").strip()
+    if provided and provided == expected:
+        return None    # ok
+    return jsonify({
+        "status":  "error",
+        "message": "admin token required (set X-Admin-Token header)",
+    }), 401
 
 
 def _window_from_query(args) -> tuple[int, str]:
@@ -120,14 +161,25 @@ def agents_summary():
         }
       }
     """
+    auth = _require_admin_token()
+    if auth is not None:
+        return auth
+
+    hours, cutoff = _window_from_query(request.args)
     try:
-        hours, cutoff = _window_from_query(request.args)
-        conn = _connect()
-        if conn is None:
+        # NB: _connect() raises _DbMissingError when the file simply
+        # doesn't exist (which maps to a 200 + empty body — clean
+        # state for a fresh deploy) AND lets every OTHER exception
+        # propagate (which falls into the outer except → 500).
+        # Distinct from the pre-PR-58 behavior where any error was
+        # silently swallowed.
+        try:
+            conn = _connect()
+        except _DbMissingError as e:
             return jsonify({
                 "window_hours": hours, "since": cutoff,
                 "agents": {},
-                "message": "telemetry db not present yet (no agent runs recorded)",
+                "message": f"{e} (no agent runs recorded yet)",
             })
 
         with conn:
@@ -210,17 +262,24 @@ def agent_recent_runs(agent_name: str):
     Query params:
       ?limit=<int>  — number of runs to return (default 25, max 200)
     """
-    try:
-        try:
-            limit = int(request.args.get("limit", _DEFAULT_RECENT))
-        except (TypeError, ValueError):
-            limit = _DEFAULT_RECENT
-        limit = max(1, min(_MAX_RECENT, limit))
+    auth = _require_admin_token()
+    if auth is not None:
+        return auth
 
-        conn = _connect()
-        if conn is None:
+    try:
+        limit = int(request.args.get("limit", _DEFAULT_RECENT))
+    except (TypeError, ValueError):
+        limit = _DEFAULT_RECENT
+    limit = max(1, min(_MAX_RECENT, limit))
+
+    try:
+        # Same pattern as agents_summary — _DbMissingError → 200,
+        # any other connect failure → 500 via the outer except.
+        try:
+            conn = _connect()
+        except _DbMissingError as e:
             return jsonify({"agent": agent_name, "runs": [], "limit": limit,
-                            "message": "telemetry db not present yet"})
+                            "message": str(e)})
 
         with conn:
             cur = conn.cursor()

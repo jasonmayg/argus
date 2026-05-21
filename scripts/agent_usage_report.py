@@ -53,16 +53,27 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _connect_ro() -> Optional[sqlite3.Connection]:
+class _DbMissingError(Exception):
+    """Telemetry sqlite file doesn't exist yet — exit 1."""
+
+
+def _connect_ro() -> sqlite3.Connection:
+    """Open a read-only sqlite connection.
+
+    Raises:
+        _DbMissingError — file not present at DB_PATH (exit 1).
+        sqlite3.Error / OSError — file exists but couldn't open. Let
+            it propagate; main() catches and exits 2. Copilot review on
+            PR #58 caught that the old "return None on any error"
+            conflated 'missing file' with 'permissions denied /
+            corrupt db', which violated the documented exit-code
+            contract (exit 1 = missing, exit 2 = failure).
+    """
     if not DB_PATH.exists():
-        return None
-    try:
-        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except Exception as e:
-        print(f"  WARN: cannot open telemetry db: {e}", file=sys.stderr)
-        return None
+        raise _DbMissingError(f"telemetry db not found at {DB_PATH}")
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def _percentile(samples: List[int], p: float) -> int:
@@ -178,12 +189,23 @@ def main() -> int:
     hours = max(1, min(168, args.hours))
     cutoff_iso = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
 
-    conn = _connect_ro()
-    if conn is None:
-        print(f"  ERROR: telemetry db not found at {DB_PATH}", file=sys.stderr)
+    try:
+        conn = _connect_ro()
+    except _DbMissingError as e:
+        # File simply doesn't exist — pre-first-run state. Distinct
+        # from "exists but won't open", which is a real failure.
+        print(f"  INFO: {e}", file=sys.stderr)
         print(f"  This means no agent has run yet, or ARGUS_NEWS_DB points elsewhere.",
               file=sys.stderr)
         return 1
+    except (sqlite3.Error, OSError) as e:
+        # File exists but can't be opened (corrupt / permissions /
+        # locked). This IS an operational failure — surface it
+        # loudly so cron / monitoring catch it. Returning 1 here
+        # used to hide it under the "no data yet" code.
+        print(f"  ERROR: cannot open telemetry db at {DB_PATH}: "
+              f"{type(e).__name__}: {e}", file=sys.stderr)
+        return 2
 
     try:
         with conn:

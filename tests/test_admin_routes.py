@@ -289,6 +289,90 @@ class TestAgentRecentRuns:
 
 
 # ──────────────────────────────────────────────────────────────────
+# Connection failure modes — distinguish missing vs unreadable
+# ──────────────────────────────────────────────────────────────────
+
+class TestConnectFailureModes:
+    """Copilot PR #58 review: the original `_connect()` returned
+    `None` on both 'file missing' AND 'open failed', so a corrupt /
+    permissions-denied db looked the same as a clean pre-first-run.
+    These tests pin the distinction:
+      * missing → 200 + empty body + "not present" message
+      * open failure → 500 + error class in the message
+    """
+
+    def test_missing_file_returns_200_empty(self, client):
+        # client fixture creates a tmp path but never seeds it.
+        assert not client._db_path.exists()
+        r = client.get("/api/admin/agents")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body["agents"] == {}
+        assert "not present" in body.get("message", "")
+
+    def test_unreadable_db_returns_500(self, client, monkeypatch):
+        """Simulate a file that exists but can't be opened (corrupt
+        / permissions). The endpoint must surface 500, not 200,
+        because monitoring needs to escalate this — it's a real
+        operational failure, not 'no data yet'."""
+        # Make the file exist so _connect() proceeds past the
+        # missing-file check, but stub sqlite3.connect to raise.
+        client._db_path.write_text("not a real sqlite db")
+        import sqlite3 as _sqlite3
+        def _raise(*_a, **_kw):
+            raise _sqlite3.DatabaseError("file is not a database")
+        monkeypatch.setattr(_sqlite3, "connect", _raise)
+        r = client.get("/api/admin/agents")
+        assert r.status_code == 500
+        body = r.get_json()
+        # The handler logs + returns the error class so ops can
+        # diagnose without reading the gunicorn log.
+        assert "DatabaseError" in body.get("message", "")
+
+
+# ──────────────────────────────────────────────────────────────────
+# Optional admin-token guard
+# ──────────────────────────────────────────────────────────────────
+
+class TestAdminTokenGuard:
+    """Defence-in-depth shim from Copilot review: when
+    ARGUS_ADMIN_TOKEN env is set, the admin surface requires a
+    matching X-Admin-Token header. Unset = no auth (preserves the
+    local-dev / private-network default)."""
+
+    def test_no_env_means_no_auth_required(self, client, monkeypatch):
+        monkeypatch.delenv("ARGUS_ADMIN_TOKEN", raising=False)
+        r = client.get("/api/admin/agents")
+        assert r.status_code == 200    # no token needed
+
+    def test_env_set_blocks_missing_header(self, client, monkeypatch):
+        monkeypatch.setenv("ARGUS_ADMIN_TOKEN", "s3cret")
+        r = client.get("/api/admin/agents")
+        assert r.status_code == 401
+        assert "admin token" in r.get_json().get("message", "").lower()
+
+    def test_env_set_blocks_wrong_header(self, client, monkeypatch):
+        monkeypatch.setenv("ARGUS_ADMIN_TOKEN", "s3cret")
+        r = client.get("/api/admin/agents",
+                        headers={"X-Admin-Token": "guess"})
+        assert r.status_code == 401
+
+    def test_correct_header_allowed(self, client, monkeypatch):
+        monkeypatch.setenv("ARGUS_ADMIN_TOKEN", "s3cret")
+        r = client.get("/api/admin/agents",
+                        headers={"X-Admin-Token": "s3cret"})
+        assert r.status_code == 200
+
+    def test_guard_also_on_recent_endpoint(self, client, monkeypatch):
+        """The recent-runs endpoint exposes the same sensitive fields
+        — tool_calls_json, error_message, output_preview — so the
+        guard must protect it too."""
+        monkeypatch.setenv("ARGUS_ADMIN_TOKEN", "s3cret")
+        r = client.get("/api/admin/agents/intelligence/recent")
+        assert r.status_code == 401
+
+
+# ──────────────────────────────────────────────────────────────────
 # Internal helpers
 # ──────────────────────────────────────────────────────────────────
 
