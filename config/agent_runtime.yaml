@@ -57,8 +57,9 @@ agents:
     tools:
       - get_persona_weights
       - get_fx_rate
-      # Phase 3D will add: get_cash_positions, get_historical_actions,
-      # score_action_coherence
+      - get_cash_positions          # Phase 3D — real cash exposure data
+      - get_historical_actions      # Phase 3D — semantic search over past actions
+      - score_action_coherence      # Phase 3D — consistency check vs history
 
 # Daily-cost ceiling for the platform. scripts/agent_usage_report.py
 # (lands in Phase 3E) reads this to decide when to alert.
