@@ -10,6 +10,7 @@ Auto-regeneration logic:
 
 import json
 import logging
+import os
 import uuid
 from pathlib import Path
 
@@ -204,7 +205,18 @@ def generate_actions():
         return jsonify({"status": "error", "message": str(e), "actions": []}), 500
 
 
-def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
+def _actions_agent_enabled() -> bool:
+    """Feature flag for the Phase 3D ActionsAgent. Off by default so
+    production stays on the legacy single-shot `_ai_generate` until ops
+    explicitly flips it. Read per-request so tests can mutate
+    os.environ; flipping in a running gunicorn deploy still requires a
+    worker restart since env is captured at worker start."""
+    return os.getenv("USE_ACTIONS_AGENT", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def _collect_alerts(pipeline_raw, min_score, exclude):
     alerts = []
     if pipeline_raw:
         for cg in pipeline_raw.get("country_groups", []):
@@ -220,25 +232,17 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
                     "score":    card.get("effective_score", 0),
                     "title":    card.get("top_alert_title", ""),
                 })
+    return alerts
 
-    if not alerts:
-        return {
-            "status":       "success",
-            "posture":      "CONTAINED",
-            "summary":      "No signals above the selected threshold.",
-            "generated_at": _now(),
-            "persona":      persona_key,
-            "actions":      [],
-        }
 
-    request_id = uuid.uuid4().hex[:16]
-    rag_ctx = build_actions_context(
-        alerts=alerts,
-        persona=persona_key,
-        request_id=request_id,
-        endpoint="api.actions",
-    )
+def _build_actions_prompt(alerts, persona_key, rag_ctx) -> str:
+    """Single source of truth for the actions-generation prompt.
 
+    Both the legacy `call_llm` path and the Phase 3D agent path send
+    the same user-message body so behaviour stays comparable when
+    A/B-ing the feature flag. The agent additionally has tools at its
+    disposal — it may choose to call them on top of, or instead of,
+    the inline RAG blocks built here."""
     signals_text = "\n".join(
         f"  - [{a['country']}] {a['category']} (score {a['score']:.0f}): \"{a['title']}\""
         for a in alerts
@@ -251,7 +255,7 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
         f"\n\n{rag_ctx.regulatory_text}\n" if rag_ctx.regulatory_text else ""
     )
 
-    prompt = f"""You are a treasury risk advisor for a {persona_key.replace('_', ' ')}.
+    return f"""You are a treasury risk advisor for a {persona_key.replace('_', ' ')}.
 
 For each signal below, generate one action with a primary recommendation and two
 alternative options. CRITICAL: each option must have its own unique SWOT analysis
@@ -323,6 +327,60 @@ Critical rules:
 - Generate exactly one action object per signal listed above
 """
 
+
+def _strip_json_fence(raw: str) -> str:
+    """Some providers wrap JSON in a ```json … ``` fence; strip it
+    before json.loads. Shared by legacy + agent paths so a fenced
+    response from either side parses identically."""
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = raw.lstrip("`").lstrip("json").strip().rstrip("`").strip()
+    return raw
+
+
+def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
+    alerts = _collect_alerts(pipeline_raw, min_score, exclude)
+    if not alerts:
+        return {
+            "status":       "success",
+            "posture":      "CONTAINED",
+            "summary":      "No signals above the selected threshold.",
+            "generated_at": _now(),
+            "persona":      persona_key,
+            "actions":      [],
+        }
+
+    request_id = uuid.uuid4().hex[:16]
+    rag_ctx = build_actions_context(
+        alerts=alerts,
+        persona=persona_key,
+        request_id=request_id,
+        endpoint="api.actions",
+    )
+    prompt = _build_actions_prompt(alerts, persona_key, rag_ctx)
+
+    # ── Phase 3D agent path (feature-flagged) ─────────────────
+    # Try the multi-turn ActionsAgent first when the flag is on.
+    # Any failure — import, agent crash, status=error, malformed
+    # JSON — falls back to the legacy single-shot call below so a
+    # rollout bug never strands the UI.
+    if _actions_agent_enabled():
+        try:
+            agent_payload = _ai_generate_via_agent(
+                prompt=prompt,
+                persona_key=persona_key,
+                request_id=request_id,
+                rag_ctx=rag_ctx,
+            )
+            if agent_payload is not None:
+                return agent_payload
+        except Exception as exc:
+            logger.warning(
+                "ActionsAgent path failed (%s) — falling back to legacy call_llm",
+                exc,
+            )
+
+    # ── Legacy single-shot path (default) ─────────────────────
     raw = call_llm(
         task="actions_generation",
         user=prompt,
@@ -332,11 +390,8 @@ Critical rules:
         max_tokens=6144,
         temperature=0.4,
         response_format="json",
-    ).strip()
-    # The router preserves a leading code fence when a provider wraps the JSON
-    if raw.startswith("```"):
-        raw = raw.lstrip("`").lstrip("json").strip().rstrip("`").strip()
-    d = json.loads(raw or "{}")
+    )
+    d = json.loads(_strip_json_fence(raw) or "{}")
     return {
         **d,
         "status":       "success",
@@ -348,6 +403,71 @@ Critical rules:
             "used":            rag_ctx.used,
             "history_hits":    rag_ctx.history_hits,
             "regulatory_hits": rag_ctx.regulatory_hits,
+        },
+    }
+
+
+def _ai_generate_via_agent(*, prompt, persona_key, request_id, rag_ctx):
+    """Phase 3D agent path. Invokes ActionsAgent with the same prompt
+    body the legacy `call_llm` sees, parses the agent's JSON answer,
+    and returns the same response envelope as `_ai_generate` plus an
+    `agent` block exposing turns / cost / tool calls for telemetry.
+
+    Returns None to signal "fall back to legacy" — used when the agent
+    returns a non-success status or its answer is not valid JSON. A
+    raised exception is also a fallback signal (caught by caller)."""
+    from core.agents.actions_agent import run_actions
+
+    result = run_actions(prompt, invoked_by="api.actions")
+
+    # Hard error → caller falls back. Budget_exceeded / max_turns with
+    # a parseable answer are still usable.
+    if result.status == "error":
+        logger.warning(
+            "ActionsAgent status=error msg=%r — falling back to legacy",
+            result.message,
+        )
+        return None
+
+    try:
+        parsed = json.loads(_strip_json_fence(result.answer) or "{}")
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "ActionsAgent returned non-JSON answer (%s) — falling back to legacy",
+            exc,
+        )
+        return None
+
+    if not isinstance(parsed, dict) or not parsed.get("actions"):
+        # Empty / malformed structure — same fallback discipline as
+        # ResponseAgent: a misshapen success isn't a success.
+        logger.warning(
+            "ActionsAgent returned no actions (status=%s) — falling back to legacy",
+            result.status,
+        )
+        return None
+
+    return {
+        **parsed,
+        "status":       "success",
+        "generated_at": _now(),
+        "persona":      persona_key,
+        "request_id":   request_id,
+        "citations":    [c.__dict__ for c in rag_ctx.citations],
+        "rag": {
+            "used":            rag_ctx.used,
+            "history_hits":    rag_ctx.history_hits,
+            "regulatory_hits": rag_ctx.regulatory_hits,
+        },
+        "agent": {
+            "used":        True,
+            "status":      result.status,
+            "turns_used":  result.turns_used,
+            "tokens_in":   result.tokens_in,
+            "tokens_out":  result.tokens_out,
+            "cost_usd":    result.cost_usd,
+            "tool_calls":  result.tool_calls,
+            "request_id":  result.request_id,
         },
     }
 
