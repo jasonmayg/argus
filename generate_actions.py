@@ -93,14 +93,67 @@ PERSONA_CONTEXT = {
 # Data loading helpers
 # ═══════════════════════════════════════════════════════════════
 
-def _load_guardian_alerts(min_score: float = MIN_GUARDIAN_SCORE, exclude: List[str] = None) -> List[Dict]:
-    """Load and filter Guardian alerts."""
+def _load_guardian_alerts_raw() -> List[Dict]:
+    """Load Guardian alerts as a list of dicts. Tries the GCS path
+    first (via core.guardian_loader, which produces classified +
+    scored alerts inline after B1), falls back to the local
+    `guardian_poc/data/alerts_latest.json` file when GCS is
+    unreachable or returns nothing.
+
+    Pre-B1 we read GUARDIAN_PATH directly and depended on the bridge
+    script (`scripts/refresh_local_snapshot_from_gcs.py`) to keep the
+    file fresh. Result: stale data → /api/actions saw only old alerts
+    → most countries had `effective_score < 40` → \"Decision Support
+    shows nothing\" for items visible elsewhere in the UI. Reading
+    via guardian_loader fixes the staleness; the local file becomes
+    a fallback for the offline / GCS-down case."""
+    # Try GCS first — guardian_loader returns scored + classified
+    # alerts after B1.
+    try:
+        from core.guardian_loader import _load_guardian_snapshot_from_gcs
+        gcs = _load_guardian_snapshot_from_gcs()
+        if gcs.get("ok") and gcs.get("snapshot"):
+            alerts = (gcs["snapshot"] or {}).get("alerts") or []
+            if alerts:
+                return alerts
+            # GCS ok but no alerts — not necessarily a failure (empty
+            # partition, data-collection lag). Soft note so the
+            # silent-fallback isn't opaque on prod boxes.
+            print("[generate_actions] guardian_loader returned ok with "
+                  "0 alerts — trying local file fallback")
+        elif gcs.get("message"):
+            # GCS not ok — guardian_loader's `message` field has the
+            # diagnostic. Log once so the fallback path is observable.
+            print(f"[generate_actions] guardian_loader GCS path "
+                  f"unavailable ({gcs.get('message')!r}) — trying "
+                  "local file fallback")
+    except Exception as exc:
+        # Loader call itself raised — distinct from GCS being
+        # unreachable (the message branch above). Usually means a
+        # code-level issue (config drift, missing dep) so log louder.
+        print(f"[generate_actions] guardian_loader call raised "
+              f"({type(exc).__name__}: {str(exc)[:160]}) — trying "
+              "local file fallback")
+
+    # Local file fallback. Kept for offline dev and emergency cases
+    # where GCS is unreachable.
     if not GUARDIAN_PATH.exists():
         return []
-    exclude = exclude or []
     try:
-        data   = json.loads(GUARDIAN_PATH.read_text(encoding="utf-8"))
-        alerts = data.get("alerts", [])
+        data = json.loads(GUARDIAN_PATH.read_text(encoding="utf-8"))
+        return data.get("alerts", []) or []
+    except Exception as e:
+        print(f"  ⚠ Guardian local-file fallback read failed: {e}")
+        return []
+
+
+def _load_guardian_alerts(min_score: float = MIN_GUARDIAN_SCORE, exclude: List[str] = None) -> List[Dict]:
+    """Load and filter Guardian alerts."""
+    exclude = exclude or []
+    alerts = _load_guardian_alerts_raw()
+    if not alerts:
+        return []
+    try:
         result = []
         for a in alerts:
             score  = float(a.get("score", 0))
