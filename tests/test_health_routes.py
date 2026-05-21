@@ -1,5 +1,5 @@
 """
-Unit tests for `routes/health_routes.py` — `/api/health/rag`.
+Unit tests for `routes/health_routes.py` — `/api/admin/health/rag`.
 
 These pin the status taxonomy + HTTP code mapping with every
 expected dependency state mocked. The endpoint exists specifically
@@ -113,7 +113,7 @@ class TestAllHealthy:
                    return_value=_ok_persist_dir()), \
              patch("routes.health_routes._check_vector_store",
                    return_value=_ok_vector_store()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 200
         body = r.get_json()
         assert body["status"] == "ok"
@@ -140,7 +140,7 @@ class TestDownStates:
                                 _available_embedder("sentence_transformer")]), \
              patch("routes.health_routes._check_persist_dir",
                    return_value=_ok_persist_dir()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 503
         body = r.get_json()
         assert body["status"] == "down"
@@ -157,7 +157,7 @@ class TestDownStates:
                                 _available_embedder("sentence_transformer")]), \
              patch("routes.health_routes._check_persist_dir",
                    return_value=_missing_persist_dir()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 503
         assert "persist_dir" in r.get_json()["checks_failed"]
 
@@ -173,7 +173,7 @@ class TestDownStates:
                    return_value=_ok_persist_dir()), \
              patch("routes.health_routes._check_vector_store",
                    return_value={"instantiated": False, "error": "boom"}):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 503
         assert r.get_json()["status"] == "down"
 
@@ -193,7 +193,7 @@ class TestDownStates:
                                                        error="import failed")]), \
              patch("routes.health_routes._check_persist_dir",
                    return_value=_ok_persist_dir()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 503
         body = r.get_json()
         assert body["status"] == "down"
@@ -217,7 +217,7 @@ class TestDegradedStates:
                    return_value=_ok_persist_dir(empty=True)), \
              patch("routes.health_routes._check_vector_store",
                    return_value=_ok_vector_store(news=0, alerts=0, regulatory=0)):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 200
         body = r.get_json()
         assert body["status"] == "degraded"
@@ -242,7 +242,7 @@ class TestDegradedStates:
                    return_value=_ok_persist_dir()), \
              patch("routes.health_routes._check_vector_store",
                    return_value=_ok_vector_store()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 200
         body = r.get_json()
         assert body["status"] == "degraded"
@@ -272,7 +272,7 @@ class TestDegradedStates:
                    return_value=_ok_persist_dir()), \
              patch("routes.health_routes._check_vector_store",
                    return_value=bad_vs):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 200
         body = r.get_json()
         assert body["status"] == "degraded"
@@ -290,7 +290,7 @@ class TestContract:
         provide a parseable answer even when things are very wrong."""
         with patch("routes.health_routes._check_module",
                    side_effect=Exception("boom in checker")):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         assert r.status_code == 503
         assert r.is_json, "endpoint returned non-JSON (HTML 500 leaked)"
         body = r.get_json()
@@ -309,13 +309,13 @@ class TestContract:
                    return_value=_ok_persist_dir()), \
              patch("routes.health_routes._check_vector_store",
                    return_value=_ok_vector_store()):
-            r = client.get("/api/health/rag")
+            r = client.get("/api/admin/health/rag")
         body = r.get_json()
         assert "status" in body
         assert "checks_failed" in body
 
     def test_endpoint_is_get_only(self, client):
-        r = client.post("/api/health/rag")
+        r = client.post("/api/admin/health/rag")
         assert r.status_code == 405
 
 

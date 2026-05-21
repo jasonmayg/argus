@@ -140,7 +140,7 @@ function _fillTable(tableId, rows, columns, emptyMsg) {
 async function loadStats() {
     const hours = document.getElementById('windowSel').value;
     try {
-        const r = await fetch(`/api/rag/stats?hours=${hours}`);
+        const r = await fetch(`/api/admin/rag/stats?hours=${hours}`);
         const d = await r.json();
         if (d.status !== 'success') throw new Error(d.message || 'unknown error');
 

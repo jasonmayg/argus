@@ -8,8 +8,14 @@ running SQL: are queries arriving, are they finding hits, is latency
 sane, where are the zero-hit blind spots.
 
 Endpoints:
-  GET /api/rag/stats?hours=24   — JSON aggregations over the window
-  GET /admin/rag                — Standalone HTML dashboard (template)
+  GET /api/admin/rag/stats?hours=24   — JSON aggregations over the window
+  GET /admin/rag                       — Standalone HTML dashboard (template)
+
+Moved to `/api/admin/` 2026-05-21 to share the ops-only namespace
+with `/api/admin/agents` and `/api/admin/health/rag` — keep
+operator endpoints out of the user-facing API surface. No
+backwards-compat shim; the only consumer was `templates/admin_rag.html`
+which is updated in the same change.
 """
 
 from __future__ import annotations
@@ -164,7 +170,7 @@ def _empty_stats(hours: int, reason: str) -> Dict[str, Any]:
     }
 
 
-@rag_stats_bp.get("/api/rag/stats")
+@rag_stats_bp.get("/api/admin/rag/stats")
 def api_rag_stats():
     """Return RAG telemetry aggregations over the trailing window."""
     try:
@@ -188,6 +194,7 @@ def api_rag_stats():
 @rag_stats_bp.get("/admin/rag")
 def admin_rag_page():
     """Render the standalone RAG health dashboard. The page itself
-    fetches /api/rag/stats client-side, so the route just serves the
-    shell — keeps server-side rendering out of the way of testing."""
+    fetches /api/admin/rag/stats client-side, so the route just
+    serves the shell — keeps server-side rendering out of the way
+    of testing."""
     return render_template("admin_rag.html")

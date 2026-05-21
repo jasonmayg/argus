@@ -1,5 +1,11 @@
 """
-`/api/health/*` — deployment health probes.
+`/api/admin/health/*` — deployment health probes.
+
+Moved under `/api/admin/` 2026-05-21 along with `/api/admin/rag/stats`
+so all operator-facing endpoints share one namespace (separate from
+user-facing `/api/chat`, `/api/actions`, etc.). No backwards-compat
+shim — the only consumer was internal monitoring, and the test
+deploy hadn't established external probes yet.
 
 Born from a real prod incident on 2026-05-20: the test deploy was
 missing `chromadb` from its venv, so every search_* tool failed
@@ -8,7 +14,7 @@ it gracefully (told the user "vector store unavailable") but
 there was no first-class way to *check* deployment health
 without trying a real query and parsing the agent's reply.
 
-`/api/health/rag` returns a structured snapshot of the vector
+`/api/admin/health/rag` returns a structured snapshot of the vector
 store stack:
   - chromadb installed (yes/no + version)
   - sentence-transformers installed (yes/no + version)
@@ -240,9 +246,9 @@ def _classify_state(payload: Dict[str, Any], failed: List[str]) -> tuple[str, in
     return "ok", 200
 
 
-@health_bp.get("/api/health/rag")
+@health_bp.get("/api/admin/health/rag")
 def health_rag():
-    """GET /api/health/rag — structured snapshot of the vector
+    """GET /api/admin/health/rag — structured snapshot of the vector
     store deployment. Use after a deploy to confirm chromadb +
     persist_dir + collection counts are sane.
 
