@@ -580,6 +580,155 @@ def _discover_raw_dt_segments(bucket, raw_base_prefix: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# B1: scoring raw GCS alerts inline (formerly the bridge script's job)
+# ---------------------------------------------------------------------------
+# Before B1 (2026-05-21), `_read_alerts_from_gcs_raw_csvs` returned
+# unclassified alert dicts (category_label="Unclassified", score=0)
+# and `scripts/refresh_local_snapshot_from_gcs.py` was an out-of-band
+# script that ran them through GuardianEngine and wrote the result to
+# `guardian_poc/data/alerts_latest.json`. Downstream consumers
+# (`/api/actions` via `generate_actions.py`, persona_eval) read that
+# local file. Result: if the bridge hadn't been re-run, the dashboard
+# saw fresh-but-unclassified alerts AND the actions API saw stale
+# scored data — root cause of "Decision Support shows nothing" 2026-05-21.
+#
+# B1 brings the scoring step inline. `_load_guardian_snapshot_from_gcs`
+# now produces classified + scored alerts directly. The bridge script
+# stays around as a manual snapshot dump tool (writes to disk for the
+# legacy file consumers), but it's no longer the only path to scored
+# alerts. The cron / health checks shift the source of truth onto
+# guardian_loader.
+
+# Map the human-readable source strings the GCS raw CSV path emits onto
+# the short keys GuardianEngine adapters / config use. Important because:
+#   * GuardianEngine._base_severity matches the short form ("ecb" → 0.3).
+#   * _infer_categories has source-default category fallbacks keyed on
+#     the short form (so "fed" → market+regulatory).
+# Anything not in this map is lowercased + underscored as a best guess.
+_GCS_SOURCE_NORMALIZATION = {
+    "European Central Bank":  "ecb",
+    "Federal Reserve":        "fed",
+    "U.S. Treasury":          "treasury",
+    "Bank of England":        "boe",
+    "Bank of Japan":          "boj",
+    "Bank of Canada":         "bank_of_canada",
+    "FCA UK":                 "fca",
+    "USGS":                   "usgs",
+}
+
+
+def _normalize_gcs_source(raw: str) -> str:
+    """Map a GCS-emitted source string to a Guardian short key.
+    Falls through to a stable snake_case form for anything not
+    explicitly mapped."""
+    if not raw:
+        return ""
+    if raw in _GCS_SOURCE_NORMALIZATION:
+        return _GCS_SOURCE_NORMALIZATION[raw]
+    return re.sub(r"[^a-z0-9]+", "_", raw.strip().lower()).strip("_")
+
+
+def _parse_gcs_published_at(value: str):
+    """Parse the published_at field from a GCS alert dict. Returns a
+    tz-aware datetime, or None when neither RFC 2822 nor ISO 8601
+    parses. Caller stamps now() as a fallback."""
+    from datetime import datetime, timezone
+    from email.utils import parsedate_to_datetime
+
+    if not value:
+        return None
+    try:
+        dt = parsedate_to_datetime(value)
+        if dt is not None:
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        pass
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def _raw_alerts_to_guardian_events(raw_alerts):
+    """Convert GCS raw alert dicts into Guardian `Event` objects.
+    Empty-title rows (the bulk of GCS CSV passthroughs) are dropped
+    so they don't waste cycles in `score_events`. Country hint flows
+    into `summary` so the engine's regex-based country detection can
+    fire on press-release titles."""
+    from datetime import datetime, timezone
+    from guardian_poc.src.guardian import Event
+
+    events = []
+    for raw in raw_alerts:
+        title = (raw.get("title") or "").strip()
+        if not title:
+            continue
+        published = _parse_gcs_published_at(raw.get("published_at") or "")
+        if published is None:
+            published = datetime.now(timezone.utc)
+        country_hint = (raw.get("country") or "").strip()
+        if country_hint and country_hint.lower() == "unknown":
+            country_hint = ""
+        events.append(Event(
+            source     = _normalize_gcs_source(raw.get("source") or ""),
+            event_id   = (raw.get("url") or f"title:{title[:200]}"),
+            title      = title,
+            summary    = country_hint,
+            url        = (raw.get("url") or ""),
+            published_at = published,
+        ))
+    return events
+
+
+def _score_raw_gcs_alerts(raw_alerts: list[dict], persona: str = "neutral") -> list[dict]:
+    """Run GCS raw alerts through GuardianEngine.score_events and
+    return a list of scored alert dicts matching the shape downstream
+    consumers (`generate_actions._load_guardian_alerts`,
+    `core/persona_eval/data_loader._normalize`) already expect.
+
+    persona="neutral" by default so the stored `score` is baseline
+    (severity × recency × country), letting downstream
+    `_compute_effective_score` apply real persona weights without
+    double-counting — same reasoning as the bridge script's
+    `--persona neutral` default.
+
+    Returns [] on any failure (engine init crash, config load error,
+    conversion crash) — callers fall back to unscored data or a
+    local snapshot. The whole function body is wrapped in try/except
+    because any uncaught raise here would break the dashboard /
+    /api/actions / persona_eval all at once."""
+    if not raw_alerts:
+        return []
+    try:
+        from dataclasses import asdict
+        from datetime import datetime
+        from guardian_poc.src.guardian import GuardianEngine
+
+        events = _raw_alerts_to_guardian_events(raw_alerts)
+        if not events:
+            return []
+
+        config_dir = Path(__file__).resolve().parent.parent / "guardian_poc" / "config"
+        engine = GuardianEngine(
+            countries_cfg = str(config_dir / "countries.yaml"),
+            keywords_cfg  = str(config_dir / "risk_keywords.yaml"),
+            personas_cfg  = str(config_dir / "personas.yaml"),
+        )
+        scored = engine.score_events(events, persona=persona)
+    except Exception:
+        return []
+
+    out = []
+    for sa in scored:
+        d = asdict(sa)
+        if isinstance(d.get("published_at"), datetime):
+            d["published_at"] = d["published_at"].isoformat()
+        out.append(d)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Snapshot loading (GCS + local fallback)
 # ---------------------------------------------------------------------------
 
@@ -682,17 +831,33 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
             raw_prefix = _join_gcs_prefix(prefix, f"{raw_prefix_base}/{dt_seg}")
             raw_alerts.extend(_read_alerts_from_gcs_raw_csvs(bucket, raw_prefix))
 
+        # B1: Run raw alerts through GuardianEngine so downstream
+        # consumers (dashboard, /api/actions, persona_eval) get
+        # classified + scored data directly rather than the bare
+        # passthrough we used to return. If scoring fails for any
+        # reason (engine import error, config load error etc.), fall
+        # through to the unscored shape so the dashboard still has
+        # *something* to display.
+        scored_alerts = _score_raw_gcs_alerts(raw_alerts, persona="neutral")
+        alerts_payload = scored_alerts if scored_alerts else raw_alerts
+
         if raw_alerts:
             now_utc = datetime.utcnow().isoformat() + "+00:00"
             loaded_snapshot = {
                 "generated_at_utc": now_utc,
                 "generated_at_local": datetime.now().astimezone().isoformat(),
                 "timezone": str(datetime.now().astimezone().tzinfo or "local"),
-                "persona": "treasury_ops",
+                "persona": "neutral",
                 "threshold": 40,
-                "data_mode": f"live_gcs_raw_{raw_mode}",
-                "event_count": len(raw_alerts),
-                "alerts": raw_alerts,
+                # `*_scored` reflects that the alerts have been run
+                # through GuardianEngine; `*_raw` is the legacy fallback.
+                "data_mode": (
+                    f"live_gcs_raw_scored_{raw_mode}"
+                    if scored_alerts else f"live_gcs_raw_{raw_mode}"
+                ),
+                "event_count":  len(raw_alerts),
+                "alert_count":  len(alerts_payload),
+                "alerts":       alerts_payload,
                 "data_availability": [],
                 "raw_dt_segments": target_dt_segments,
             }
