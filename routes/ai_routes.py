@@ -278,6 +278,22 @@ Tag citations inline using the [N#] / [A#] / [R#] markers from the retrieval blo
 If data is unavailable, say so and answer from general knowledge.
 Tone: precise, professional, concise. No disclaimers or filler."""
 
+def _response_agent_enabled() -> bool:
+    """Feature flag for the Phase 3C ResponseAgent path. Off by
+    default so production stays on the legacy single-shot RAG until
+    ops explicitly flip it.
+
+    Read fresh per-request rather than cached at module-load time.
+    Note: in a typical gunicorn deploy the env is fixed when the
+    worker starts, so flipping the flag still requires a worker
+    restart in production. The per-request read matters for tests
+    (which mutate os.environ) and for in-process flag tooling, not
+    for hot-flipping a running deploy."""
+    return os.getenv("ARGUS_RESPONSE_AGENT_ENABLED", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
 @ai_bp.post("/api/chat")
 def api_chat():
     if not request.is_json:
@@ -289,6 +305,33 @@ def api_chat():
     if not user_msg:
         return jsonify({"status": "error", "message": "message is required"}), 400
 
+    # ── Phase 3C routing ──────────────────────────────────────
+    # The router scores user_msg with a pure heuristic (no LLM,
+    # no I/O). When ARGUS_RESPONSE_AGENT_ENABLED is on AND the
+    # router flags the query complex, hand off to ResponseAgent;
+    # otherwise stay on the legacy RAG path so a routing miss only
+    # costs a less rich answer, not a hung request.
+    if _response_agent_enabled():
+        try:
+            from core.agents.chat_router import classify
+            decision = classify(user_msg)
+        except Exception as exc:
+            # Router must never break /api/chat. Log + fall through
+            # to legacy so a bug here is graceful degradation.
+            print(f"[chat] router error, falling back to legacy: {exc}")
+            decision = None
+
+        if decision is not None and decision.route == "complex":
+            return _api_chat_via_agent(user_msg, persona, history, decision)
+
+    # ── Legacy single-shot RAG path (default) ─────────────────
+    return _api_chat_legacy(user_msg, persona, history)
+
+
+def _api_chat_legacy(user_msg: str, persona: str, history: List[Dict]) -> Any:
+    """The pre-Phase-3C path: build RAG context, call_llm once,
+    return. Untouched by 3C — this is what every chat session has
+    always seen and remains the default when the feature flag is off."""
     request_id   = uuid.uuid4().hex[:16]
     results      = _load_latest_results()
     pipeline_ctx = _results_summary_text(results) if results else ""
@@ -319,6 +362,7 @@ def api_chat():
             "status": "success",
             "reply": reply,
             "request_id": request_id,
+            "route": "legacy",
             "citations": [c.__dict__ for c in rag_ctx.citations],
             "rag": {
                 "used":            rag_ctx.used,
@@ -328,7 +372,88 @@ def api_chat():
             },
         })
     except RuntimeError as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e), "route": "legacy"}), 500
+
+
+def _api_chat_via_agent(user_msg: str, persona: str, history: List[Dict], decision) -> Any:
+    """Phase 3C complex-query path. Invoke ResponseAgent with the
+    Phase 3B tools; same JSON shape as the legacy path so the
+    frontend doesn't care which one ran (visible only via `route`
+    + the richer telemetry surfaced under `agent`).
+
+    Falls back to legacy automatically if the agent path raises —
+    a chat UI must never present a 500 because an agent SDK didn't
+    initialize."""
+    try:
+        from core.agents.response_agent import run_response
+    except Exception as exc:
+        print(f"[chat] response_agent import failed, falling back: {exc}")
+        return _api_chat_legacy(user_msg, persona, history)
+
+    try:
+        result = run_response(user_msg, persona=persona)
+    except Exception as exc:
+        # Defence in depth — run_response itself returns
+        # status=error rather than raising for budget / upstream
+        # issues, but a truly unexpected crash still falls back.
+        print(f"[chat] response_agent crash, falling back: {exc}")
+        return _api_chat_legacy(user_msg, persona, history)
+
+    # Soft outcomes (budget_exceeded / max_turns) still surface the
+    # partial answer alongside a flag; hard errors fall back rather
+    # than confront the user with a 500.
+    if result.status == "error":
+        print(f"[chat] response_agent status=error msg={result.message!r}, falling back")
+        return _api_chat_legacy(user_msg, persona, history)
+
+    # Derive the legacy-shaped `rag` block from the agent's
+    # actual tool calls. The agent might end_turn without invoking
+    # any retrieval tool (general-knowledge answer), in which case
+    # `rag.used` should be False — claiming `used: True` with all
+    # zeros would mislead anyone watching the /api/rag/stats
+    # dashboard. We count SUCCESSFUL search_* calls; a search that
+    # errored doesn't count as a hit because no document came back.
+    news_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_news" and tc.get("ok")
+    )
+    alerts_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_alerts" and tc.get("ok")
+    )
+    regulatory_hits = sum(
+        1 for tc in result.tool_calls
+        if tc.get("tool") == "search_regulatory" and tc.get("ok")
+    )
+    rag_used = (news_hits + alerts_hits + regulatory_hits) > 0
+
+    return jsonify({
+        "status":     "success",
+        "reply":      result.answer,
+        "request_id": result.request_id,
+        "route":      "agent",
+        # Empty citations array preserves the legacy field so the
+        # frontend renders without conditional logic. Tool-grounded
+        # citations are in result.tool_calls.
+        "citations":  [],
+        "rag": {
+            "used":            rag_used,
+            "news_hits":       news_hits,
+            "alerts_hits":     alerts_hits,
+            "regulatory_hits": regulatory_hits,
+        },
+        "agent": {
+            "status":       result.status,
+            "turns_used":   result.turns_used,
+            "tokens_in":    result.tokens_in,
+            "tokens_out":   result.tokens_out,
+            "cost_usd":     round(result.cost_usd, 5),
+            "tool_calls":   result.tool_calls,
+            "router_score": decision.score,
+            "router_reasons": decision.reasons,
+            "message":      result.message,
+        },
+    })
 
 
 # ═══════════════════════════════════════════════════════════════

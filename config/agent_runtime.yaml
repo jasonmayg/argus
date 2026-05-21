@@ -39,9 +39,13 @@ agents:
     max_total_tokens: 60000
     max_cost_usd:     0.30
     tools:
+      - search_news
+      - search_alerts
+      - search_regulatory
       - get_persona_weights
       - get_fx_rate
-      # Phase 3C will add: search_news, search_alerts, ask_user_clarification
+      # Deferred: ask_user_clarification — needs interactive UX support
+      # on the frontend (resumable tool turn) which is its own PR.
 
   actions:
     # Business decisions. Opus is justified — but the cap is higher to
