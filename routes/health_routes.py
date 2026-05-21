@@ -67,6 +67,71 @@ def _check_module(name: str) -> Dict[str, Any]:
         }
 
 
+def _read_rag_config() -> Dict[str, Any]:
+    """Parse `rag_config.yaml` once per probe call. Both the embedder
+    check and the persist_dir check read keys from this file —
+    previously each opened + parsed the yaml independently, doing 2×
+    the file I/O per request. Consolidated here so a probe request
+    parses the config exactly once.
+
+    Returns `{}` on any read / parse failure so callers can `.get()`
+    safely without guarding."""
+    if not _RAG_CONFIG_PATH.exists():
+        return {}
+    try:
+        with open(_RAG_CONFIG_PATH, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception as e:
+        logger.warning("rag_config parse failed: %s", e)
+        return {}
+
+
+def _read_embedder_config() -> Dict[str, Any]:
+    """Embedder block from rag_config.yaml. Returns `{}` if absent.
+    Thin wrapper around `_read_rag_config` for back-compat with
+    callers / tests that expect just the embedder section."""
+    return _read_rag_config().get("embedder") or {}
+
+
+def _check_embedder(name: str, providers_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Check whether a specific configured embedder is usable.
+
+    For `openai`-type providers we check the env var is set (don't
+    actually call the API — a health probe must be fast and free).
+    For `sentence_transformer`-type providers we check the
+    sentence-transformers package is importable.
+
+    Returns a dict with `available: bool` plus type/model/error
+    detail for visibility."""
+    pcfg = (providers_cfg or {}).get(name) or {}
+    ptype = pcfg.get("type") or name
+    out: Dict[str, Any] = {
+        "type":  ptype,
+        "model": pcfg.get("model", "<unknown>"),
+    }
+    if ptype == "openai":
+        env = pcfg.get("api_key_env", "OPENAI_API_KEY")
+        key = os.getenv(env, "").strip()
+        # Treat the .env.example placeholder as "not set" — a fresh
+        # deploy that forgot to fill in the real key would otherwise
+        # report available=True and then 401 on the first real call.
+        if not key or key.lower() in ("your_api_key_here", "changeme", ""):
+            out["available"] = False
+            out["error"] = f"{env} not set or still placeholder"
+        else:
+            out["available"] = True
+            out["api_key_env"] = env
+    elif ptype == "sentence_transformer":
+        check = _check_module("sentence_transformers")
+        out["available"] = check.get("installed", False)
+        if not out["available"]:
+            out["error"] = check.get("error", "import failed")
+    else:
+        out["available"] = False
+        out["error"] = f"unknown embedder type: {ptype}"
+    return out
+
+
 def _resolve_configured_persist_dir() -> Path:
     """Read the persist_dir the app would actually use.
 
@@ -82,14 +147,8 @@ def _resolve_configured_persist_dir() -> Path:
     path regardless of whether the directory exists — the caller
     checks existence.
     """
-    rel = "data/chroma_db"
-    if _RAG_CONFIG_PATH.exists():
-        try:
-            with open(_RAG_CONFIG_PATH, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            rel = (cfg.get("storage") or {}).get("persist_dir", rel)
-        except Exception as e:
-            logger.warning("rag_config parse failed: %s", e)
+    cfg = _read_rag_config()
+    rel = (cfg.get("storage") or {}).get("persist_dir", "data/chroma_db")
     return (_ROOT / rel).resolve()
 
 
@@ -156,15 +215,15 @@ def _classify_state(payload: Dict[str, Any], failed: List[str]) -> tuple[str, in
 
     Rules:
       * chromadb / persist_dir / vector_store missing or failed → down (503)
+      * embedder section: at least one of (default, fallback)
+        must be available; otherwise no embed() call can succeed → down (503)
       * any collection errors                                    → degraded (200)
       * empty collections (count == 0)                           → degraded (200)
-      * sentence_transformers missing alone                      → down (503)
-        (RAG fundamentally needs the embedder for new queries —
-        existing indexed docs return as cached hits, but new ones
-        won't embed; treat as down so monitoring escalates)
+      * default embedder unavailable but fallback works          → degraded (200)
       * everything else                                          → ok (200)
     """
-    hard_down = {"chromadb", "persist_dir", "vector_store", "sentence_transformers"}
+    hard_down = {"chromadb", "persist_dir", "vector_store",
+                  "no_usable_embedder"}
     if hard_down & set(failed):
         return "down", 503
 
@@ -173,6 +232,10 @@ def _classify_state(payload: Dict[str, Any], failed: List[str]) -> tuple[str, in
     if any("error" in info for info in collections.values()):
         return "degraded", 200
     if payload.get("empty_collections"):
+        return "degraded", 200
+    # Default embedder unavailable but fallback works → degraded.
+    emb = payload.get("embedder") or {}
+    if (emb.get("default") or {}).get("available") is False:
         return "degraded", 200
     return "ok", 200
 
@@ -191,24 +254,45 @@ def health_rag():
         payload: Dict[str, Any] = {}
         failed: List[str] = []
 
-        # Module checks
+        # chromadb is hard-required regardless of embedder choice —
+        # it's the persistent store the embeddings live in.
         payload["chromadb"] = _check_module("chromadb")
         if not payload["chromadb"]["installed"]:
             failed.append("chromadb")
 
-        payload["sentence_transformers"] = _check_module("sentence_transformers")
-        if not payload["sentence_transformers"]["installed"]:
-            failed.append("sentence_transformers")
+        # Embedder availability is driven by rag_config.yaml, not by
+        # "is sentence_transformers installed". After the 2026-05-21
+        # config flip, OpenAI is the default — `sentence_transformers`
+        # absence is now just "fallback not available", not down.
+        emb_cfg          = _read_embedder_config()
+        providers_cfg    = emb_cfg.get("providers") or {}
+        default_name     = emb_cfg.get("default")
+        fallback_name    = emb_cfg.get("fallback")
+
+        embedder_info: Dict[str, Any] = {
+            "default_name":  default_name,
+            "fallback_name": fallback_name,
+        }
+        if default_name:
+            embedder_info["default"] = _check_embedder(default_name, providers_cfg)
+        if fallback_name and fallback_name != default_name:
+            embedder_info["fallback"] = _check_embedder(fallback_name, providers_cfg)
+        payload["embedder"] = embedder_info
+
+        # At least ONE configured embedder must be usable, else no
+        # embed() call can succeed → down.
+        default_ok  = (embedder_info.get("default")  or {}).get("available", False)
+        fallback_ok = (embedder_info.get("fallback") or {}).get("available", False)
+        if not (default_ok or fallback_ok):
+            failed.append("no_usable_embedder")
 
         # Filesystem
         payload["persist_dir"] = _check_persist_dir()
         if not payload["persist_dir"].get("exists"):
             failed.append("persist_dir")
 
-        # If the hard prerequisites passed, attempt to actually
-        # instantiate the store. Treat sentence_transformers as
-        # "hard" too — see _classify_state docstring.
-        if not any(f in failed for f in ("chromadb", "persist_dir")):
+        if not any(f in failed for f in
+                    ("chromadb", "persist_dir", "no_usable_embedder")):
             payload["vector_store"] = _check_vector_store()
             if not payload["vector_store"].get("instantiated"):
                 failed.append("vector_store")
