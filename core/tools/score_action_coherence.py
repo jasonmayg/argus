@@ -141,7 +141,14 @@ class ScoreActionCoherence(Tool):
         nearest_sim = max(0.0, min(1.0, 1.0 - nearest))
 
         strong_count = sum(1 for d in distances if d < _STRONG_MATCH_THRESHOLD)
-        strong_ratio = strong_count / len(distances)
+        # Denominator is the K we ASKED for, not the number actually
+        # returned. With a tiny corpus (e.g. 2 past actions, both
+        # strong matches) `strong_count / len(distances) = 1.0` would
+        # falsely inflate the score to "strong_precedent". Anchoring
+        # on K means "2 strong matches out of 10 we'd want to see" is
+        # honestly weighted as 0.2 — the corpus simply isn't deep
+        # enough to claim strong precedent.
+        strong_ratio = strong_count / _NEIGHBORS_K
 
         # Weighted blend: strong_ratio carries 60% weight (multiple
         # precedents > single near-match), nearest_sim 40% (sanity-anchor
@@ -157,7 +164,7 @@ class ScoreActionCoherence(Tool):
         content_lines = [
             f"Coherence score: {coherence:.2f} ({interpretation})",
             f"  nearest match distance:  {nearest:.3f}",
-            f"  strong matches (<{_STRONG_MATCH_THRESHOLD}): {strong_count}/{len(distances)}",
+            f"  strong matches (<{_STRONG_MATCH_THRESHOLD}): {strong_count}/{_NEIGHBORS_K} requested ({len(distances)} returned)",
             "Top similar past actions:",
         ]
         for i, h in enumerate(hits[:3], 1):

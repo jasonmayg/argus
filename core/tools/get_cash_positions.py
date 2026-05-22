@@ -78,7 +78,10 @@ class GetCashPositions(Tool):
         if not rows:
             return ToolResult.success(
                 content="No cash position rows found.",
-                structured={"positions": []},
+                # Keep `row_count` present on every success path so the
+                # structured contract stays stable for downstream agent
+                # code — `result["structured"]["row_count"]` is always safe.
+                structured={"positions": [], "row_count": 0},
             )
 
         if country_filter:
@@ -86,7 +89,7 @@ class GetCashPositions(Tool):
             if not rows:
                 return ToolResult.success(
                     content=f"No cash position found for country='{country_filter}'.",
-                    structured={"positions": []},
+                    structured={"positions": [], "row_count": 0},
                 )
 
         rows = rows[:_MAX_ROWS]

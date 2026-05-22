@@ -32,6 +32,7 @@ from core.tools.get_cash_positions import GetCashPositions
 from core.tools.get_historical_actions import GetHistoricalActions
 from core.tools.score_action_coherence import (
     ScoreActionCoherence,
+    _NEIGHBORS_K,
     _STRONG_MATCH_THRESHOLD,
 )
 
@@ -245,11 +246,14 @@ class TestScoreActionCoherence:
         assert r.structured["interpretation"] == "no_history"
 
     def test_strong_precedent_when_many_close_matches(self):
-        """5 of 5 neighbors with distance <0.6 → coherence very high
-        (strong_ratio=1.0 weighted 0.6 + nearest_sim weighted 0.4)."""
+        """K of K neighbors with distance <0.6 → coherence very high
+        (strong_ratio=1.0 weighted 0.6 + nearest_sim weighted 0.4).
+        Uses the full K=10 corpus so the denominator-fix (strong_count
+        / K, not / len(distances)) doesn't penalize the genuinely-
+        strong case."""
         store = _FakeStore(results=[
-            _Hit(f"a{i}", "Tighten MXN forwards", {"country": "Mexico"}, 0.1 + 0.05*i)
-            for i in range(5)
+            _Hit(f"a{i}", "Tighten MXN forwards", {"country": "Mexico"}, 0.1 + 0.04*i)
+            for i in range(_NEIGHBORS_K)
         ])
         with patch("core.vector_store.get_vector_store", return_value=store):
             r = ScoreActionCoherence().execute({
@@ -257,11 +261,36 @@ class TestScoreActionCoherence:
                 "country": "Mexico", "category": "Market Risk",
             })
         assert r.ok is True
-        # All 5 distances are < 0.6 → strong_ratio=1.0.
+        # All K distances are < 0.6 → strong_ratio = K/K = 1.0.
         # nearest_sim = 1.0 - 0.10 = 0.9. Coherence = 0.6*1 + 0.4*0.9 = 0.96.
         assert r.structured["coherence_score"] >= 0.9
         assert r.structured["interpretation"] == "strong_precedent"
-        assert r.structured["strong_match_count"] == 5
+        assert r.structured["strong_match_count"] == _NEIGHBORS_K
+
+    def test_sparse_corpus_not_inflated_to_strong(self):
+        """Regression pin for the denominator bug: with only 2 hits in
+        the corpus — both strong matches — the OLD formula computed
+        strong_ratio = 2/2 = 1.0 and called the result strong_precedent
+        even though we have basically no comparison data. The fix
+        anchors on K=10 (what we ASKED for), so 2/10 = 0.2 and the
+        result downgrades to 'some_precedent' or 'novel'."""
+        store = _FakeStore(results=[
+            _Hit("a1", "MXN hedge action", {"country": "Mexico"}, 0.15),
+            _Hit("a2", "MXN hedge action", {"country": "Mexico"}, 0.2),
+        ])
+        with patch("core.vector_store.get_vector_store", return_value=store):
+            r = ScoreActionCoherence().execute({
+                "action_text": "MXN hedge action",
+                "country": "Mexico", "category": "Market Risk",
+            })
+        # strong_ratio = 2/10 = 0.2, nearest_sim = 1-0.15 = 0.85.
+        # Coherence = 0.6*0.2 + 0.4*0.85 = 0.46 → some_precedent.
+        assert r.ok is True
+        assert r.structured["interpretation"] != "strong_precedent", (
+            "2 strong matches in a corpus of 2 must NOT be called "
+            "strong_precedent — that's the denominator-bug regression."
+        )
+        assert r.structured["strong_match_count"] == 2
 
     def test_novel_when_all_matches_far(self):
         """All 5 neighbors distance >0.8 → strong_ratio=0,
@@ -290,8 +319,8 @@ class TestScoreActionCoherence:
         ])
         with patch("core.vector_store.get_vector_store", return_value=store):
             r = ScoreActionCoherence().execute({"action_text": "x"})
-        # strong_ratio = 2/5 = 0.4, nearest_sim = 0.7. Coherence =
-        # 0.6*0.4 + 0.4*0.7 = 0.52 → "some_precedent".
+        # strong_ratio = 2/_NEIGHBORS_K = 2/10 = 0.2, nearest_sim = 0.7.
+        # Coherence = 0.6*0.2 + 0.4*0.7 = 0.40 → "some_precedent" (>=0.3).
         score = r.structured["coherence_score"]
         assert 0.3 <= score < 0.7
         assert r.structured["interpretation"] == "some_precedent"
@@ -333,7 +362,9 @@ class TestAgentRuntimeYaml:
 
     def _load_actions_tools(self):
         import yaml
-        cfg = yaml.safe_load(open(ROOT / "config" / "agent_runtime.yaml"))
+        with open(ROOT / "config" / "agent_runtime.yaml",
+                  "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
         return set((cfg.get("agents") or {}).get("actions", {}).get("tools") or [])
 
     def test_all_three_tools_in_yaml(self):
