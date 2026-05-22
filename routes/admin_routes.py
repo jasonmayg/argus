@@ -35,7 +35,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, render_template, request
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,24 @@ def _window_from_query(args) -> tuple[int, str]:
     hours = max(1, min(_MAX_WINDOW_HOURS, hours))
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     return hours, cutoff
+
+
+# ──────────────────────────────────────────────────────────────────
+# GET /admin — multi-tab admin SPA
+# ──────────────────────────────────────────────────────────────────
+# The page is a thin client over the /api/admin/* JSON endpoints; this
+# route just serves the static template. Tab routing happens client-side
+# via URL hash (#rag / #agents / #llm / #pipeline) so deep-links work
+# and the back button doesn't accumulate dozens of history entries.
+#
+# Intentionally NOT gated by `_require_admin_token` — the page itself
+# is just HTML with no secrets in it, and the JSON it loads from
+# /api/admin/* is gated separately. Gating the page would force a
+# header on a browser navigation, which doesn't fit the browser model.
+
+@admin_bp.get("/admin")
+def admin_page():
+    return render_template("admin.html")
 
 
 # ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARGUS — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        body { background: var(--bg-color); padding: 24px; }
+        .wrap { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px; color: var(--text-main); }
+        .sub { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 20px; }
+        .nav-back { font-size: 11px; color: var(--primary); text-decoration: none; font-family: var(--font-mono);
+                    margin-bottom: 12px; display: inline-block; }
+        .nav-back:hover { text-decoration: underline; }
+
+        /* Tabs */
+        .tabs {
+            display: flex; gap: 2px; border-bottom: 1px solid var(--border);
+            margin-bottom: 20px; padding-bottom: 0;
+        }
+        .tab {
+            background: transparent; border: none; border-bottom: 2px solid transparent;
+            padding: 10px 18px; font-size: 12px; font-weight: 600; font-family: var(--font-mono);
+            text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
+            cursor: pointer; transition: color 0.15s, border-color 0.15s;
+            margin-bottom: -1px;
+        }
+        .tab:hover { color: var(--text-main); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Window selector */
+        .ctrl { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+        .ctrl label { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+        .ctrl select { font-size: 12px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px;
+                       font-family: var(--font-mono); background: white; }
+
+        /* KPI grid */
+        .grid-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .kpi-card { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+        .kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+                     color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 6px; }
+        .kpi-value { font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .kpi-sub   { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 4px; }
+
+        /* Panel + tables */
+        .panel { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
+        .panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+                       color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+        th { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);
+             font-family: var(--font-mono); }
+        td.num { text-align: right; font-family: var(--font-mono); }
+        tr.row-click { cursor: pointer; }
+        tr.row-click:hover td { background: #F8FAFC; }
+        tr.row-expanded td { background: #EFF6FF; }
+
+        /* Status pills */
+        .pill { display: inline-block; padding: 1px 7px; border-radius: 10px;
+                font-size: 9px; font-weight: 700; font-family: var(--font-mono);
+                text-transform: uppercase; letter-spacing: 0.04em; }
+        .pill.ok    { background: #DCFCE7; color: #166534; }
+        .pill.warn  { background: #FEF3C7; color: #92400E; }
+        .pill.bad   { background: #FEE2E2; color: #991B1B; }
+        .pill.idle  { background: #F1F5F9; color: var(--text-muted); }
+
+        .pct-bad  { color: var(--danger-text); }
+        .pct-warn { color: var(--warning-text); }
+        .pct-ok   { color: #166534; }
+
+        .empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 12px; }
+        .empty-soon { padding: 48px 24px; color: var(--text-muted); font-size: 13px;
+                      text-align: center; background: white; border: 1px solid var(--border);
+                      border-radius: 6px; }
+        .empty-soon strong { display: block; font-size: 14px; color: var(--text-main); margin-bottom: 6px; }
+
+        /* Recent-runs drill-down (Agents tab) */
+        .recent-runs { background: #FAFBFC; border-top: 1px solid var(--border);
+                       padding: 10px 14px; }
+        .recent-runs table { background: white; border: 1px solid var(--border); border-radius: 4px; }
+        .recent-runs .err-cell { color: var(--danger-text); font-family: var(--font-mono); font-size: 10px; }
+        .recent-runs .ts { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+        .recent-runs .req-id { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <a href="/" class="nav-back">← Dashboard</a>
+        <h1>⊙ Admin</h1>
+        <div class="sub" id="generatedAt">Ops-only views over telemetry, agent runs, and pipeline state.</div>
+
+        <!-- Tab navigation. ARIA wiring: each button's id is referenced
+             by the corresponding panel's aria-labelledby; aria-controls
+             points the other way. setActiveTab() flips aria-selected
+             and aria-hidden on activation. -->
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="rag"      role="tab" id="tab-rag"      aria-controls="panel-rag"      aria-selected="true">RAG Health</button>
+            <button class="tab"        data-tab="agents"   role="tab" id="tab-agents"   aria-controls="panel-agents"   aria-selected="false">Agents</button>
+            <button class="tab"        data-tab="llm"      role="tab" id="tab-llm"      aria-controls="panel-llm"      aria-selected="false">LLM Usage</button>
+            <button class="tab"        data-tab="pipeline" role="tab" id="tab-pipeline" aria-controls="panel-pipeline" aria-selected="false">Pipeline</button>
+        </div>
+
+        <!-- ─────────────────────────────── RAG Health tab ─────────────────────────────── -->
+        <div class="tab-panel active" id="panel-rag" role="tabpanel" aria-labelledby="tab-rag">
+            <div class="ctrl">
+                <label for="ragWindow">Window</label>
+                <select id="ragWindow" onchange="loadRagStats()">
+                    <option value="1">Last 1 h</option>
+                    <option value="6">Last 6 h</option>
+                    <option value="24" selected>Last 24 h</option>
+                    <option value="168">Last 7 d</option>
+                    <option value="720">Last 30 d</option>
+                </select>
+                <span class="sub" id="ragGeneratedAt" style="margin: 0;">—</span>
+            </div>
+
+            <div class="grid-kpi">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Queries</div>
+                    <div class="kpi-value" id="kpiTotal">—</div>
+                    <div class="kpi-sub" id="kpiTotalSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Hit Rate</div>
+                    <div class="kpi-value" id="kpiHitRate">—</div>
+                    <div class="kpi-sub" id="kpiHitRateSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Latency p50 / p95</div>
+                    <div class="kpi-value" id="kpiLatency">—</div>
+                    <div class="kpi-sub" id="kpiLatencySub">p99 —</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Zero-Hit Queries</div>
+                    <div class="kpi-value" id="kpiZero">—</div>
+                    <div class="kpi-sub" id="kpiZeroSub">queries returning 0 docs</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">By Collection</div>
+                <table id="tblCollection">
+                    <thead>
+                        <tr><th>Collection</th><th>Queries</th><th>Zero-hits</th><th>Avg hits</th><th>Avg ms</th></tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="5">—</td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">By Endpoint</div>
+                <table id="tblEndpoint">
+                    <thead>
+                        <tr><th>Endpoint</th><th>Queries</th><th>Zero-hits</th><th>Avg ms</th></tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="4">—</td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">10 Slowest Queries</div>
+                <table id="tblSlowest">
+                    <thead>
+                        <tr><th>Timestamp (UTC)</th><th>Endpoint</th><th>Collection</th><th>ms</th><th>Query</th></tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="5">—</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─────────────────────────────── Agents tab ─────────────────────────────── -->
+        <div class="tab-panel" id="panel-agents" role="tabpanel" aria-labelledby="tab-agents" hidden>
+            <div class="ctrl">
+                <label for="agentsWindow">Window</label>
+                <select id="agentsWindow" onchange="loadAgentsSummary()">
+                    <option value="1">Last 1 h</option>
+                    <option value="6">Last 6 h</option>
+                    <option value="24" selected>Last 24 h</option>
+                    <option value="168">Last 7 d</option>
+                </select>
+                <span class="sub" id="agentsGeneratedAt" style="margin: 0;">—</span>
+            </div>
+
+            <div class="grid-kpi">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Runs</div>
+                    <div class="kpi-value" id="agtTotalRuns">—</div>
+                    <div class="kpi-sub" id="agtTotalRunsSub">across all agents</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" id="agtSuccessRate">—</div>
+                    <div class="kpi-sub" id="agtSuccessRateSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Cost</div>
+                    <div class="kpi-value" id="agtCostTotal">—</div>
+                    <div class="kpi-sub" id="agtCostTotalSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Cost / Run</div>
+                    <div class="kpi-value" id="agtCostAvg">—</div>
+                    <div class="kpi-sub" id="agtCostAvgSub">all agents pooled</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Per-agent breakdown · click a row for last 10 runs</div>
+                <table id="tblAgents">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Runs</th>
+                            <th>Success</th>
+                            <th>Errors</th>
+                            <th>Cost ($)</th>
+                            <th>Avg cost</th>
+                            <th>Turns p95</th>
+                            <th>Tokens in/out</th>
+                            <th>Top error</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="9">—</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─────────────────────────────── LLM tab placeholder ─────────────────────────── -->
+        <div class="tab-panel" id="panel-llm" role="tabpanel" aria-labelledby="tab-llm" hidden>
+            <div class="empty-soon">
+                <strong>LLM Usage</strong>
+                Coming in the next admin iteration — aggregations over the <code>llm_calls</code> table
+                (cost by task / provider, recent calls, request_id drill-down into Agents).
+                For now use <code>scripts/llm_usage_report.py</code> on the server.
+            </div>
+        </div>
+
+        <!-- ─────────────────────────────── Pipeline tab placeholder ────────────────────── -->
+        <div class="tab-panel" id="panel-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" hidden>
+            <div class="empty-soon">
+                <strong>Pipeline</strong>
+                Coming in the next admin iteration — daily-monitor run history with stage status,
+                Fed crawler success / failure, GCS bridge counts. For now check
+                <code>data/logs/daily_monitor_*.json</code> on the server.
+            </div>
+        </div>
+    </div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// Shared helpers
+// ─────────────────────────────────────────────────────────────────────────
+
+function _escape(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => (
+        {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+    ));
+}
+
+function _hitRateColor(pct) {
+    if (pct >= 80) return 'pct-ok';
+    if (pct >= 50) return 'pct-warn';
+    return 'pct-bad';
+}
+
+function _fillTable(tableId, rows, columns, emptyMsg) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td class="empty" colspan="${columns.length}">${emptyMsg}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => '<tr>' + columns.map(c => {
+        const v = typeof c.render === 'function' ? c.render(r) : r[c.key];
+        return `<td class="${c.num ? 'num' : ''}">${c.raw ? v : _escape(v)}</td>`;
+    }).join('') + '</tr>').join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tab routing — URL hash drives the active tab so deep-links work
+// (e.g. /admin#agents). Backwards-compat: /admin/rag redirects to
+// /admin#rag at the route level.
+// ─────────────────────────────────────────────────────────────────────────
+
+const _TAB_LOADERS = {
+    rag:      () => loadRagStats(),
+    agents:   () => loadAgentsSummary(),
+    llm:      () => { /* placeholder */ },
+    pipeline: () => { /* placeholder */ },
+};
+const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false };
+
+function setActiveTab(name) {
+    if (!_TAB_LOADERS[name]) name = 'rag';
+    document.querySelectorAll('.tab').forEach(b => {
+        const isActive = b.dataset.tab === name;
+        b.classList.toggle('active', isActive);
+        // aria-selected mirrors visual state so screen readers and
+        // keyboard users see the same active tab as sighted users.
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => {
+        const isActive = p.id === `panel-${name}`;
+        p.classList.toggle('active', isActive);
+        // `hidden` attribute removes the inactive panel from the
+        // accessibility tree, so assistive tech doesn't read all four
+        // panels at once.
+        if (isActive) p.removeAttribute('hidden');
+        else          p.setAttribute('hidden', '');
+    });
+    if (!_TAB_LOADED[name]) {
+        _TAB_LOADED[name] = true;
+        _TAB_LOADERS[name]();
+    }
+    if (location.hash !== `#${name}`) {
+        // replaceState avoids polluting browser history on every tab switch
+        history.replaceState(null, '', `#${name}`);
+    }
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+});
+window.addEventListener('hashchange', () => {
+    setActiveTab((location.hash || '#rag').slice(1));
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// RAG Health tab loader — same data shape as the old admin_rag.html.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function loadRagStats() {
+    const hours = document.getElementById('ragWindow').value;
+    try {
+        const r = await fetch(`/api/admin/rag/stats?hours=${hours}`);
+        const d = await r.json();
+        if (d.status !== 'success') throw new Error(d.message || 'unknown error');
+
+        document.getElementById('ragGeneratedAt').textContent =
+            `Generated ${d.generated_at} · window ${d.window_hours} h` +
+            (d.message ? ` · ${d.message}` : '');
+
+        document.getElementById('kpiTotal').textContent = d.total_queries.toLocaleString();
+        document.getElementById('kpiTotalSub').textContent =
+            d.window_hours === 1 ? 'last hour' : `last ${d.window_hours}h`;
+
+        const hrEl = document.getElementById('kpiHitRate');
+        hrEl.textContent = d.total_queries ? `${d.hit_rate_pct}%` : '—';
+        hrEl.className = 'kpi-value ' + (d.total_queries ? _hitRateColor(d.hit_rate_pct) : '');
+        document.getElementById('kpiHitRateSub').textContent =
+            d.total_queries ? `${d.total_queries - d.zero_hits} of ${d.total_queries} returned ≥1 hit` : '—';
+
+        document.getElementById('kpiLatency').textContent =
+            d.latency_ms.p50 || d.latency_ms.p95
+                ? `${Math.round(d.latency_ms.p50)} / ${Math.round(d.latency_ms.p95)} ms`
+                : '—';
+        document.getElementById('kpiLatencySub').textContent = `p99 ${Math.round(d.latency_ms.p99)} ms`;
+
+        document.getElementById('kpiZero').textContent = d.zero_hits.toLocaleString();
+        document.getElementById('kpiZeroSub').textContent =
+            d.total_queries ? `${Math.round(100 * d.zero_hits / d.total_queries)}% of total` : 'no data';
+
+        _fillTable('tblCollection', d.by_collection, [
+            { key: 'collection' },
+            { key: 'count',     num: true },
+            { key: 'zero_hits', num: true },
+            { key: 'avg_hits',  num: true },
+            { key: 'avg_ms',    num: true },
+        ], 'No queries in window');
+
+        _fillTable('tblEndpoint', d.by_endpoint, [
+            { key: 'endpoint' },
+            { key: 'count',     num: true },
+            { key: 'zero_hits', num: true },
+            { key: 'avg_ms',    num: true },
+        ], 'No queries in window');
+
+        _fillTable('tblSlowest', d.slowest, [
+            { render: r => (r.timestamp || '').substr(0, 19).replace('T', ' ') },
+            { key: 'endpoint' },
+            { key: 'collection' },
+            { key: 'latency_ms', num: true },
+            { key: 'query' },
+        ], 'No queries in window');
+    } catch (e) {
+        document.getElementById('ragGeneratedAt').textContent = `Failed to load: ${e.message}`;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Agents tab loader — aggregates /api/admin/agents into the KPI strip,
+// then renders per-agent rows. Clicking a row fetches that agent's last
+// 10 runs from /api/admin/agents/<name>/recent and renders an inline
+// drill-down (toggleable).
+// ─────────────────────────────────────────────────────────────────────────
+
+// Track open drill-downs per agent so a re-render preserves the visible
+// state and a second click collapses cleanly.
+const _agentDrillOpen = new Set();
+// Cache the last `/api/admin/agents` response so toggleAgentDrill can
+// re-render the table without refetching. Refetching on every drill
+// click would burn the agent_executions query repeatedly and lose
+// state on a transient network failure.
+let _agentsCache = {};
+
+async function loadAgentsSummary() {
+    const hours = document.getElementById('agentsWindow').value;
+    const generatedEl = document.getElementById('agentsGeneratedAt');
+    generatedEl.textContent = 'Loading…';
+
+    try {
+        const r = await fetch(`/api/admin/agents?hours=${hours}`);
+        const d = await r.json();
+        // Endpoint returns {message: ...} on a fresh deploy with no telemetry;
+        // surface that as an explicit "no data yet" rather than a fake zero.
+        const agents = d.agents || {};
+        _agentsCache = agents;
+        const agentNames = Object.keys(agents);
+
+        generatedEl.textContent =
+            `Window ${d.window_hours || hours} h` +
+            (d.message ? ` · ${d.message}` : ` · ${agentNames.length} agent${agentNames.length === 1 ? '' : 's'} active`);
+
+        // Aggregate KPIs across all agents in the window.
+        let totalRuns = 0, totalSuccess = 0, totalCost = 0;
+        for (const name of agentNames) {
+            const a = agents[name];
+            totalRuns    += a.total_runs    || 0;
+            totalSuccess += a.success       || 0;
+            totalCost    += a.cost_usd_total || 0;
+        }
+
+        document.getElementById('agtTotalRuns').textContent    = totalRuns.toLocaleString();
+        document.getElementById('agtTotalRunsSub').textContent =
+            agentNames.length ? `across ${agentNames.length} agent${agentNames.length === 1 ? '' : 's'}` : 'no data yet';
+
+        const srEl = document.getElementById('agtSuccessRate');
+        if (totalRuns) {
+            const sr = totalSuccess / totalRuns;
+            const pct = Math.round(sr * 1000) / 10;
+            srEl.textContent = `${pct}%`;
+            srEl.className = 'kpi-value ' + _hitRateColor(pct);
+            document.getElementById('agtSuccessRateSub').textContent =
+                `${totalSuccess} of ${totalRuns} returned ok`;
+        } else {
+            srEl.textContent = '—';
+            srEl.className = 'kpi-value';
+            document.getElementById('agtSuccessRateSub').textContent = '—';
+        }
+
+        document.getElementById('agtCostTotal').textContent    = `$${totalCost.toFixed(2)}`;
+        document.getElementById('agtCostTotalSub').textContent = `window pool`;
+        document.getElementById('agtCostAvg').textContent      =
+            totalRuns ? `$${(totalCost / totalRuns).toFixed(3)}` : '—';
+
+        _renderAgentsTable(agents);
+    } catch (e) {
+        generatedEl.textContent = `Failed to load: ${e.message}`;
+        // Set the placeholder row directly — _fillTable would emit
+        // colspan="0" with an empty columns array, which renders as
+        // an invisible / collapsed cell.
+        document.querySelector('#tblAgents tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="9">Failed to load agent telemetry: ${_escape(e.message)}</td></tr>`;
+    }
+}
+
+function _renderAgentsTable(agents) {
+    const tbody = document.querySelector('#tblAgents tbody');
+    const names = Object.keys(agents).sort();
+    if (!names.length) {
+        tbody.innerHTML = `<tr><td class="empty" colspan="9">No agent runs in this window.</td></tr>`;
+        return;
+    }
+
+    const rows = [];
+    for (const name of names) {
+        const a = agents[name];
+        const errs    = a.errors || 0;
+        const runs    = a.total_runs || 0;
+        const sr      = a.success_rate != null ? Math.round(a.success_rate * 1000) / 10 : null;
+        const srClass = sr == null ? 'idle' : sr >= 90 ? 'ok' : sr >= 70 ? 'warn' : 'bad';
+        const topErr  = (a.top_error_classes || [])[0];
+        const safeName = _escape(name);
+        const drillId  = `drill-${encodeURIComponent(name)}`;
+
+        // Agent name in `data-agent` flows through JS event binding
+        // (no inline onclick), so an agent name like
+        // `intel'); alert(1);//` can't break out of a string context.
+        // HTML escaping of `safeName` is still needed for the rendered
+        // cell text but is no longer load-bearing for click handling.
+        rows.push(`<tr class="row-click ${_agentDrillOpen.has(name) ? 'row-expanded' : ''}"
+                       data-agent="${safeName}">
+            <td><strong>${safeName}</strong></td>
+            <td class="num">${runs}</td>
+            <td><span class="pill ${srClass}">${sr != null ? sr + '%' : '—'}</span></td>
+            <td class="num ${errs > 0 ? 'pct-bad' : ''}">${errs}</td>
+            <td class="num">$${(a.cost_usd_total || 0).toFixed(2)}</td>
+            <td class="num">$${(a.cost_usd_avg || 0).toFixed(3)}</td>
+            <td class="num">${a.turns_p95 || 0}</td>
+            <td class="num">${(a.tokens_in_total || 0).toLocaleString()} / ${(a.tokens_out_total || 0).toLocaleString()}</td>
+            <td>${topErr ? _escape(topErr.class) + ` ×${topErr.count}` : '—'}</td>
+        </tr>`);
+        if (_agentDrillOpen.has(name)) {
+            // Render a placeholder row that loadAgentRecent will populate.
+            rows.push(`<tr id="${_escape(drillId)}"><td colspan="9" class="recent-runs">
+                <div class="empty">Loading recent runs…</div>
+            </td></tr>`);
+        }
+    }
+    tbody.innerHTML = rows.join('');
+
+    // Bind click listeners via JS instead of inline onclick — the
+    // agent name flows through a data attribute (not a string literal
+    // interpolated into JS), so values containing quotes can't break
+    // out. Also safer for CSP-tightened deployments later.
+    tbody.querySelectorAll('tr.row-click').forEach(tr => {
+        tr.addEventListener('click', () => toggleAgentDrill(tr.dataset.agent));
+    });
+
+    // Trigger loads for any open drill-downs that don't have data yet.
+    _agentDrillOpen.forEach(loadAgentRecent);
+}
+
+function toggleAgentDrill(name) {
+    if (!name) return;
+    if (_agentDrillOpen.has(name)) {
+        _agentDrillOpen.delete(name);
+    } else {
+        _agentDrillOpen.add(name);
+    }
+    // Re-render from cache — no refetch needed. The cache was set by
+    // the most recent loadAgentsSummary() call; if it's empty we just
+    // render the "no agent runs" placeholder, which is the correct
+    // state for a tab that hasn't loaded yet.
+    _renderAgentsTable(_agentsCache);
+}
+
+async function loadAgentRecent(agentName) {
+    // Drill-row id is built with encodeURIComponent in _renderAgentsTable,
+    // so look it up the same way to keep arbitrary agent names (with
+    // spaces / punctuation) working.
+    const cell = document.getElementById(`drill-${encodeURIComponent(agentName)}`);
+    if (!cell) return;
+    try {
+        const r = await fetch(`/api/admin/agents/${encodeURIComponent(agentName)}/recent?limit=10`);
+        const d = await r.json();
+        const runs = d.runs || [];
+        if (!runs.length) {
+            cell.innerHTML = `<td colspan="9" class="recent-runs"><div class="empty">No recent runs.</div></td>`;
+            return;
+        }
+
+        const html = `
+            <td colspan="9" class="recent-runs">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px;">
+                    Last ${runs.length} run${runs.length === 1 ? '' : 's'} of <strong>${_escape(agentName)}</strong>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Started</th>
+                            <th>Status</th>
+                            <th>Turns</th>
+                            <th>Cost</th>
+                            <th>Tokens in/out</th>
+                            <th>LLM calls</th>
+                            <th>RAG queries</th>
+                            <th>Invoked by</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>${runs.map(_recentRunRow).join('')}</tbody>
+                </table>
+            </td>`;
+        cell.innerHTML = html;
+    } catch (e) {
+        cell.innerHTML = `<td colspan="9" class="recent-runs"><div class="empty pct-bad">Failed to load: ${_escape(e.message)}</div></td>`;
+    }
+}
+
+function _recentRunRow(run) {
+    const status = run.status || '—';
+    const pillClass =
+        status === 'ok'              ? 'ok'   :
+        status === 'budget_exceeded' ? 'warn' :
+        status === 'max_turns'       ? 'warn' :
+        'bad';
+    const note = run.error_class
+        ? `<span class="err-cell">${_escape(run.error_class)}: ${_escape((run.error_message || '').slice(0, 100))}</span>`
+        : run.output_preview
+            ? _escape((run.output_preview || '').slice(0, 80)) + (run.output_preview && run.output_preview.length > 80 ? '…' : '')
+            : '—';
+
+    return `<tr>
+        <td class="ts">${_escape((run.started_at || '').substr(0, 19).replace('T', ' '))}<br>
+            <span class="req-id">${_escape(run.request_id || '')}</span></td>
+        <td><span class="pill ${pillClass}">${_escape(status)}</span></td>
+        <td class="num">${run.turns_used || 0}</td>
+        <td class="num">$${(run.cost_usd || 0).toFixed(4)}</td>
+        <td class="num">${(run.tokens_in || 0).toLocaleString()} / ${(run.tokens_out || 0).toLocaleString()}</td>
+        <td class="num">${run.llm_calls_count || 0}</td>
+        <td class="num">${run.rag_queries_count || 0}</td>
+        <td>${_escape(run.invoked_by || '—')}</td>
+        <td>${note}</td>
+    </tr>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Boot: pick up the hash on initial load so /admin#agents lands on Agents.
+// ─────────────────────────────────────────────────────────────────────────
+
+setActiveTab((location.hash || '#rag').slice(1));
+</script>
+</body>
+</html>

@@ -26,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, request
 
 rag_stats_bp = Blueprint("rag_stats_routes", __name__)
 
@@ -193,8 +193,8 @@ def api_rag_stats():
 
 @rag_stats_bp.get("/admin/rag")
 def admin_rag_page():
-    """Render the standalone RAG health dashboard. The page itself
-    fetches /api/admin/rag/stats client-side, so the route just
-    serves the shell — keeps server-side rendering out of the way
-    of testing."""
-    return render_template("admin_rag.html")
+    """Backwards-compat redirect to the new multi-tab Admin SPA at
+    `/admin#rag`. The standalone `admin_rag.html` template was folded
+    into `templates/admin.html` as the first tab; keep this redirect
+    for any bookmarks / old sidebar links pointing at /admin/rag."""
+    return redirect("/admin#rag", code=302)

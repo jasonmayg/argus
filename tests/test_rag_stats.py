@@ -237,3 +237,19 @@ class TestInputValidation:
         assert r.status_code == 200
         # Clamp ceiling is 24 * 30 = 720h.
         assert r.json["window_hours"] == 720
+
+
+# ──────────────────────────────────────────────────────────────
+# /admin/rag — legacy URL preserved as a 302 to the new SPA tab
+# ──────────────────────────────────────────────────────────────
+
+class TestAdminRagRedirect:
+    """Before the multi-tab Admin SPA, /admin/rag served a standalone
+    RAG health page. That page is now the first tab of /admin; the
+    route is kept as a redirect so existing bookmarks and the old
+    sidebar link don't break."""
+
+    def test_legacy_admin_rag_redirects_to_spa_tab(self, client):
+        r = client.get("/admin/rag", follow_redirects=False)
+        assert r.status_code == 302
+        assert r.headers["Location"] == "/admin#rag"
