@@ -662,12 +662,16 @@ _DATA_DASHBOARD_HTML = r"""
     }
     .kpi-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
 
-    /* Main grid */
+    /* Main grid — row 1: Inventory (narrow) | Signal Charts (wider).
+       Coverage Matrix lives on its own full-width row below so the
+       country × indicator table doesn't squeeze the chart column. */
     .main-grid {
       display: grid;
-      grid-template-columns: 1fr 1.2fr;
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
       gap: 16px;
+      margin-bottom: 16px;
     }
+    .matrix-row { margin-bottom: 20px; }
 
     /* Cards */
     .card {
@@ -728,6 +732,40 @@ _DATA_DASHBOARD_HTML = r"""
 
     /* Scrollable table wrapper */
     .tbl-wrap { max-height: 340px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
+
+    /* Coverage Matrix — full width, country×indicator grid can have
+       15+ columns. Compact cells + horizontal scroll + sticky first
+       column keep it readable without forcing the whole card wide. */
+    .matrix-wrap {
+      max-height: 380px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .matrix-wrap table.tbl { font-size: 11px; }
+    .matrix-wrap thead th,
+    .matrix-wrap tbody td {
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+    .matrix-wrap thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .matrix-wrap thead th:first-child,
+    .matrix-wrap tbody td:first-child {
+      position: sticky;
+      left: 0;
+      background: #F8FAFC;
+      z-index: 1;
+      border-right: 1px solid var(--border);
+    }
+    .matrix-wrap thead th:first-child { z-index: 3; }
+    .matrix-wrap .pill {
+      padding: 1px 5px;
+      font-size: 9px;
+    }
 
     /* Charts section */
     .chart-section { margin-bottom: 24px; }
@@ -853,45 +891,26 @@ _DATA_DASHBOARD_HTML = r"""
   <!-- Main Grid -->
   <div class="main-grid">
 
-    <!-- Left: Inventory + Matrix -->
-    <div style="display:flex; flex-direction:column; gap:16px;">
-
-      <!-- Dataset Inventory -->
-      <div class="card">
-        <div class="card-title">Dataset Inventory</div>
-        <div class="card-sub">All CSV files detected in current GCS prefix.</div>
-        <div class="tbl-wrap">
-          <table class="tbl" id="inv_table">
-            <thead>
-              <tr>
-                <th>File</th><th>Type</th><th>Country</th>
-                <th>Indicator</th><th>Range</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="loading-row"><td colspan="5">Loading inventory…</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- Left: Dataset Inventory (narrow, ~5 cols) -->
+    <div class="card">
+      <div class="card-title">Dataset Inventory</div>
+      <div class="card-sub">All CSV files detected in current GCS prefix.</div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="inv_table">
+          <thead>
+            <tr>
+              <th>File</th><th>Type</th><th>Country</th>
+              <th>Indicator</th><th>Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="loading-row"><td colspan="5">Loading inventory…</td></tr>
+          </tbody>
+        </table>
       </div>
-
-      <!-- Coverage Matrix -->
-      <div class="card">
-        <div class="card-title">Coverage Matrix — Macro</div>
-        <div class="card-sub">Country × indicator availability.</div>
-        <div class="tbl-wrap">
-          <table class="tbl" id="matrix_table">
-            <thead id="matrix_head"></thead>
-            <tbody id="matrix_body">
-              <tr class="loading-row"><td colspan="10">Loading matrix…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
 
-    <!-- Right: Charts -->
+    <!-- Right: Signal Charts (single + compare stacked) -->
     <div class="card">
       <div class="card-title">Signal Charts</div>
 
@@ -925,6 +944,22 @@ _DATA_DASHBOARD_HTML = r"""
 
     </div>
   </div><!-- /main-grid -->
+
+  <!-- Row 2: Coverage Matrix at full width.
+       Country × indicator grid scrolls horizontally; first column is
+       sticky so the country label stays visible as users scan across. -->
+  <div class="card matrix-row">
+    <div class="card-title">Coverage Matrix — Macro</div>
+    <div class="card-sub">Country × indicator availability. Scroll horizontally for additional indicators.</div>
+    <div class="matrix-wrap">
+      <table class="tbl" id="matrix_table">
+        <thead id="matrix_head"></thead>
+        <tbody id="matrix_body">
+          <tr class="loading-row"><td colspan="10">Loading matrix…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div><!-- /wrap -->
 
 <script>
