@@ -95,16 +95,19 @@
         <h1>⊙ Admin</h1>
         <div class="sub" id="generatedAt">Ops-only views over telemetry, agent runs, and pipeline state.</div>
 
-        <!-- Tab navigation -->
+        <!-- Tab navigation. ARIA wiring: each button's id is referenced
+             by the corresponding panel's aria-labelledby; aria-controls
+             points the other way. setActiveTab() flips aria-selected
+             and aria-hidden on activation. -->
         <div class="tabs" role="tablist">
-            <button class="tab active" data-tab="rag"      role="tab">RAG Health</button>
-            <button class="tab"        data-tab="agents"   role="tab">Agents</button>
-            <button class="tab"        data-tab="llm"      role="tab">LLM Usage</button>
-            <button class="tab"        data-tab="pipeline" role="tab">Pipeline</button>
+            <button class="tab active" data-tab="rag"      role="tab" id="tab-rag"      aria-controls="panel-rag"      aria-selected="true">RAG Health</button>
+            <button class="tab"        data-tab="agents"   role="tab" id="tab-agents"   aria-controls="panel-agents"   aria-selected="false">Agents</button>
+            <button class="tab"        data-tab="llm"      role="tab" id="tab-llm"      aria-controls="panel-llm"      aria-selected="false">LLM Usage</button>
+            <button class="tab"        data-tab="pipeline" role="tab" id="tab-pipeline" aria-controls="panel-pipeline" aria-selected="false">Pipeline</button>
         </div>
 
         <!-- ─────────────────────────────── RAG Health tab ─────────────────────────────── -->
-        <div class="tab-panel active" id="panel-rag" role="tabpanel">
+        <div class="tab-panel active" id="panel-rag" role="tabpanel" aria-labelledby="tab-rag">
             <div class="ctrl">
                 <label for="ragWindow">Window</label>
                 <select id="ragWindow" onchange="loadRagStats()">
@@ -172,7 +175,7 @@
         </div>
 
         <!-- ─────────────────────────────── Agents tab ─────────────────────────────── -->
-        <div class="tab-panel" id="panel-agents" role="tabpanel">
+        <div class="tab-panel" id="panel-agents" role="tabpanel" aria-labelledby="tab-agents" hidden>
             <div class="ctrl">
                 <label for="agentsWindow">Window</label>
                 <select id="agentsWindow" onchange="loadAgentsSummary()">
@@ -229,7 +232,7 @@
         </div>
 
         <!-- ─────────────────────────────── LLM tab placeholder ─────────────────────────── -->
-        <div class="tab-panel" id="panel-llm" role="tabpanel">
+        <div class="tab-panel" id="panel-llm" role="tabpanel" aria-labelledby="tab-llm" hidden>
             <div class="empty-soon">
                 <strong>LLM Usage</strong>
                 Coming in the next admin iteration — aggregations over the <code>llm_calls</code> table
@@ -239,7 +242,7 @@
         </div>
 
         <!-- ─────────────────────────────── Pipeline tab placeholder ────────────────────── -->
-        <div class="tab-panel" id="panel-pipeline" role="tabpanel">
+        <div class="tab-panel" id="panel-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" hidden>
             <div class="empty-soon">
                 <strong>Pipeline</strong>
                 Coming in the next admin iteration — daily-monitor run history with stage status,
@@ -295,10 +298,20 @@ const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false };
 function setActiveTab(name) {
     if (!_TAB_LOADERS[name]) name = 'rag';
     document.querySelectorAll('.tab').forEach(b => {
-        b.classList.toggle('active', b.dataset.tab === name);
+        const isActive = b.dataset.tab === name;
+        b.classList.toggle('active', isActive);
+        // aria-selected mirrors visual state so screen readers and
+        // keyboard users see the same active tab as sighted users.
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     document.querySelectorAll('.tab-panel').forEach(p => {
-        p.classList.toggle('active', p.id === `panel-${name}`);
+        const isActive = p.id === `panel-${name}`;
+        p.classList.toggle('active', isActive);
+        // `hidden` attribute removes the inactive panel from the
+        // accessibility tree, so assistive tech doesn't read all four
+        // panels at once.
+        if (isActive) p.removeAttribute('hidden');
+        else          p.setAttribute('hidden', '');
     });
     if (!_TAB_LOADED[name]) {
         _TAB_LOADED[name] = true;
@@ -389,6 +402,11 @@ async function loadRagStats() {
 // Track open drill-downs per agent so a re-render preserves the visible
 // state and a second click collapses cleanly.
 const _agentDrillOpen = new Set();
+// Cache the last `/api/admin/agents` response so toggleAgentDrill can
+// re-render the table without refetching. Refetching on every drill
+// click would burn the agent_executions query repeatedly and lose
+// state on a transient network failure.
+let _agentsCache = {};
 
 async function loadAgentsSummary() {
     const hours = document.getElementById('agentsWindow').value;
@@ -401,6 +419,7 @@ async function loadAgentsSummary() {
         // Endpoint returns {message: ...} on a fresh deploy with no telemetry;
         // surface that as an explicit "no data yet" rather than a fake zero.
         const agents = d.agents || {};
+        _agentsCache = agents;
         const agentNames = Object.keys(agents);
 
         generatedEl.textContent =
@@ -442,7 +461,11 @@ async function loadAgentsSummary() {
         _renderAgentsTable(agents);
     } catch (e) {
         generatedEl.textContent = `Failed to load: ${e.message}`;
-        _fillTable('tblAgents', [], [], 'Failed to load agent telemetry.');
+        // Set the placeholder row directly — _fillTable would emit
+        // colspan="0" with an empty columns array, which renders as
+        // an invisible / collapsed cell.
+        document.querySelector('#tblAgents tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="9">Failed to load agent telemetry: ${_escape(e.message)}</td></tr>`;
     }
 }
 
@@ -462,11 +485,17 @@ function _renderAgentsTable(agents) {
         const sr      = a.success_rate != null ? Math.round(a.success_rate * 1000) / 10 : null;
         const srClass = sr == null ? 'idle' : sr >= 90 ? 'ok' : sr >= 70 ? 'warn' : 'bad';
         const topErr  = (a.top_error_classes || [])[0];
+        const safeName = _escape(name);
+        const drillId  = `drill-${encodeURIComponent(name)}`;
 
+        // Agent name in `data-agent` flows through JS event binding
+        // (no inline onclick), so an agent name like
+        // `intel'); alert(1);//` can't break out of a string context.
+        // HTML escaping of `safeName` is still needed for the rendered
+        // cell text but is no longer load-bearing for click handling.
         rows.push(`<tr class="row-click ${_agentDrillOpen.has(name) ? 'row-expanded' : ''}"
-                       data-agent="${_escape(name)}"
-                       onclick="toggleAgentDrill('${_escape(name)}')">
-            <td><strong>${_escape(name)}</strong></td>
+                       data-agent="${safeName}">
+            <td><strong>${safeName}</strong></td>
             <td class="num">${runs}</td>
             <td><span class="pill ${srClass}">${sr != null ? sr + '%' : '—'}</span></td>
             <td class="num ${errs > 0 ? 'pct-bad' : ''}">${errs}</td>
@@ -478,32 +507,44 @@ function _renderAgentsTable(agents) {
         </tr>`);
         if (_agentDrillOpen.has(name)) {
             // Render a placeholder row that loadAgentRecent will populate.
-            rows.push(`<tr id="drill-${_escape(name)}"><td colspan="9" class="recent-runs">
+            rows.push(`<tr id="${_escape(drillId)}"><td colspan="9" class="recent-runs">
                 <div class="empty">Loading recent runs…</div>
             </td></tr>`);
         }
     }
     tbody.innerHTML = rows.join('');
 
+    // Bind click listeners via JS instead of inline onclick — the
+    // agent name flows through a data attribute (not a string literal
+    // interpolated into JS), so values containing quotes can't break
+    // out. Also safer for CSP-tightened deployments later.
+    tbody.querySelectorAll('tr.row-click').forEach(tr => {
+        tr.addEventListener('click', () => toggleAgentDrill(tr.dataset.agent));
+    });
+
     // Trigger loads for any open drill-downs that don't have data yet.
     _agentDrillOpen.forEach(loadAgentRecent);
 }
 
 function toggleAgentDrill(name) {
+    if (!name) return;
     if (_agentDrillOpen.has(name)) {
         _agentDrillOpen.delete(name);
     } else {
         _agentDrillOpen.add(name);
     }
-    // Re-render the table so open / closed state matches.
-    const hours = document.getElementById('agentsWindow').value;
-    fetch(`/api/admin/agents?hours=${hours}`)
-        .then(r => r.json())
-        .then(d => _renderAgentsTable(d.agents || {}));
+    // Re-render from cache — no refetch needed. The cache was set by
+    // the most recent loadAgentsSummary() call; if it's empty we just
+    // render the "no agent runs" placeholder, which is the correct
+    // state for a tab that hasn't loaded yet.
+    _renderAgentsTable(_agentsCache);
 }
 
 async function loadAgentRecent(agentName) {
-    const cell = document.getElementById(`drill-${agentName}`);
+    // Drill-row id is built with encodeURIComponent in _renderAgentsTable,
+    // so look it up the same way to keep arbitrary agent names (with
+    // spaces / punctuation) working.
+    const cell = document.getElementById(`drill-${encodeURIComponent(agentName)}`);
     if (!cell) return;
     try {
         const r = await fetch(`/api/admin/agents/${encodeURIComponent(agentName)}/recent?limit=10`);

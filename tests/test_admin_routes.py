@@ -394,3 +394,35 @@ class TestPercentileHelper:
         samples = sorted([1, 2, 2, 3, 3, 4, 5, 5, 6, 8, 10])
         assert _percentile(samples, 0.5)  in (3, 4)   # nearest-rank tolerance
         assert _percentile(samples, 0.95) in (8, 10)
+
+
+# ──────────────────────────────────────────────────────────────────
+# GET /admin — multi-tab Admin SPA page
+# ──────────────────────────────────────────────────────────────────
+
+class TestAdminPage:
+    """The /admin route just renders a static template. This test
+    pins it as a regression guard so future blueprint / template-folder
+    config changes don't silently 500 the operator UI."""
+
+    def test_admin_page_returns_spa_shell(self, tmp_path, monkeypatch):
+        # The shared `client` fixture builds a Flask without a
+        # template_folder, which works for the JSON endpoints but not
+        # the new HTML route. Build a fresh app here with templates
+        # wired up to the real directory.
+        monkeypatch.setattr(admin_routes, "_DB_PATH", tmp_path / "telemetry.db")
+        app = Flask(__name__, template_folder=str(ROOT / "templates"))
+        app.register_blueprint(admin_bp)
+        client = app.test_client()
+
+        r = client.get("/admin")
+        assert r.status_code == 200
+        # Smoke-check the template actually rendered (rather than the
+        # route 500-falling-back to a Flask error page). These ids are
+        # stable contract for the SPA shell — tab routing depends on
+        # them.
+        body = r.data.decode("utf-8")
+        assert "panel-rag"      in body
+        assert "panel-agents"   in body
+        assert "panel-llm"      in body
+        assert "panel-pipeline" in body
