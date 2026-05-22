@@ -26,9 +26,14 @@ const _FOCUS = {
     IND: 'India',
 };
 
-// ── Initial zoom view — same set as _FOCUS (all five fit in one
-// reasonable Mercator viewport without shrinking unrelated regions).
-const _INIT_VIEW_KEYS = ['USA','CAN','GBR','JPN','IND'];
+// ── Initial zoom view — derived from `_FOCUS` (Object.keys preserves
+// insertion order for string keys per ES2015+). Tying the two together
+// at the variable level so the next person who edits `_FOCUS` can't
+// accidentally let the initial viewport drift out of sync with the
+// focus list. Override here only if some focus country is so far off
+// the main viewport that it would shrink the others too much (none
+// today; revisit if Brazil/Australia ever get added back).
+const _INIT_VIEW_KEYS = Object.keys(_FOCUS);
 
 // ── Country name → ISO-3166 alpha-3 lookup
 const _ISO3 = {
@@ -117,6 +122,13 @@ function _normalizeLevel(level) {
 let _mapCountryData = {};
 let _mapTopNews     = {};   // iso3 → { title, score } of top-scored alert
 let _mapRendered    = false;
+// True only when the latest /api/guardian/dashboard fetch succeeded
+// AND the payload's status field was 'success'. Used to distinguish
+// the "focus country with genuinely zero alerts in the snapshot"
+// case from the "we couldn't load the dashboard at all" case — the
+// previous code rendered both as "Tracked — no alerts", which lied
+// to operators when the backend was actually down.
+let _mapDataOk = false;
 
 // ── Compute initial pan+zoom so all 8 focus countries fit in view ─
 // Returns { zoom, panX, panY } given the container's W and H.
@@ -169,8 +181,12 @@ async function loadRiskMap() {
     try {
         const r = await fetch(`${API_BASE}/guardian/dashboard`);
         const d = await r.json();
-        // Accept missing data — we still render focus countries
-        const board = (d.status === 'success')
+        // `_mapDataOk` gates the downstream "no alerts" vs "unavailable"
+        // tooltip text. Only flip it true on a clean success response;
+        // a 200 with status='missing'/'error' is still a data-unavailable
+        // state from the operator's perspective.
+        _mapDataOk = d.status === 'success';
+        const board = _mapDataOk
             ? (d.country_board || d.country_rank_top5 || [])
             : [];
 
@@ -197,6 +213,12 @@ async function loadRiskMap() {
         await _drawMap(container);
     } catch(e) {
         console.warn('loadRiskMap error:', e);
+        // Wipe stale state so a re-render after a network blip can't
+        // bleed previous-snapshot numbers into the "unavailable"
+        // tooltip.
+        _mapDataOk = false;
+        _mapCountryData = {};
+        _mapTopNews = {};
         await _drawMap(container);   // still render map skeleton
     }
 }
@@ -409,12 +431,20 @@ async function _drawMap(container) {
                 path.style.filter = 'brightness(0.88)';
                 tooltip.style.display = 'block';
                 const topNews = _mapTopNews[iso3];
+                // Three states for the no-data fallback line:
+                //   `data` present                → render real metrics
+                //   no `data`, but `_mapDataOk`   → genuinely 0 alerts today
+                //   no `data` AND `!_mapDataOk`   → dashboard fetch failed,
+                //                                   don't pretend it's zero
+                const fallbackText = _mapDataOk
+                    ? 'Tracked — no alerts in current snapshot'
+                    : 'Data unavailable — dashboard fetch failed';
                 tooltip.innerHTML =
                     `<strong>${tooltipData.country}</strong><br>` +
                     (data
                         ? `Risk: <b>${_normalizeLevel(data.risk_level)}</b> · ${data.alert_count} alert${data.alert_count !== 1 ? 's' : ''}<br>` +
                           `<span style="font-size:9px;color:#64748B;">Top news: ${topNews ? topNews.title : (data.top_category || '—')}</span>`
-                        : `<span style="font-size:9px;color:#3B82F6;">Tracked — no alerts in current snapshot</span>`
+                        : `<span style="font-size:9px;color:#3B82F6;">${fallbackText}</span>`
                     );
             });
             path.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
@@ -573,7 +603,10 @@ async function _drawMap(container) {
         text.setAttribute('fill',           'white');
         text.setAttribute('font-family',    'IBM Plex Mono, monospace');
         text.setAttribute('pointer-events', 'none');
-        text.textContent = '0';
+        // Numeric "0" vs dash "—": same three-state logic as the
+        // country-path tooltip. If we couldn't load the dashboard at
+        // all, rendering "0" implies certainty we don't have.
+        text.textContent = _mapDataOk ? '0' : '—';
 
         g.appendChild(circle);
         g.appendChild(text);
@@ -582,9 +615,12 @@ async function _drawMap(container) {
             if (_moved) return;
             circle.setAttribute('r', r + 2);
             tooltip.style.display = 'block';
+            const badgeText = _mapDataOk
+                ? 'Tracked — no alerts in current snapshot'
+                : 'Data unavailable — dashboard fetch failed';
             tooltip.innerHTML =
                 `<strong>${displayName}</strong><br>` +
-                `<span style="font-size:9px;color:#3B82F6;">Tracked — no alerts in current snapshot</span>`;
+                `<span style="font-size:9px;color:#3B82F6;">${badgeText}</span>`;
         });
         g.addEventListener('mousemove', e => { if (!_moved) _positionTooltip(e, tooltip, container); });
         g.addEventListener('mouseleave', () => { circle.setAttribute('r', r); tooltip.style.display = 'none'; });
