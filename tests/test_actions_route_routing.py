@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from routes.actions_routes import actions_bp
+from routes.actions_routes import _strip_json_fence, actions_bp
 
 
 # Minimal pipeline that yields exactly one alert above min_score=40
@@ -313,3 +313,93 @@ class TestFallbackOnAgentFailure:
 
         body = r.get_json()
         assert body["summary"] == "Legacy summary"
+
+
+# ──────────────────────────────────────────────────────────────────
+# Fence-stripping (shared by legacy + agent paths)
+# ──────────────────────────────────────────────────────────────────
+
+class TestStripJsonFence:
+    """`_strip_json_fence` runs on both paths. A bug here would silently
+    corrupt provider responses across the whole endpoint — hence pinning
+    every fence variant we've seen in the wild plus the scalar-JSON case
+    that the original `lstrip("json")` implementation would have broken
+    (`null` → `ull`)."""
+
+    def test_unfenced_passthrough(self):
+        assert _strip_json_fence('{"actions": []}') == '{"actions": []}'
+
+    def test_unfenced_with_whitespace(self):
+        assert _strip_json_fence('  {"a":1}\n') == '{"a":1}'
+
+    def test_fenced_json_lang(self):
+        raw = '```json\n{"actions": [1, 2]}\n```'
+        assert _strip_json_fence(raw) == '{"actions": [1, 2]}'
+
+    def test_fenced_no_lang(self):
+        """A bare ``` opener (no language tag) is also common."""
+        raw = '```\n{"actions": []}\n```'
+        assert _strip_json_fence(raw) == '{"actions": []}'
+
+    def test_fenced_scalar_null(self):
+        """The original `.lstrip("json")` implementation would have
+        corrupted this to `ull`. Pin the fix so it can't regress."""
+        raw = '```json\nnull\n```'
+        out = _strip_json_fence(raw)
+        assert out == 'null'
+        # json.loads round-trip — the actual contract callers rely on.
+        assert json.loads(out) is None
+
+    def test_fenced_unknown_lang(self):
+        """Some providers emit ```javascript or ```js — same line-aware
+        strip should still work."""
+        raw = '```javascript\n{"actions": []}\n```'
+        assert _strip_json_fence(raw) == '{"actions": []}'
+
+    def test_empty_input(self):
+        assert _strip_json_fence("") == ""
+        assert _strip_json_fence(None) == ""
+
+
+# ──────────────────────────────────────────────────────────────────
+# request_id parity across legacy / agent paths
+# ──────────────────────────────────────────────────────────────────
+
+class TestRequestIdParity:
+    """One request_id must thread through both the route's RAG
+    context build AND the agent's internal telemetry, so the admin
+    UI can join `rag_queries` rows (route side) with
+    `agent_executions` / `llm_calls` (agent side) by request_id."""
+
+    def test_route_passes_request_id_to_agent(self, client, monkeypatch):
+        monkeypatch.setenv("USE_ACTIONS_AGENT", "1")
+        captured = {}
+
+        def _capture_run_actions(prompt, *, invoked_by, request_id=None):
+            captured["request_id"] = request_id
+            captured["invoked_by"] = invoked_by
+            # Echo it back so the response envelope reflects the
+            # threaded id, mirroring real `run_actions` behaviour.
+            return SimpleNamespace(
+                status="ok", answer=_AGENT_JSON,
+                turns_used=1, tokens_in=10, tokens_out=10,
+                cost_usd=0.01, tool_calls=[],
+                request_id=request_id or "agent_minted",
+                message=None,
+            )
+
+        with patch("core.agents.actions_agent.run_actions",
+                   side_effect=_capture_run_actions), \
+             patch("routes.actions_routes.build_actions_context",
+                   return_value=_rag_ctx_stub()):
+            r = client.post("/api/actions/generate", json={})
+
+        body = r.get_json()
+        assert captured["request_id"], (
+            "route must pass a request_id to run_actions, got None"
+        )
+        assert captured["invoked_by"] == "api.actions"
+        # Top-level request_id and the agent block's request_id must
+        # match — that's the join key admin tooling will rely on.
+        assert body["request_id"] == captured["request_id"]
+        assert body["agent"]["request_id"] == captured["request_id"]

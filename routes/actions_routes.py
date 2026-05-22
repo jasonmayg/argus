@@ -331,11 +331,24 @@ Critical rules:
 def _strip_json_fence(raw: str) -> str:
     """Some providers wrap JSON in a ```json … ``` fence; strip it
     before json.loads. Shared by legacy + agent paths so a fenced
-    response from either side parses identically."""
+    response from either side parses identically.
+
+    Implemented as line-aware fence stripping (not str.lstrip with a
+    character set). `lstrip("json")` removes any leading char in the
+    set {j,s,o,n}, which would corrupt valid payloads like `null` →
+    `ull` or any string starting with those letters."""
     raw = (raw or "").strip()
-    if raw.startswith("```"):
-        raw = raw.lstrip("`").lstrip("json").strip().rstrip("`").strip()
-    return raw
+    if not raw.startswith("```"):
+        return raw
+    # Drop the opening fence line — covers ```json, ``` (no lang),
+    # and ```anything by splitting on the first newline.
+    _, _, body = raw.partition("\n")
+    body = body.rstrip()
+    # Drop the closing fence. The opener may have been the only line
+    # (degenerate "```{}```") in which case body is now "```...```".
+    if body.endswith("```"):
+        body = body[:-3].rstrip()
+    return body
 
 
 def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
@@ -374,10 +387,12 @@ def _ai_generate(persona_key, min_score, exclude, sources_cfg, pipeline_raw):
             )
             if agent_payload is not None:
                 return agent_payload
-        except Exception as exc:
-            logger.warning(
-                "ActionsAgent path failed (%s) — falling back to legacy call_llm",
-                exc,
+        except Exception:
+            # exc_info=True keeps the traceback for rollout debugging
+            # (a bare "(%s)" string drops the stack and only tells us
+            # the last frame's message).
+            logger.exception(
+                "ActionsAgent path failed — falling back to legacy call_llm"
             )
 
     # ── Legacy single-shot path (default) ─────────────────────
@@ -418,7 +433,12 @@ def _ai_generate_via_agent(*, prompt, persona_key, request_id, rag_ctx):
     raised exception is also a fallback signal (caught by caller)."""
     from core.agents.actions_agent import run_actions
 
-    result = run_actions(prompt, invoked_by="api.actions")
+    # Thread the route's preallocated request_id so build_actions_context
+    # rag_queries (route side) join the agent's agent_executions /
+    # llm_calls / tool rag_queries (agent side) on the same key.
+    result = run_actions(
+        prompt, invoked_by="api.actions", request_id=request_id,
+    )
 
     # Hard error → caller falls back. Budget_exceeded / max_turns with
     # a parseable answer are still usable.

@@ -158,6 +158,7 @@ def run_actions(
     *,
     invoked_by: str = "api.actions",
     client: Optional[Any] = None,
+    request_id: Optional[str] = None,
 ) -> ActionsResult:
     """Public entry point. The route layer formats the signals list
     + JSON schema into `user_prompt` (same shape `_ai_generate`
@@ -165,7 +166,14 @@ def run_actions(
 
     `client` is test-injected; production instantiates the Anthropic
     SDK client lazily — the route layer doesn't have to care about
-    provider wiring."""
+    provider wiring.
+
+    `request_id` lets the route thread its own preallocated id
+    through so `build_actions_context`'s rag_queries (route side)
+    and `agent_executions` / `llm_calls` / tool-side `rag_queries`
+    (agent side) all share one key. Default `None` keeps the
+    Phase 3B/3C behaviour where the agent mints its own — useful
+    for direct scripted invocation."""
     cfg = _load_agent_config("actions")
     model            = cfg.get("model", "claude-opus-4-7")
     max_turns        = int(cfg.get("max_turns", 15))
@@ -182,9 +190,11 @@ def run_actions(
 
     # Pre-allocate request_id so tool-side rag_queries + runner-side
     # agent_executions / llm_calls share one key. Same pattern as
-    # Phase 3B / 3C.
-    from core import agent_telemetry
-    request_id = agent_telemetry.new_request_id()
+    # Phase 3B / 3C. Use the caller's id when provided so route +
+    # agent telemetry rows join across the request.
+    if request_id is None:
+        from core import agent_telemetry
+        request_id = agent_telemetry.new_request_id()
 
     tools = _build_tools(tools_allowed, request_id=request_id)
 
