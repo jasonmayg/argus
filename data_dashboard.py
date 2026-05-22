@@ -955,7 +955,12 @@ _DATA_DASHBOARD_HTML = r"""
       <table class="tbl" id="matrix_table">
         <thead id="matrix_head"></thead>
         <tbody id="matrix_body">
-          <tr class="loading-row"><td colspan="10">Loading matrix…</td></tr>
+          <!-- colspan picks a value safely larger than the real
+               indicator count (15+ today, ~30 ceiling); HTML spec
+               accepts up to 1000. Hardcoding a smaller number (10)
+               would leave bare cells to the right of the loading
+               message until JS replaces the body. -->
+          <tr class="loading-row"><td colspan="999">Loading matrix…</td></tr>
         </tbody>
       </table>
     </div>
