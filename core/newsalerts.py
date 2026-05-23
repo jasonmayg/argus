@@ -168,20 +168,39 @@ def filter_news_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _is_low_quality(row: dict[str, Any], news_score: float) -> bool:
+def _is_low_quality(news_score: float, body: str) -> bool:
     """
     Return True if this alert is low-quality and should be filtered out.
-    Low-quality = score below threshold AND body text too short to be meaningful.
+    Low-quality = score below threshold AND body text too short to be
+    meaningful.
+
+    Body is passed in (rather than re-extracted from the row) so this
+    sees the exact same text source as `_apply_keyword_bonus` upstream
+    in `rescore_news_alerts`. The previous version did its own field
+    lookup with a different fallback chain (no `title` fallback), so
+    a title-only alert with a long title was treated as `len(body)=0`
+    here while keyword bonus saw the title as body — over-filtering
+    title-only rows that should have been kept.
     """
     if news_score >= _LOW_QUALITY_SCORE_THRESHOLD:
         return False
-    body = str(
+    return len(body.strip()) < _LOW_QUALITY_MIN_BODY_LEN
+
+
+def _extract_title_body(row: dict[str, Any]) -> tuple[str, str]:
+    """Pull (title, body) out of the alert row. Body fields vary across
+    upstream sources so we coalesce in priority order; default body to
+    title so a title-only alert produces a non-empty text for keyword
+    matching (the `_apply_keyword_bonus` gate then notices body length
+    equals title length and treats it as title-only)."""
+    title = str(row.get("title") or row.get("headline") or "")
+    body  = str(
         row.get("body") or
         row.get("analysis_text") or
         row.get("summary") or
-        ""
-    ).strip()
-    return len(body) < _LOW_QUALITY_MIN_BODY_LEN
+        title
+    )
+    return title, body
 
 
 def rescore_news_alerts(
@@ -191,18 +210,40 @@ def rescore_news_alerts(
     """
     Recompute Guardian News Alert scores.
 
-    Scoring pipeline:
-      1. ML model predicts raw news_score (0-10)
-      2. Keyword bonus applied for title-only articles (capped at ±1.0)
-      3. Score amplified around midpoint for better visual discrimination
-      4. Recency and country_weight applied to produce final 0-100 score
+    The function has two scoring backends:
 
-    Filtering:
-      - Low-quality alerts (news_score < 5.0 AND body < 50 chars) are removed
+      * **ML backend** (when the local NewsScorer model + `predict`
+        module are importable). Produces a smooth 0-10 prediction per
+        alert, then runs the full pipeline:
+        ML predict → keyword bonus → low-quality filter → amplify →
+        final 0-100.
+
+      * **Rules backend** (default in prod — the ML model isn't shipped
+        in the repo, so `_ML_AVAILABLE` is False on most deploys).
+        Originally was just `severity * recency * country_weight *
+        persona_weight * 100`. PR #64 added keyword bonus and
+        low-quality filter, but those were nested inside the
+        `if _ML_AVAILABLE:` branch, so on prod the new logic was dead
+        code — holiday alerts kept showing, scores stayed clustered at
+        the discrete severity tiers (15 / 60 / etc).
+
+    This refactor moves keyword bonus + low-quality filter out of the
+    ML-only branch so the rules path benefits too. Amplification stays
+    ML-only because rules already produces a discrete distribution
+    (severity ∈ {0.15, 0.6, 0.9}), and amplifying that with factor 2.5
+    would over-clamp most rows to 0 or 10 rather than spread them.
     """
     risk_weights   = risk_weights or {}
     rescored: list[dict[str, Any]] = []
     filtered_count = 0
+    # ML failures count + sample of first error. A bad model file (e.g.
+    # version mismatch after a deploy) would otherwise produce one
+    # `[newsalerts] ML predict failed for '...'` line per alert —
+    # thousands of lines per batch. Print one summary at the end with
+    # the first error message instead.
+    ml_failure_count        = 0
+    first_ml_failure_msg:    str | None = None
+    first_ml_failure_title:  str | None = None
 
     for alert in alerts:
         row          = dict(alert)
@@ -216,65 +257,88 @@ def rescore_news_alerts(
 
         country_weight = 1.2 if country == "China" else 1.0
         persona_weight = float(risk_weights.get(category_key, 1.0))
+        title, body    = _extract_title_body(row)
 
+        # ── Step 1 — compute base news_score on the common 0-10 scale,
+        # using ML if available, otherwise the rules-derived severity.
         if _ML_AVAILABLE and _scorer is not None:
             ml_category = _WEIGHT_KEY_TO_CATEGORY.get(category_key, "General")
-            title = str(row.get("title") or row.get("headline") or "")
-            body  = str(
-                row.get("body") or
-                row.get("analysis_text") or
-                row.get("summary") or
-                title
-            )
             try:
-                # Step 1: ML prediction
                 news_score = _scorer.predict_one(
                     title         = title,
                     analysis_text = body,
                     risk_category = ml_category,
                     user_weight   = persona_weight,
                 )
-
-                # Step 2: Keyword bonus (capped at ±1.0, differentiation only)
-                news_score = _apply_keyword_bonus(news_score, title, body)
-
-                # Step 3: Filter low-quality
-                if _is_low_quality(row, news_score):
-                    filtered_count += 1
-                    continue
-
-                # Step 4: Amplify + final score
-                amplified = _amplify_score(news_score)
-                score = max(0.0, min(100.0,
-                    amplified * 10.0 * recency * country_weight
-                ))
-
+                used_ml = True
             except Exception as _predict_err:
-                print(f"[newsalerts] ML predict failed for '{title[:40]}': {_predict_err}")
-                try:
-                    severity = float(row.get("severity", 0) or 0)
-                except Exception:
-                    severity = 0.0
-                score = max(0.0, min(100.0,
-                    100.0 * severity * recency * country_weight * persona_weight
-                ))
+                # Per-row ML failure falls back to severity-based
+                # scoring for THIS row only — keep the batch
+                # progressing. Count and stash the first error;
+                # print a single summary line after the loop.
+                ml_failure_count += 1
+                if first_ml_failure_msg is None:
+                    first_ml_failure_msg   = str(_predict_err)
+                    first_ml_failure_title = title[:40]
+                news_score = _severity_to_news_score(row)
+                used_ml = False
         else:
-            try:
-                severity = float(row.get("severity", 0) or 0)
-            except Exception:
-                severity = 0.0
-            score = max(0.0, min(100.0,
-                100.0 * severity * recency * country_weight * persona_weight
-            ))
+            news_score = _severity_to_news_score(row)
+            used_ml = False
 
-        row["score"] = round(score, 2)
+        # ── Step 2 — keyword bonus + low-quality filter run on BOTH
+        # backends so the rules path stops shipping holiday / "Boxing
+        # Day" / "memorial" titles that the bonus is meant to suppress.
+        news_score = _apply_keyword_bonus(news_score, title, body)
+
+        # `body` is the one extracted at the top of the loop — same
+        # source-of-truth as the keyword bonus saw. `_is_low_quality`
+        # used to re-extract from `row` with a different fallback
+        # chain (no title fallback), which over-filtered title-only
+        # rows with long titles. Passing `body` in fixes that.
+        if _is_low_quality(news_score, body):
+            filtered_count += 1
+            continue
+
+        # ── Step 3 — final 0-100 score.
+        if used_ml:
+            # ML's smooth distribution benefits from amplification —
+            # without it, predictions cluster tightly around 5.0 and
+            # produce visually identical scores after the 10× scale.
+            amplified = _amplify_score(news_score)
+            score = amplified * 10.0 * recency * country_weight
+        else:
+            # Rules path: severity already comes pre-tiered, so the
+            # spread is built in. Apply persona_weight here (in the ML
+            # path it's baked into the prediction via `user_weight`)
+            # and skip amplification.
+            score = news_score * 10.0 * recency * country_weight * persona_weight
+
+        row["score"] = round(max(0.0, min(100.0, score)), 2)
         rescored.append(row)
 
     if filtered_count:
         print(f"[newsalerts] Filtered {filtered_count} low-quality alerts")
+    if ml_failure_count:
+        print(
+            f"[newsalerts] ML predict failed for {ml_failure_count} alert(s); "
+            f"first failure on '{first_ml_failure_title}': {first_ml_failure_msg}"
+        )
 
     rescored.sort(key=lambda a: float(a.get("score", 0) or 0), reverse=True)
     return rescored
+
+
+def _severity_to_news_score(row: dict[str, Any]) -> float:
+    """Rules-backend equivalent of `_scorer.predict_one` — turn the
+    upstream `severity` field (typically 0.0-1.0) into a comparable
+    0-10 news_score so `_apply_keyword_bonus` / `_is_low_quality` /
+    downstream math all see the same scale regardless of backend."""
+    try:
+        severity = float(row.get("severity", 0) or 0)
+    except Exception:
+        severity = 0.0
+    return max(0.0, min(10.0, severity * 10.0))
 
 
 def build_rescored_newsalerts_payload(

@@ -146,6 +146,17 @@ shared_storage/analyzed/
 shared_storage/failed/
 
 # ============================================================================
+# ML News Scorer
+# ============================================================================
+# The trained NewsScorer (predict.py + models/) is shipped to deploys
+# out-of-band (rsync / GCS / private repo per team convention) rather
+# than via this repo — model weights run hundreds of MB and version
+# infrequently. `core/newsalerts.py` import-guards `from predict import
+# NewsScorer`, so a missing `ml/` directory degrades to the rules
+# backend cleanly.
+ml/
+
+# ============================================================================
 # Misc
 # ============================================================================
 *.pickle
