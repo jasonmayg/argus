@@ -168,20 +168,23 @@ def filter_news_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _is_low_quality(row: dict[str, Any], news_score: float) -> bool:
+def _is_low_quality(news_score: float, body: str) -> bool:
     """
     Return True if this alert is low-quality and should be filtered out.
-    Low-quality = score below threshold AND body text too short to be meaningful.
+    Low-quality = score below threshold AND body text too short to be
+    meaningful.
+
+    Body is passed in (rather than re-extracted from the row) so this
+    sees the exact same text source as `_apply_keyword_bonus` upstream
+    in `rescore_news_alerts`. The previous version did its own field
+    lookup with a different fallback chain (no `title` fallback), so
+    a title-only alert with a long title was treated as `len(body)=0`
+    here while keyword bonus saw the title as body — over-filtering
+    title-only rows that should have been kept.
     """
     if news_score >= _LOW_QUALITY_SCORE_THRESHOLD:
         return False
-    body = str(
-        row.get("body") or
-        row.get("analysis_text") or
-        row.get("summary") or
-        ""
-    ).strip()
-    return len(body) < _LOW_QUALITY_MIN_BODY_LEN
+    return len(body.strip()) < _LOW_QUALITY_MIN_BODY_LEN
 
 
 def _extract_title_body(row: dict[str, Any]) -> tuple[str, str]:
@@ -233,6 +236,14 @@ def rescore_news_alerts(
     risk_weights   = risk_weights or {}
     rescored: list[dict[str, Any]] = []
     filtered_count = 0
+    # ML failures count + sample of first error. A bad model file (e.g.
+    # version mismatch after a deploy) would otherwise produce one
+    # `[newsalerts] ML predict failed for '...'` line per alert —
+    # thousands of lines per batch. Print one summary at the end with
+    # the first error message instead.
+    ml_failure_count        = 0
+    first_ml_failure_msg:    str | None = None
+    first_ml_failure_title:  str | None = None
 
     for alert in alerts:
         row          = dict(alert)
@@ -261,9 +272,14 @@ def rescore_news_alerts(
                 )
                 used_ml = True
             except Exception as _predict_err:
-                # Per-row ML failure falls back to severity-based scoring
-                # for THIS row only — keep the batch progressing.
-                print(f"[newsalerts] ML predict failed for '{title[:40]}': {_predict_err}")
+                # Per-row ML failure falls back to severity-based
+                # scoring for THIS row only — keep the batch
+                # progressing. Count and stash the first error;
+                # print a single summary line after the loop.
+                ml_failure_count += 1
+                if first_ml_failure_msg is None:
+                    first_ml_failure_msg   = str(_predict_err)
+                    first_ml_failure_title = title[:40]
                 news_score = _severity_to_news_score(row)
                 used_ml = False
         else:
@@ -275,7 +291,12 @@ def rescore_news_alerts(
         # Day" / "memorial" titles that the bonus is meant to suppress.
         news_score = _apply_keyword_bonus(news_score, title, body)
 
-        if _is_low_quality(row, news_score):
+        # `body` is the one extracted at the top of the loop — same
+        # source-of-truth as the keyword bonus saw. `_is_low_quality`
+        # used to re-extract from `row` with a different fallback
+        # chain (no title fallback), which over-filtered title-only
+        # rows with long titles. Passing `body` in fixes that.
+        if _is_low_quality(news_score, body):
             filtered_count += 1
             continue
 
@@ -298,6 +319,11 @@ def rescore_news_alerts(
 
     if filtered_count:
         print(f"[newsalerts] Filtered {filtered_count} low-quality alerts")
+    if ml_failure_count:
+        print(
+            f"[newsalerts] ML predict failed for {ml_failure_count} alert(s); "
+            f"first failure on '{first_ml_failure_title}': {first_ml_failure_msg}"
+        )
 
     rescored.sort(key=lambda a: float(a.get("score", 0) or 0), reverse=True)
     return rescored

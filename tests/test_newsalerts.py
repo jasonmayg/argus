@@ -156,29 +156,44 @@ class TestAmplifyScore:
 # ──────────────────────────────────────────────────────────────────
 
 class TestIsLowQuality:
+    """New signature: `_is_low_quality(news_score, body)`. Body is
+    passed in (not re-extracted from a row dict) so this sees the
+    exact same text source as `_apply_keyword_bonus` above it in
+    `rescore_news_alerts` — Copilot review on the original refactor
+    flagged that the old signature re-extracted with a different
+    fallback chain (no title fallback), causing title-only alerts
+    with long titles to be over-filtered."""
+
     def test_high_score_never_low_quality(self):
         """Even with empty body, score >= threshold protects the row."""
-        assert newsalerts._is_low_quality({"body": ""}, 5.5) is False
-        assert newsalerts._is_low_quality({"body": ""}, 5.0) is False  # exactly threshold
+        assert newsalerts._is_low_quality(5.5, "") is False
+        assert newsalerts._is_low_quality(5.0, "") is False  # exactly threshold
 
     def test_low_score_short_body_is_low_quality(self):
         # body 10 chars, well under the 50-char floor
-        assert newsalerts._is_low_quality({"body": "short"}, 4.0) is True
+        assert newsalerts._is_low_quality(4.0, "short") is True
 
     def test_low_score_long_body_is_not_low_quality(self):
         long_body = "x" * 100
-        assert newsalerts._is_low_quality({"body": long_body}, 4.0) is False
+        assert newsalerts._is_low_quality(4.0, long_body) is False
 
-    def test_body_field_coalescing(self):
-        """`analysis_text` and `summary` are fallbacks when `body`
-        isn't present — `_is_low_quality` must use the same priority
-        order as `_extract_title_body` so the gate sees the same
-        text the keyword bonus does."""
-        # analysis_text long → not low quality
-        row = {"analysis_text": "x" * 80}
-        assert newsalerts._is_low_quality(row, 4.0) is False
-        # All sources empty → low quality
-        assert newsalerts._is_low_quality({}, 4.0) is True
+    def test_whitespace_only_body_counted_as_empty(self):
+        """Leading/trailing whitespace is stripped before length
+        check, so a body of "   " counts as 0 chars and triggers
+        filtering."""
+        assert newsalerts._is_low_quality(4.0, "   \n\t  ") is True
+
+    def test_consistency_with_extract_title_body(self):
+        """When `rescore_news_alerts` calls `_extract_title_body(row)`
+        and then `_is_low_quality(news_score, body)`, a title-only
+        alert with a long title must NOT be filtered (body falls
+        back to title via the helper, so body length = title length).
+        Previously `_is_low_quality` did its own field lookup with
+        no title fallback and treated this case as `len(body)=0`."""
+        row = {"title": "x" * 120}   # title-only, long title, no body field
+        _, body = newsalerts._extract_title_body(row)
+        # body now equals title (120 chars) → should NOT be low-quality
+        assert newsalerts._is_low_quality(4.0, body) is False
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -270,6 +285,20 @@ class TestRescoreRulesBackend:
         captured = capsys.readouterr()
         assert "Filtered 2 low-quality alerts" in captured.out
 
+    def test_title_only_long_title_not_overfiltered(self, force_rules_backend):
+        """Regression test for the Copilot review on the first fix
+        PR: a Low-severity alert with no body field but a long title
+        used to be filtered because `_is_low_quality` did its own
+        empty-string fallback when `body` was missing. After the fix,
+        `_extract_title_body` falls back to title and `_is_low_quality`
+        sees that text — the row stays."""
+        long_title = "Detailed credit downgrade notice " * 5   # ~165 chars
+        out = newsalerts.rescore_news_alerts([
+            _alert(title=long_title, severity=0.15),   # no body field
+        ])
+        assert len(out) == 1, "title-only long-title row was wrongly filtered"
+        assert out[0]["title"] == long_title
+
 
 # ──────────────────────────────────────────────────────────────────
 # _extract_title_body — body coalescing helper
@@ -303,3 +332,59 @@ class TestExtractTitleBody:
     def test_headline_alias(self):
         t, _ = newsalerts._extract_title_body({"headline": "H"})
         assert t == "H"
+
+
+# ──────────────────────────────────────────────────────────────────
+# rescore_news_alerts — ML failure handling
+# ──────────────────────────────────────────────────────────────────
+
+class _FlakyScorer:
+    """Fake `_scorer` that always raises — exercises the per-row ML
+    failure fallback path without depending on an actual ML model."""
+    def predict_one(self, **kwargs):
+        raise RuntimeError("model file corrupt")
+
+
+class TestMLFailureSummary:
+    """Copilot review on the rules-fallback PR flagged that the
+    per-row `print()` on ML failure could flood logs with one line
+    per alert on a batch of thousands. The summary should be a
+    single line at the end of the batch with the failure count +
+    the first error message."""
+
+    def test_failures_collapse_to_one_summary_line(self, monkeypatch, capsys):
+        monkeypatch.setattr(newsalerts, "_ML_AVAILABLE", True)
+        monkeypatch.setattr(newsalerts, "_scorer",       _FlakyScorer())
+
+        alerts = [
+            _alert(title=f"Alert {i}", severity=0.6, body="x" * 100)
+            for i in range(5)
+        ]
+        out = newsalerts.rescore_news_alerts(alerts)
+        captured = capsys.readouterr()
+
+        # All 5 fell back to rules-based scoring (not dropped).
+        assert len(out) == 5
+        # Exactly ONE summary line, not 5 per-row lines.
+        failure_lines = [
+            ln for ln in captured.out.splitlines()
+            if "ML predict failed" in ln
+        ]
+        assert len(failure_lines) == 1, (
+            f"Expected exactly 1 summary line, got {len(failure_lines)}:\n"
+            + "\n".join(failure_lines)
+        )
+        # Summary mentions count + the first row's title + the underlying error.
+        assert "5 alert(s)" in failure_lines[0]
+        assert "Alert 0"   in failure_lines[0]
+        assert "model file corrupt" in failure_lines[0]
+
+    def test_no_summary_when_no_failures(self, force_rules_backend, capsys):
+        """When ML isn't even running (rules backend), the failure
+        summary must not print — it would be misleading to claim ML
+        failed when ML was never tried."""
+        newsalerts.rescore_news_alerts([
+            _alert(title="X", severity=0.6, body="x"*100),
+        ])
+        captured = capsys.readouterr()
+        assert "ML predict failed" not in captured.out
