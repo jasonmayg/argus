@@ -388,3 +388,124 @@ class TestMLFailureSummary:
         ])
         captured = capsys.readouterr()
         assert "ML predict failed" not in captured.out
+
+
+# ──────────────────────────────────────────────────────────────────
+# Precomputed score cache — write_scored_snapshot +
+# load_scored_snapshot_if_fresh
+# ──────────────────────────────────────────────────────────────────
+
+import json     # noqa: E402  — needed only by tests below
+import os       # noqa: E402
+import time     # noqa: E402
+
+def _write_snapshot(path, alerts):
+    """Helper: write a minimal Guardian-shaped snapshot with the
+    given alerts list. Used by the cache tests below."""
+    payload = {
+        "alerts":   alerts,
+        "data_mode": "live_local",
+        "threshold": 40,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+class TestScoredSnapshotCache:
+    """The bridge precomputes `<snapshot>_scored.json` on write so
+    the dashboard doesn't pay the ~30s ML cost per request. These
+    tests pin the freshness semantics + helper contract."""
+
+    def test_scored_path_naming_convention(self, tmp_path):
+        """`alerts_latest.json` should map to `alerts_latest_scored.json`
+        in the same directory — the dashboard's lookup depends on it."""
+        snap = tmp_path / "guardian_poc" / "data" / "alerts_latest.json"
+        out  = newsalerts._scored_path_for(snap)
+        assert out.parent == snap.parent
+        assert out.name   == "alerts_latest_scored.json"
+
+    def test_write_then_load_round_trips(self, force_rules_backend, tmp_path):
+        snap = tmp_path / "alerts_latest.json"
+        alerts = [
+            _alert(title="Real news",     severity=0.6, body="x"*100),
+            _alert(title="Christmas Day", severity=0.15),
+        ]
+        _write_snapshot(snap, alerts)
+
+        out_path = newsalerts.write_scored_snapshot(snap)
+        assert out_path is not None
+        assert out_path.exists()
+
+        cached = newsalerts.load_scored_snapshot_if_fresh(snap)
+        assert cached is not None
+        # The Christmas Day alert should have been dropped by the
+        # low-quality filter at write time.
+        cached_titles = [a["title"] for a in cached["alerts"]]
+        assert "Christmas Day" not in cached_titles
+        assert "Real news"     in cached_titles
+        # Freshness metadata is wired up.
+        meta = cached["_score_meta"]
+        assert meta["source_mtime"] == os.path.getmtime(snap)
+        assert "scored_at" in meta
+        assert "alert_count" in meta
+
+    def test_returns_none_when_source_changed(self, force_rules_backend, tmp_path):
+        """If the snapshot is rewritten after the cache, mtime no
+        longer matches → cache is stale → dashboard must live-rescore."""
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+        newsalerts.write_scored_snapshot(snap)
+        # Sleep > filesystem mtime granularity (1s on most Linux fs)
+        # so the rewrite produces a measurably different mtime.
+        time.sleep(1.05)
+        _write_snapshot(snap, [_alert(title="B", severity=0.6, body="x"*100)])
+
+        cached = newsalerts.load_scored_snapshot_if_fresh(snap)
+        assert cached is None, (
+            "Cache must invalidate when source mtime changes — "
+            "otherwise dashboard would serve stale post-bridge data."
+        )
+
+    def test_returns_none_when_cache_missing(self, force_rules_backend, tmp_path):
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+        # Never wrote the scored cache.
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
+
+    def test_returns_none_when_source_missing(self, force_rules_backend, tmp_path):
+        """Edge case: cache file exists but snapshot was deleted.
+        Dashboard would 404 anyway, but the helper shouldn't crash."""
+        snap = tmp_path / "alerts_latest.json"
+        scored = newsalerts._scored_path_for(snap)
+        scored.parent.mkdir(parents=True, exist_ok=True)
+        scored.write_text('{"alerts": [], "_score_meta": {"source_mtime": 0}}',
+                          encoding="utf-8")
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
+
+    def test_returns_none_when_cache_corrupt(self, force_rules_backend, tmp_path):
+        """Hand-edited / partial-write corrupt JSON: don't crash,
+        just return None so caller live-rescores."""
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+        scored = newsalerts._scored_path_for(snap)
+        scored.write_text("{not valid json", encoding="utf-8")
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
+
+    def test_returns_none_when_cache_has_no_score_meta(
+        self, force_rules_backend, tmp_path
+    ):
+        """Cache files written by a hypothetical pre-this-PR bridge
+        wouldn't have `_score_meta`. They must be treated as stale."""
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+        scored = newsalerts._scored_path_for(snap)
+        scored.write_text(json.dumps({"alerts": []}), encoding="utf-8")
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
+
+    def test_write_skips_when_source_missing(self, tmp_path):
+        """Bridge calls write_scored_snapshot in a try/except, but
+        the helper itself should return None (not raise) when the
+        source file doesn't exist — keeps the bridge log line
+        clean on edge cases."""
+        snap = tmp_path / "does_not_exist.json"
+        assert newsalerts.write_scored_snapshot(snap) is None

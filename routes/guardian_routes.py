@@ -65,6 +65,15 @@ def get_guardian_dashboard():
     snapshot_ref      = ""
     prev_snapshot_obj = None
     data_source       = "local"
+    # Tracked separately from `snapshot_ref` because the precomputed
+    # score cache only lives next to the LOCAL snapshot file — GCS
+    # data is read-only from Argus's side so we never write a cache
+    # for it. None when GCS is used.
+    local_snapshot_path = None
+    # True when the request served alerts straight from the
+    # precomputed score cache (i.e. paid 0 ML cost). Surfaced in the
+    # response meta so operators can monitor cache hit rate.
+    used_score_cache = False
 
     if gcs_result.get("ok"):
         snapshot          = gcs_result.get("snapshot")
@@ -93,16 +102,39 @@ def get_guardian_dashboard():
                 "snapshot_path": str(snapshot_path),
                 "gcs_status":    gcs_diag,
             }), 404
+
+        # ── Precomputed score cache fast path ─────────────────────
+        # The bridge (`scripts/refresh_local_snapshot_from_gcs.py`)
+        # writes a sibling `*_scored.json` after each snapshot refresh
+        # that contains the already-rescored alerts. When its
+        # `_score_meta.source_mtime` matches the live snapshot's
+        # mtime, we can skip the ~30s live rescore entirely.
         try:
-            snapshot     = json.loads(snapshot_path.read_text(encoding="utf-8"))
-            snapshot_ref = str(snapshot_path)
-        except Exception as e:
-            return jsonify({
-                "status":        "error",
-                "message":       f"Failed to parse local snapshot: {str(e)}",
-                "snapshot_path": str(snapshot_path),
-                "gcs_status":    gcs_diag,
-            }), 500
+            from core.newsalerts import load_scored_snapshot_if_fresh
+            cached = load_scored_snapshot_if_fresh(snapshot_path)
+        except Exception:
+            cached = None    # cache is a perf hint — never block the
+                             # request if the helper itself errors.
+
+        if cached is not None:
+            snapshot          = cached
+            snapshot_ref      = str(snapshot_path)
+            local_snapshot_path = snapshot_path
+            used_score_cache  = True
+            print(f"[dashboard] Used precomputed score cache "
+                  f"({len(cached.get('alerts') or [])} alerts)")
+        else:
+            try:
+                snapshot     = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                snapshot_ref = str(snapshot_path)
+                local_snapshot_path = snapshot_path
+            except Exception as e:
+                return jsonify({
+                    "status":        "error",
+                    "message":       f"Failed to parse local snapshot: {str(e)}",
+                    "snapshot_path": str(snapshot_path),
+                    "gcs_status":    gcs_diag,
+                }), 500
 
     data_mode         = snapshot.get("data_mode")
     enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
@@ -114,11 +146,17 @@ def get_guardian_dashboard():
     # Uses default weights (no user tuning at dashboard load time).
     # When the user drags the Weights Tuner, /api/guardian/news-alerts/rescore
     # re-runs with their custom weights on top of this baseline.
-    try:
-        alerts = rescore_news_alerts(alerts, risk_weights={})
-        print(f"[dashboard] Model A rescored {len(alerts)} alerts successfully.")
-    except Exception as _ml_err:
-        print(f"[dashboard] ML rescore failed, using snapshot scores: {_ml_err}")
+    #
+    # Skipped entirely when `used_score_cache=True` — the cached alerts
+    # were already rescored at bridge-write time with the same default
+    # weights, so re-running here would just burn ~30s on identical
+    # output.
+    if not used_score_cache:
+        try:
+            alerts = rescore_news_alerts(alerts, risk_weights={})
+            print(f"[dashboard] Model A rescored {len(alerts)} alerts successfully.")
+        except Exception as _ml_err:
+            print(f"[dashboard] ML rescore failed, using snapshot scores: {_ml_err}")
     # ─────────────────────────────────────────────────────────────────────────
 
     monitored_countries = load_monitored_countries()
@@ -257,6 +295,11 @@ def get_guardian_dashboard():
             "scope":                     "11-country",
             "global_event_count":        len(alert_rows_all),
             "ml_scoring":                True,   # indicates Model A is active
+            # `used_score_cache=True` means the dashboard served alerts
+            # from the precomputed `*_scored.json` sibling file rather
+            # than running rescore_news_alerts live. Operators can grep
+            # logs for the rate.
+            "used_score_cache":          used_score_cache,
         },
         "gcs_status": gcs_diag,
         "executive_summary": {

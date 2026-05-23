@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -339,6 +340,116 @@ def _severity_to_news_score(row: dict[str, Any]) -> float:
     except Exception:
         severity = 0.0
     return max(0.0, min(10.0, severity * 10.0))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Precomputed-score snapshot cache
+#
+# `rescore_news_alerts` runs once per `/api/guardian/dashboard` request, and
+# with ML enabled it takes ~30s for ~280 alerts (each `predict_one()` is
+# ~100ms). That's the whole page-load time for the home dashboard.
+#
+# But the input — `guardian_poc/data/alerts_latest.json` — only changes
+# every few hours (when `refresh_local_snapshot_from_gcs.py` runs from the
+# daily cron). The same expensive computation gets repeated on every
+# request despite the source not changing.
+#
+# Fix: the bridge script writes a sibling file
+# `alerts_latest_scored.json` containing the already-rescored alerts plus
+# a `_score_meta.source_mtime` field. The dashboard checks if that
+# mtime matches the live snapshot's mtime; if it does, it returns the
+# cached scored alerts directly, skipping the 30s rescore.
+#
+# A few design choices worth flagging:
+#
+#   * mtime, not hash: mtime comparison is O(1); the alerts_latest.json
+#     file is only written by the bridge so we trust its mtime as a
+#     change signal. Hash would be safer in principle but the bridge
+#     is the single writer in practice.
+#   * Cache lives next to source: same directory, suffix-based naming,
+#     so a `rm alerts_latest.json` cleanup catches the cache too.
+#   * Defaults-only cache: precomputed scores use `risk_weights={}`.
+#     The Weights Tuner path goes through `/api/guardian/news-alerts/rescore`
+#     with custom weights and stays live (rare action, slow is OK).
+#   * Cache miss is non-fatal: callers fall back to live rescore +
+#     write-through, so a corrupt / missing / stale cache only costs
+#     one slow request.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SCORED_SUFFIX = "_scored"
+
+
+def _scored_path_for(snapshot_path: Path) -> Path:
+    """Return the conventional location for the scored cache that
+    sits next to `snapshot_path`. e.g.
+    `alerts_latest.json` → `alerts_latest_scored.json`."""
+    snapshot_path = Path(snapshot_path)
+    return snapshot_path.with_name(snapshot_path.stem + _SCORED_SUFFIX + snapshot_path.suffix)
+
+
+def write_scored_snapshot(
+    snapshot_path: Path,
+    risk_weights: dict[str, float] | None = None,
+) -> Path | None:
+    """Rescore the alerts in `snapshot_path` with default weights and
+    persist the result next to it as `<name>_scored.json`. Returns
+    the written path, or None when the source snapshot is missing.
+
+    Called by the bridge script (`scripts/refresh_local_snapshot_from_gcs.py`)
+    immediately after writing the snapshot, so the 30s rescore cost is
+    paid in the cron job rather than on the user request."""
+    snapshot_path = Path(snapshot_path)
+    if not snapshot_path.exists():
+        return None
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    alerts   = snapshot.get("alerts") or []
+    scored   = rescore_news_alerts(alerts, risk_weights=risk_weights or {})
+
+    out = {
+        **snapshot,
+        "alerts": scored,
+        # Freshness signal the dashboard checks. `source_mtime` pins
+        # which input snapshot produced this scored file; a mismatch
+        # means the bridge re-wrote the source after the scored cache
+        # was built (or this cache was hand-edited) — the dashboard
+        # treats that as a cache miss and re-scores live.
+        "_score_meta": {
+            "source_mtime": os.path.getmtime(snapshot_path),
+            "scored_at":    datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "ml_used":      _ML_AVAILABLE,
+            "alert_count":  len(scored),
+        },
+    }
+    out_path = _scored_path_for(snapshot_path)
+    out_path.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
+    return out_path
+
+
+def load_scored_snapshot_if_fresh(snapshot_path: Path) -> dict[str, Any] | None:
+    """Return the cached scored snapshot iff:
+      * the cache file exists,
+      * the source snapshot file exists,
+      * the cache's `_score_meta.source_mtime` matches the source
+        file's current mtime.
+
+    Otherwise return None — caller should live-rescore and (typically)
+    call `write_scored_snapshot` to refresh the cache. Any file-read
+    or JSON-parse error returns None too: cache is a perf hint, never
+    the authoritative source."""
+    snapshot_path = Path(snapshot_path)
+    scored_path   = _scored_path_for(snapshot_path)
+    if not scored_path.exists() or not snapshot_path.exists():
+        return None
+    try:
+        scored = json.loads(scored_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    meta = scored.get("_score_meta") or {}
+    cached_mtime  = meta.get("source_mtime")
+    current_mtime = os.path.getmtime(snapshot_path)
+    if cached_mtime is None or cached_mtime != current_mtime:
+        return None    # source has changed since cache was built
+    return scored
 
 
 def build_rescored_newsalerts_payload(

@@ -338,6 +338,23 @@ def main() -> int:
     snap_path.write_text(json.dumps(out, indent=2, ensure_ascii=False), encoding="utf-8")
     LOG.info("wrote %s", snap_path)
 
+    # Precompute the rescored snapshot so the dashboard doesn't pay the
+    # ~30s ML cost on every request. Import is inside main() because
+    # `core.newsalerts` pulls in the ML scorer on import, and we want
+    # the bridge to keep working in environments without ML deps
+    # (it just won't generate the cache file there — the dashboard's
+    # fallback path handles that).
+    try:
+        from core.newsalerts import write_scored_snapshot
+        scored_path = write_scored_snapshot(LATEST_PATH)
+        if scored_path is not None:
+            LOG.info("wrote %s (precomputed dashboard scores)", scored_path)
+    except Exception as exc:
+        # A failure here is non-fatal — the dashboard will fall back
+        # to live rescoring (slow but correct). Log loudly so
+        # operators notice the precompute regressed.
+        LOG.warning("precompute scored snapshot failed: %s", exc)
+
     return 0
 
 

@@ -135,6 +135,10 @@ docker-compose.override.yml
 # Guardian POC
 # ============================================================================
 guardian_poc/reports/
+# Precomputed ML-rescored cache written by the bridge alongside
+# alerts_latest.json. Pure derivative of the snapshot + scoring code;
+# regenerates on every bridge run.
+guardian_poc/data/*_scored.json
 
 # ============================================================================
 # Pipeline file queue (raw crawls, bridge_manager intermediate output)
