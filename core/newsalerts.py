@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,8 +14,7 @@ from core.guardian_loader import (
     _resolve_guardian_snapshot_path,
 )
 
-# ── ML News Scorer (optional — falls back to rules if model not found) ────────
-# Looks for the trained model in ml/models/ relative to this file's location
+# ── ML News Scorer ────────────────────────────────────────────────────────────
 _ML_DIR = Path(__file__).resolve().parent.parent / "ml"
 sys.path.insert(0, str(_ML_DIR))
 
@@ -31,8 +31,7 @@ except Exception as _e:
     _scorer       = None
     _ML_AVAILABLE = False
 
-# Maps frontend weight keys (e.g. "liquidity_risk") to ML model category strings
-# Must stay in sync with TUNE_CAT_MAP in tune-strategy.js
+# Maps frontend weight keys to ML model category strings
 _WEIGHT_KEY_TO_CATEGORY: dict[str, str] = {
     "liquidity_risk":   "Liquidity",
     "regulatory_risk":  "Regulatory",
@@ -48,7 +47,82 @@ _WEIGHT_KEY_TO_CATEGORY: dict[str, str] = {
     "process_risk":     "Process Risk",
     "business_risk":    "Business Risk",
 }
+
+# ── Low-quality filter ────────────────────────────────────────────────────────
+_LOW_QUALITY_SCORE_THRESHOLD = 5.0
+_LOW_QUALITY_MIN_BODY_LEN    = 50
+
+# ── Score amplification ───────────────────────────────────────────────────────
+_AMPLIFY_CENTER = 5.0
+_AMPLIFY_FACTOR = 2.5
+
+# ── Keyword bonus — capped at ±1.0 to provide bounded score differentiation ──
+# Purpose: produce score variation for title-only articles.
+# The total keyword adjustment is capped at ±1.0 on the 0-10 scale to keep the
+# heuristic bounded, but it still affects downstream 0-100 scores and can alter
+# the final alert level near classification thresholds after scaling/modifiers.
+_KEYWORD_ADJUSTMENTS: list[tuple[list[str], float]] = [
+    # High-risk signals → small upward nudge
+    (["terrorist", "terrorism", "terror"],  +0.4),
+    (["cartel", "trafficking", "narco"],    +0.4),
+    (["sanctions", "sanctioned"],           +0.3),
+    (["hamas", "hezbollah", "hizballah"],   +0.4),
+    (["fraud", "fraudulent"],               +0.3),
+    (["ban", "banned", "bans"],             +0.2),
+    (["fine", "fined", "fines"],            +0.2),
+    (["misconduct", "malpractice"],         +0.3),
+    (["disrupts", "dismantles", "seizes"],  +0.3),
+    (["enforcement action"],                +0.2),
+    (["criminal", "convicted", "prison"],   +0.3),
+    (["money laundering", "laundering"],    +0.3),
+    (["crisis", "collapse", "failure"],     +0.3),
+    (["breach", "violation", "penalty"],    +0.2),
+    # Low-risk signals → small downward nudge
+    (["remarks", "commencement", "speech"],       -0.3),
+    (["annual report", "quarterly report"],       -0.3),
+    (["survey", "consultation", "questionnaire"], -0.2),
+    (["holiday", "christmas", "thanksgiving"],    -0.5),
+    (["memorial", "remembrance"],                 -0.3),
+    (["routine", "scheduled"],                    -0.3),
+    (["vision", "shared vision", "joint statement",
+      "statement on", "frontier"],                -0.3),
+    (["publication", "publishes", "published"],   -0.2),
+]
+# Hard cap: keyword adjustment cannot exceed ±1.0 on 0-10 scale
+_MAX_KEYWORD_ADJUSTMENT = 1.0
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def _apply_keyword_bonus(news_score: float, title: str, body: str) -> float:
+    """
+    Apply small keyword-based score adjustments for title-only articles.
+
+    Only applies when body text has no meaningful content beyond the title.
+    Total adjustment is capped at ±1.0 to prevent risk level changes —
+    the goal is score differentiation, not risk reclassification.
+    """
+    effective_body = body.strip()
+    if len(effective_body) > len(title.strip()) + 20:
+        return news_score  # body has real content, trust the model
+
+    text = (title + " " + body).lower()
+    adjustment = 0.0
+    for keywords, delta in _KEYWORD_ADJUSTMENTS:
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', text) for kw in keywords):
+            adjustment += delta
+
+    # Hard cap to prevent risk level changes
+    adjustment = max(-_MAX_KEYWORD_ADJUSTMENT, min(_MAX_KEYWORD_ADJUSTMENT, adjustment))
+    return max(0.0, min(10.0, news_score + adjustment))
+
+
+def _amplify_score(news_score: float) -> float:
+    """
+    Amplify score differences around the midpoint for better visual discrimination.
+    factor=2.5 means a 0.4 raw difference becomes ~1.0 amplified difference.
+    """
+    amplified = _AMPLIFY_CENTER + (news_score - _AMPLIFY_CENTER) * _AMPLIFY_FACTOR
+    return max(0.0, min(10.0, amplified))
 
 
 def load_guardian_snapshot_for_newsalerts() -> tuple[dict[str, Any] | None, str]:
@@ -80,7 +154,7 @@ def filter_news_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
     for alert in alerts:
-        src = str(alert.get("source") or "").lower()
+        src   = str(alert.get("source") or "").lower()
         title = str(alert.get("title") or "").strip()
         if src in {"gcs_raw", "gcs_data"}:
             continue
@@ -94,6 +168,22 @@ def filter_news_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def _is_low_quality(row: dict[str, Any], news_score: float) -> bool:
+    """
+    Return True if this alert is low-quality and should be filtered out.
+    Low-quality = score below threshold AND body text too short to be meaningful.
+    """
+    if news_score >= _LOW_QUALITY_SCORE_THRESHOLD:
+        return False
+    body = str(
+        row.get("body") or
+        row.get("analysis_text") or
+        row.get("summary") or
+        ""
+    ).strip()
+    return len(body) < _LOW_QUALITY_MIN_BODY_LEN
+
+
 def rescore_news_alerts(
     alerts: list[dict[str, Any]],
     risk_weights: dict[str, float] | None = None,
@@ -101,15 +191,18 @@ def rescore_news_alerts(
     """
     Recompute Guardian News Alert scores.
 
-    Scoring strategy:
-      - If ML model is available: use NewsScorer.predict_one() to get news_score (0-10),
-        then apply recency and country_weight on top to produce the final 0-100 score.
-        The user's Weights Tuner value is passed as user_weight directly into the ML model.
-      - If ML model is not available: fall back to the original rules-based formula
-        (severity * recency * country_weight * persona_weight). Nothing breaks.
+    Scoring pipeline:
+      1. ML model predicts raw news_score (0-10)
+      2. Keyword bonus applied for title-only articles (capped at ±1.0)
+      3. Score amplified around midpoint for better visual discrimination
+      4. Recency and country_weight applied to produce final 0-100 score
+
+    Filtering:
+      - Low-quality alerts (news_score < 5.0 AND body < 50 chars) are removed
     """
-    risk_weights = risk_weights or {}
+    risk_weights   = risk_weights or {}
     rescored: list[dict[str, Any]] = []
+    filtered_count = 0
 
     for alert in alerts:
         row          = dict(alert)
@@ -122,11 +215,9 @@ def rescore_news_alerts(
             recency = 1.0
 
         country_weight = 1.2 if country == "China" else 1.0
-        # persona_weight: the value the user set in Weights Tuner for this category
         persona_weight = float(risk_weights.get(category_key, 1.0))
 
         if _ML_AVAILABLE and _scorer is not None:
-            # ── ML path ──────────────────────────────────────────────────────
             ml_category = _WEIGHT_KEY_TO_CATEGORY.get(category_key, "General")
             title = str(row.get("title") or row.get("headline") or "")
             body  = str(
@@ -136,19 +227,30 @@ def rescore_news_alerts(
                 title
             )
             try:
-                # news_score 0-10; user's slider value passed in as user_weight
+                # Step 1: ML prediction
                 news_score = _scorer.predict_one(
                     title         = title,
                     analysis_text = body,
                     risk_category = ml_category,
                     user_weight   = persona_weight,
                 )
+
+                # Step 2: Keyword bonus (capped at ±1.0, differentiation only)
+                news_score = _apply_keyword_bonus(news_score, title, body)
+
+                # Step 3: Filter low-quality
+                if _is_low_quality(row, news_score):
+                    filtered_count += 1
+                    continue
+
+                # Step 4: Amplify + final score
+                amplified = _amplify_score(news_score)
                 score = max(0.0, min(100.0,
-                    news_score * 10.0 * recency * country_weight
+                    amplified * 10.0 * recency * country_weight
                 ))
+
             except Exception as _predict_err:
                 print(f"[newsalerts] ML predict failed for '{title[:40]}': {_predict_err}")
-                # Single-alert fallback to rules
                 try:
                     severity = float(row.get("severity", 0) or 0)
                 except Exception:
@@ -157,7 +259,6 @@ def rescore_news_alerts(
                     100.0 * severity * recency * country_weight * persona_weight
                 ))
         else:
-            # ── Rules fallback (original logic, unchanged) ────────────────────
             try:
                 severity = float(row.get("severity", 0) or 0)
             except Exception:
@@ -169,6 +270,9 @@ def rescore_news_alerts(
         row["score"] = round(score, 2)
         rescored.append(row)
 
+    if filtered_count:
+        print(f"[newsalerts] Filtered {filtered_count} low-quality alerts")
+
     rescored.sort(key=lambda a: float(a.get("score", 0) or 0), reverse=True)
     return rescored
 
@@ -177,45 +281,47 @@ def build_rescored_newsalerts_payload(
     weights_cfg: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build backend-computed News Alerts payload for the tuner."""
-    weights_cfg = weights_cfg or {}
+    weights_cfg  = weights_cfg or {}
     risk_weights = weights_cfg.get("risk_weights") or {}
-    threshold = float(weights_cfg.get("alert_threshold") or 40.0)
+    threshold    = float(weights_cfg.get("alert_threshold") or 40.0)
 
     snapshot, snapshot_ref = load_guardian_snapshot_for_newsalerts()
     if snapshot is None:
         return {"status": "missing", "message": "Guardian snapshot not found"}
 
-    data_mode = snapshot.get("data_mode")
+    data_mode         = snapshot.get("data_mode")
     enforce_whitelist = not str(data_mode or "").startswith("live_gcs_raw")
-    alerts = _filter_guardian_alerts(snapshot.get("alerts"), enforce_whitelist=enforce_whitelist)
-    rescored = rescore_news_alerts(alerts, risk_weights=risk_weights)
-    filtered = filter_news_alerts(rescored)
-    alert_rows = build_alert_list(filtered, max_items=5000)
+    alerts            = _filter_guardian_alerts(
+        snapshot.get("alerts"), enforce_whitelist=enforce_whitelist
+    )
+    rescored      = rescore_news_alerts(alerts, risk_weights=risk_weights)
+    filtered      = filter_news_alerts(rescored)
+    alert_rows    = build_alert_list(filtered, max_items=5000)
     country_board = build_country_board(filtered)
 
     high_risk_country_count = len([x for x in country_board if float(x.get("max_score", 0)) >= 70])
-    at_risk_country_count = len([x for x in country_board if float(x.get("max_score", 0)) > 0])
-    high_risk_alert_count = len([x for x in alert_rows if float(x.get("score", 0)) >= 70])
-    total_risk_alert_count = len([x for x in alert_rows if float(x.get("score", 0)) > 0])
-    triggered_count = len([x for x in alert_rows if float(x.get("score", 0)) >= threshold])
+    at_risk_country_count   = len([x for x in country_board if float(x.get("max_score", 0)) > 0])
+    high_risk_alert_count   = len([x for x in alert_rows    if float(x.get("score", 0)) >= 70])
+    total_risk_alert_count  = len([x for x in alert_rows    if float(x.get("score", 0)) > 0])
+    triggered_count         = len([x for x in alert_rows    if float(x.get("score", 0)) >= threshold])
 
     return {
-        "status": "success",
+        "status":        "success",
         "snapshot_path": snapshot_ref,
-        "source": "newsalerts_rescored",
+        "source":        "newsalerts_rescored",
         "meta": {
-            "threshold": threshold,
-            "data_mode": data_mode,
-            "alert_count": len(alert_rows),
+            "threshold":       threshold,
+            "data_mode":       data_mode,
+            "alert_count":     len(alert_rows),
             "triggered_count": triggered_count,
         },
         "executive_summary": {
             "high_risk_country_count": high_risk_country_count,
-            "high_risk_alert_count": high_risk_alert_count,
-            "at_risk_country_count": at_risk_country_count,
-            "total_risk_alert_count": total_risk_alert_count,
+            "high_risk_alert_count":   high_risk_alert_count,
+            "at_risk_country_count":   at_risk_country_count,
+            "total_risk_alert_count":  total_risk_alert_count,
         },
-        "country_rank_top5": country_board[:5],
+        "country_rank_top5":    country_board[:5],
         "critical_alerts_top5": alert_rows[:5],
-        "alerts": alert_rows,
+        "alerts":               alert_rows,
     }
