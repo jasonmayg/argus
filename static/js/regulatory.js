@@ -135,17 +135,38 @@ async function loadRegulatory() {
                     ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank"
                         style="font-size:10px;color:var(--primary);text-decoration:none;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;">Source →</a>` : ''}
                 </div>
-                ${(hasBefore || hasAfter) ? `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                    ${hasBefore ? `<div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 10px;">
+                ${(hasBefore || hasAfter) ? (
+                    hasBefore && hasAfter
+                    // Rule change: show the diff side-by-side.
+                    ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#92400E;margin-bottom:4px;font-family:var(--font-mono);">Before</div>
+                            <div style="font-size:11px;color:#78350F;line-height:1.4;">${escapeHtml(item.change_before)}</div>
+                        </div>
+                        <div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:4px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;font-family:var(--font-mono);">After</div>
+                            <div style="font-size:11px;color:#14532D;line-height:1.4;">${escapeHtml(item.change_after)}</div>
+                        </div>
+                    </div>`
+                    // Action-type item (sanctions, debt op, rate decision):
+                    // classifier intentionally leaves change_before empty,
+                    // so render a single full-width "Action" panel with a
+                    // brief label so users don't wonder why there's no
+                    // "Before" half.
+                    : hasAfter
+                    ? `<div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:4px;padding:8px 10px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#166534;font-family:var(--font-mono);">Action / Substance</div>
+                            <div style="font-size:9px;color:#166534;opacity:0.7;font-family:var(--font-mono);" title="Sanctions, debt operations, and rate decisions have no prior-state baseline.">No prior baseline</div>
+                        </div>
+                        <div style="font-size:11px;color:#14532D;line-height:1.4;">${escapeHtml(item.change_after)}</div>
+                    </div>`
+                    // Edge case: only Before, no After. Render alone.
+                    : `<div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 10px;margin-bottom:10px;">
                         <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#92400E;margin-bottom:4px;font-family:var(--font-mono);">Before</div>
                         <div style="font-size:11px;color:#78350F;line-height:1.4;">${escapeHtml(item.change_before)}</div>
-                    </div>` : '<div></div>'}
-                    ${hasAfter ? `<div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:4px;padding:8px 10px;">
-                        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;font-family:var(--font-mono);">After</div>
-                        <div style="font-size:11px;color:#14532D;line-height:1.4;">${escapeHtml(item.change_after)}</div>
-                    </div>` : '<div></div>'}
-                </div>` : ''}
+                    </div>`
+                ) : ''}
                 ${item.treasury_impact ? `
                 <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;">
                     <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);">Impact: </span>
