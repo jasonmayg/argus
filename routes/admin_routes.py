@@ -28,6 +28,7 @@ before. See `_require_admin_token()` below.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sqlite3
@@ -363,6 +364,161 @@ def agent_recent_runs(agent_name: str):
             "status":  "error",
             "message": f"{type(exc).__name__}: {str(exc)[:200]}",
         }), 500
+
+
+# ──────────────────────────────────────────────────────────────────
+# GET /api/admin/pipeline/history — daily-monitor run history
+# ──────────────────────────────────────────────────────────────────
+# `daily_monitor.py` writes one JSON file per day under `data/logs/`
+# capturing each stage's outcome (Fed news fetch, Guardian legacy
+# job, GCS bridge, summary). Until now operators had to ssh + ls +
+# cat to see whether yesterday's cron run succeeded. This surfaces
+# the same data in the Admin SPA's Pipeline tab.
+
+
+_PIPELINE_LOG_DIR     = Path(os.getenv("ARGUS_DAILY_LOG_DIR", "data/logs"))
+_PIPELINE_LOG_GLOB    = "daily_monitor_*.json"
+_PIPELINE_DEFAULT_LIMIT = 20
+_PIPELINE_MAX_LIMIT     = 100
+
+
+@admin_bp.get("/api/admin/pipeline/history")
+def pipeline_history():
+    """Recent daily-monitor runs, newest first. Reads JSON files
+    written by `daily_monitor._save_log()`; one file per day.
+
+    Query params:
+      ?limit=<int>  — number of runs to return (default 20, max 100)
+    """
+    auth = _require_admin_token()
+    if auth is not None:
+        return auth
+
+    try:
+        limit = int(request.args.get("limit", _PIPELINE_DEFAULT_LIMIT))
+    except (TypeError, ValueError):
+        limit = _PIPELINE_DEFAULT_LIMIT
+    limit = max(1, min(_PIPELINE_MAX_LIMIT, limit))
+
+    log_dir = _PIPELINE_LOG_DIR
+    if not log_dir.exists():
+        # No daily run has ever happened on this deploy — clean
+        # empty response, not a 500.
+        return jsonify({
+            "log_dir": str(log_dir),
+            "limit":   limit,
+            "runs":    [],
+            "message": f"log directory not present: {log_dir}",
+        })
+
+    # Sort by mtime desc so the freshest run lands at the top of
+    # the list. mtime > filename sort because cron clock skew or
+    # manual re-runs in the same day can produce out-of-order
+    # filenames vs actual completion time.
+    try:
+        files = sorted(
+            log_dir.glob(_PIPELINE_LOG_GLOB),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )[:limit]
+    except Exception as exc:
+        logger.exception("admin pipeline_history listdir failed")
+        return jsonify({
+            "status":  "error",
+            "message": f"{type(exc).__name__}: {str(exc)[:200]}",
+        }), 500
+
+    runs: List[Dict[str, Any]] = []
+    for path in files:
+        try:
+            raw  = path.read_text(encoding="utf-8")
+            body = json.loads(raw)
+        except Exception as exc:
+            # Skip but surface the failure so operators can spot
+            # half-written files. Don't fail the whole endpoint —
+            # one corrupt file shouldn't hide 19 healthy ones.
+            runs.append({
+                "filename":   path.name,
+                "mtime":      _isoformat_mtime(path),
+                "status":     "parse_error",
+                "error":      f"{type(exc).__name__}: {str(exc)[:120]}",
+            })
+            continue
+        runs.append(_shape_pipeline_run(path, body))
+
+    return jsonify({
+        "log_dir": str(log_dir),
+        "limit":   limit,
+        "runs":    runs,
+    })
+
+
+# ──────────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────────
+
+def _isoformat_mtime(path: Path) -> str:
+    """Path mtime → UTC ISO string. Falls back to empty when stat fails
+    (path was deleted between glob and read)."""
+    try:
+        ts = path.stat().st_mtime
+    except Exception:
+        return ""
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(timespec="seconds")
+
+
+def _shape_pipeline_run(path: Path, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Project a daily_monitor JSON payload onto the fields the
+    Pipeline tab actually renders. Bigger payload fields (raw_paths,
+    full nested dicts) are kept under `detail` so the row stays
+    grep-friendly but the drill-down has the full context."""
+    guardian = body.get("guardian")    or {}
+    bridge   = body.get("gcs_bridge")  or {}
+    status   = str(body.get("status") or "unknown")
+    return {
+        "filename":  path.name,
+        "mtime":     _isoformat_mtime(path),
+        "timestamp": body.get("timestamp"),
+        "status":    status,
+        "error":     body.get("error"),
+        "news_count": body.get("news_count"),
+        # Stage summaries — keep just the fields the tab table shows.
+        "guardian": {
+            "status":          guardian.get("status"),
+            "alerts_count":    guardian.get("alerts_count"),
+            "events_count":    guardian.get("events_count"),
+            "triggered_count": guardian.get("triggered_count"),
+        },
+        "gcs_bridge": {
+            "status":          bridge.get("status"),
+            "alerts_count":    bridge.get("alerts_count"),
+            "events_count":    bridge.get("events_count"),
+            "triggered_count": bridge.get("triggered_count"),
+            "chroma_mirrored": bridge.get("chroma_mirrored"),
+        },
+        # Detail field carries the raw body for the drill-down, capped
+        # so a runaway 100MB log doesn't blow the response.
+        "detail": _truncated_detail(body),
+    }
+
+
+def _truncated_detail(body: Dict[str, Any], max_bytes: int = 32_000) -> Dict[str, Any]:
+    """Return `body` if it serialises under `max_bytes`, otherwise a
+    sentinel with the size — the drill-down can render the elided
+    bytes count instead of crashing the JSON response with a
+    multi-MB payload."""
+    try:
+        encoded = json.dumps(body)
+    except Exception:
+        return {"_unparsable": True}
+    if len(encoded) <= max_bytes:
+        return body
+    return {
+        "_truncated":  True,
+        "_size_bytes": len(encoded),
+        "timestamp":   body.get("timestamp"),
+        "status":      body.get("status"),
+    }
 
 
 # ──────────────────────────────────────────────────────────────────
