@@ -231,13 +231,78 @@
             </div>
         </div>
 
-        <!-- ─────────────────────────────── LLM tab placeholder ─────────────────────────── -->
+        <!-- ─────────────────────────────── LLM Usage tab ────────────────────────────────── -->
         <div class="tab-panel" id="panel-llm" role="tabpanel" aria-labelledby="tab-llm" hidden>
-            <div class="empty-soon">
-                <strong>LLM Usage</strong>
-                Coming in the next admin iteration — aggregations over the <code>llm_calls</code> table
-                (cost by task / provider, recent calls, request_id drill-down into Agents).
-                For now use <code>scripts/llm_usage_report.py</code> on the server.
+            <div class="ctrl">
+                <label for="llmWindow">Window</label>
+                <select id="llmWindow" onchange="loadLlmStats()">
+                    <option value="1">Last 1 h</option>
+                    <option value="6">Last 6 h</option>
+                    <option value="24" selected>Last 24 h</option>
+                    <option value="168">Last 7 d</option>
+                </select>
+                <span class="sub" id="llmGeneratedAt" style="margin: 0;">—</span>
+            </div>
+
+            <div class="grid-kpi">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Calls</div>
+                    <div class="kpi-value" id="llmTotalCalls">—</div>
+                    <div class="kpi-sub" id="llmTotalCallsSub">across all tasks</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" id="llmSuccessRate">—</div>
+                    <div class="kpi-sub" id="llmSuccessRateSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Cost · Window</div>
+                    <div class="kpi-value" id="llmCost">—</div>
+                    <div class="kpi-sub" id="llmCostSub">vs all-GPT-4o baseline</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Latency p50 / p95</div>
+                    <div class="kpi-value" id="llmLatency">—</div>
+                    <div class="kpi-sub" id="llmLatencySub">across all providers</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">By Task</div>
+                <table id="tblLlmTask">
+                    <thead>
+                        <tr>
+                            <th>Task</th><th>Calls</th><th>Success</th>
+                            <th>Cost ($)</th><th>Tokens in/out</th>
+                            <th>p50</th><th>p95</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="7">—</td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">By Provider</div>
+                <table id="tblLlmProvider">
+                    <thead>
+                        <tr>
+                            <th>Provider</th><th>Calls</th><th>Success</th>
+                            <th>Cost ($)</th><th>Tokens in/out</th>
+                            <th>p50</th><th>p95</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="7">—</td></tr></tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Top Failures</div>
+                <table id="tblLlmFailures">
+                    <thead>
+                        <tr><th>Task</th><th>Provider</th><th>Error</th><th>Count</th></tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="4">—</td></tr></tbody>
+                </table>
             </div>
         </div>
 
@@ -290,7 +355,7 @@ function _fillTable(tableId, rows, columns, emptyMsg) {
 const _TAB_LOADERS = {
     rag:      () => loadRagStats(),
     agents:   () => loadAgentsSummary(),
-    llm:      () => { /* placeholder */ },
+    llm:      () => loadLlmStats(),
     pipeline: () => { /* placeholder */ },
 };
 const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false };
@@ -608,6 +673,105 @@ function _recentRunRow(run) {
         <td>${_escape(run.invoked_by || '—')}</td>
         <td>${note}</td>
     </tr>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// LLM Usage tab loader — aggregates /api/admin/llm/stats into the KPI
+// strip + per-task / per-provider / top-failures tables. Cost numbers
+// come from the same `PROVIDER_PRICING` table the CLI script uses, so
+// what you see here is what `scripts/llm_usage_report.py` would print.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function loadLlmStats() {
+    const hours = document.getElementById('llmWindow').value;
+    const generatedEl = document.getElementById('llmGeneratedAt');
+    generatedEl.textContent = 'Loading…';
+
+    try {
+        const r = await fetch(`/api/admin/llm/stats?hours=${hours}`);
+        const d = await r.json();
+        const t = d.totals || {};
+        generatedEl.textContent =
+            `Window ${d.window_hours || hours} h` +
+            (d.message ? ` · ${d.message}` : ` · ${(t.calls || 0).toLocaleString()} call${t.calls === 1 ? '' : 's'}`);
+
+        document.getElementById('llmTotalCalls').textContent =
+            (t.calls || 0).toLocaleString();
+        document.getElementById('llmTotalCallsSub').textContent =
+            t.calls ? `${(t.tokens_in || 0).toLocaleString()} in · ${(t.tokens_out || 0).toLocaleString()} out` : 'no data yet';
+
+        const srEl = document.getElementById('llmSuccessRate');
+        if (t.calls) {
+            const pct = Math.round(((t.success_rate || 0) * 1000)) / 10;
+            srEl.textContent = `${pct}%`;
+            srEl.className = 'kpi-value ' + _hitRateColor(pct);
+            document.getElementById('llmSuccessRateSub').textContent =
+                `${(t.ok || 0).toLocaleString()} of ${(t.calls || 0).toLocaleString()} returned ok`;
+        } else {
+            srEl.textContent = '—';
+            srEl.className = 'kpi-value';
+            document.getElementById('llmSuccessRateSub').textContent = '—';
+        }
+
+        const cost      = t.cost_usd          || 0;
+        const baseline  = t.baseline_cost_usd || 0;
+        const savings   = t.savings_usd       || 0;
+        document.getElementById('llmCost').textContent = `$${cost.toFixed(2)}`;
+        // Savings is "what we would have paid on all-GPT-4o minus what
+        // we actually paid". Positive = router saved money; negative
+        // means we're spending more than baseline (e.g. using Opus
+        // heavily) — show signed so operators read intent.
+        const savingsTxt = savings > 0
+            ? `saved $${savings.toFixed(2)} vs $${baseline.toFixed(2)} all-4o`
+            : (savings < 0
+                ? `+$${(-savings).toFixed(2)} over $${baseline.toFixed(2)} all-4o`
+                : `parity with $${baseline.toFixed(2)} all-4o`);
+        document.getElementById('llmCostSub').textContent = savingsTxt;
+
+        document.getElementById('llmLatency').textContent =
+            t.latency_p50 || t.latency_p95
+                ? `${t.latency_p50 || 0} / ${t.latency_p95 || 0} ms`
+                : '—';
+        document.getElementById('llmLatencySub').textContent =
+            t.calls ? 'across all providers' : '—';
+
+        _fillTable('tblLlmTask', d.by_task || [], [
+            { key: 'task' },
+            { key: 'calls', num: true },
+            { render: r => `${r.ok}/${r.calls}` },
+            { render: r => `$${(r.cost_usd || 0).toFixed(2)}`, num: true },
+            { render: r => `${(r.tokens_in || 0).toLocaleString()} / ${(r.tokens_out || 0).toLocaleString()}`, num: true },
+            { key: 'latency_p50', num: true },
+            { key: 'latency_p95', num: true },
+        ], 'No LLM calls in this window.');
+
+        _fillTable('tblLlmProvider', d.by_provider || [], [
+            { key: 'provider' },
+            { key: 'calls', num: true },
+            { render: r => `${r.ok}/${r.calls}` },
+            { render: r => `$${(r.cost_usd || 0).toFixed(2)}`, num: true },
+            { render: r => `${(r.tokens_in || 0).toLocaleString()} / ${(r.tokens_out || 0).toLocaleString()}`, num: true },
+            { key: 'latency_p50', num: true },
+            { key: 'latency_p95', num: true },
+        ], 'No provider activity in this window.');
+
+        _fillTable('tblLlmFailures', d.top_failures || [], [
+            { key: 'task' },
+            { key: 'provider' },
+            { render: r => r.error || '—' },
+            { key: 'count', num: true },
+        ], 'No failures in this window.');
+
+    } catch (e) {
+        generatedEl.textContent = `Failed to load: ${e.message}`;
+        // Reset KPI strip rather than leaving "Loading…" stuck.
+        document.querySelector('#tblLlmTask tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="7">Failed to load LLM telemetry: ${_escape(e.message)}</td></tr>`;
+        document.querySelector('#tblLlmProvider tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="7">—</td></tr>`;
+        document.querySelector('#tblLlmFailures tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="4">—</td></tr>`;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
