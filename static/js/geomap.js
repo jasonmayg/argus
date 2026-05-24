@@ -2,8 +2,9 @@
    ARGUS — Geospatial Risk Map
    Renders an SVG world map on the home page with:
      • Country fill colour keyed to risk level (High/Medium/Low)
-     • Focus countries (those with a native source crawler upstream
-       in AI_Treasury_Project) highlighted with border + label
+     • Focus countries (the 11-country watchlist) highlighted with
+       border + label, with a blue "Monitored" state for ones the
+       current snapshot has no data for yet
      • Circular badge showing alert count per country
      • Hover tooltip: country name, risk level, top news headline
    Uses TopoJSON world-110m (loaded from CDN) + a minimal
@@ -11,29 +12,39 @@
    ============================================================ */
 
 // ── Focus countries: ISO-3 → display label.
-// Membership criterion: the upstream data pipeline currently
-// publishes a dedicated regulator crawler for this country
-// (fed/treasury, boe/fca, boj, bank_of_canada, …). Countries
-// that only show up via cross-references in other sources stay
-// off this list so the map doesn't promise coverage we don't
-// actually have. Add a country back when its native source goes
-// live in AI_Treasury_Project.
+// Mirrors `core.agents.legacy.load_monitored_countries()` — the
+// 11-country watchlist that drives `monitored_countries` everywhere
+// else on the backend. Keep these two lists in sync: the legend
+// promises "blue = Monitored", and "Monitored" means "in the
+// watchlist", not "has data flowing right now". A country with no
+// native crawler upstream is still on the map in blue with a
+// "Monitored — no data source yet" tooltip; once data starts
+// flowing it switches to a risk colour automatically based on the
+// dashboard payload.
 const _FOCUS = {
     USA: 'US',
+    CHN: 'China',
     CAN: 'Canada',
     GBR: 'UK',
     JPN: 'Japan',
+    MEX: 'Mexico',
     IND: 'India',
+    BRA: 'Brazil',
+    AUS: 'Australia',
+    FRA: 'France',
+    DEU: 'Germany',
 };
 
-// ── Initial zoom view — derived from `_FOCUS` (Object.keys preserves
-// insertion order for string keys per ES2015+). Tying the two together
-// at the variable level so the next person who edits `_FOCUS` can't
-// accidentally let the initial viewport drift out of sync with the
-// focus list. Override here only if some focus country is so far off
-// the main viewport that it would shrink the others too much (none
-// today; revisit if Brazil/Australia ever get added back).
-const _INIT_VIEW_KEYS = Object.keys(_FOCUS);
+// ── Initial zoom view — original 8 core countries that cluster
+// around the primary risk corridor (Americas + Western Europe +
+// East Asia). BRA / AUS / FRA / DEU are in the focus list but
+// geographically far from this cluster; including them would
+// shrink the rest of the map too much on the initial render.
+// Manual override here (not `Object.keys(_FOCUS)`) so the choice
+// of "which countries dictate initial zoom" stays an explicit
+// product decision and doesn't drift when someone adds a focus
+// country.
+const _INIT_VIEW_KEYS = ['USA', 'CHN', 'CAN', 'GBR', 'JPN', 'MEX', 'IND'];
 
 // ── Country name → ISO-3166 alpha-3 lookup
 const _ISO3 = {
@@ -95,14 +106,14 @@ const _RISK_FILL = {
     High:   '#FEE2E2',   // red-100   — danger
     Medium: '#FEF9C3',   // yellow-100 — caution
     Low:    '#DCFCE7',   // green-100  — safe
-    Focus:  '#DBEAFE',   // blue-100   — focus country, transient empty snapshot
-    None:   '#F1F5F9',   // slate-100  — not a focus country
+    Focus:  '#DBEAFE',   // blue-100   — watchlist country with no current data
+    None:   '#F1F5F9',   // slate-100  — not on the watchlist
 };
 const _RISK_STROKE = {
     High:   '#EF4444',   // red-500
     Medium: '#F59E0B',   // amber-500
     Low:    '#22C55E',   // green-500
-    Focus:  '#3B82F6',   // blue-500 — focus-country border
+    Focus:  '#3B82F6',   // blue-500 — watchlist border ("Monitored" legend chip)
     None:   '#CBD5E1',   // slate-300
 };
 const _BADGE_BG = {
@@ -423,7 +434,7 @@ async function _drawMap(container) {
         path.style.transition = 'filter 0.15s';
         path.style.cursor     = (data || isFocus) ? 'pointer' : 'default';
 
-        const tooltipData = data || (isFocus ? { country: _FOCUS[iso3], alert_count: 0, risk_level: 'Tracked', top_category: 'Focus country' } : null);
+        const tooltipData = data || (isFocus ? { country: _FOCUS[iso3], alert_count: 0, risk_level: 'Monitored', top_category: 'Watchlist country' } : null);
         if (tooltipData) {
             const clickName = data ? data.country : (isFocus ? _FOCUS[iso3] : null);
             path.addEventListener('mouseenter', () => {
@@ -433,11 +444,18 @@ async function _drawMap(container) {
                 const topNews = _mapTopNews[iso3];
                 // Three states for the no-data fallback line:
                 //   `data` present                → render real metrics
-                //   no `data`, but `_mapDataOk`   → genuinely 0 alerts today
+                //   no `data`, but `_mapDataOk`   → country is on the
+                //                                   11-country watchlist but
+                //                                   this snapshot has nothing
+                //                                   for it (could be "no native
+                //                                   source yet" OR "source exists
+                //                                   but quiet today" — both render
+                //                                   the same way; user only cares
+                //                                   it's monitored).
                 //   no `data` AND `!_mapDataOk`   → dashboard fetch failed,
                 //                                   don't pretend it's zero
                 const fallbackText = _mapDataOk
-                    ? 'Tracked — no alerts in current snapshot'
+                    ? 'Monitored — no data in current snapshot'
                     : 'Data unavailable — dashboard fetch failed';
                 tooltip.innerHTML =
                     `<strong>${tooltipData.country}</strong><br>` +
@@ -571,10 +589,14 @@ async function _drawMap(container) {
         badgeGroup.appendChild(g);
     });
 
-    // ── Draw "0" badges for focus countries with no alerts in the
-    //    current snapshot. All five _FOCUS entries have a native
-    //    source upstream, so this branch is for transient empties
-    //    (slow news day) — not for missing-coverage cases.
+    // ── Draw "Monitored" badges for watchlist countries that have no
+    //    alerts in the current snapshot. This branch covers two
+    //    cases that look identical to the user: (a) the country has a
+    //    native source upstream but the snapshot happens to be quiet
+    //    for it, (b) the country is on the watchlist but no native
+    //    source is configured yet. Both render as a blue badge with
+    //    "—" so the legend's "Monitored" promise is honest either
+    //    way.
     Object.entries(_FOCUS).forEach(([iso3, displayName]) => {
         if (_mapCountryData[iso3]) return;   // already has a real badge above
         const centroid = _CENTROIDS[iso3];
@@ -603,10 +625,12 @@ async function _drawMap(container) {
         text.setAttribute('fill',           'white');
         text.setAttribute('font-family',    'IBM Plex Mono, monospace');
         text.setAttribute('pointer-events', 'none');
-        // Numeric "0" vs dash "—": same three-state logic as the
-        // country-path tooltip. If we couldn't load the dashboard at
-        // all, rendering "0" implies certainty we don't have.
-        text.textContent = _mapDataOk ? '0' : '—';
+        // "—" (em-dash) reads as "no count to show" without implying
+        // certainty about whether 0 alerts came in or no source
+        // exists. Using a numeric "0" would falsely suggest the
+        // bridge confirmed zero alerts when, for some watchlist
+        // countries, no source is even configured.
+        text.textContent = '—';
 
         g.appendChild(circle);
         g.appendChild(text);
@@ -616,7 +640,7 @@ async function _drawMap(container) {
             circle.setAttribute('r', r + 2);
             tooltip.style.display = 'block';
             const badgeText = _mapDataOk
-                ? 'Tracked — no alerts in current snapshot'
+                ? 'Monitored — no data in current snapshot'
                 : 'Data unavailable — dashboard fetch failed';
             tooltip.innerHTML =
                 `<strong>${displayName}</strong><br>` +
