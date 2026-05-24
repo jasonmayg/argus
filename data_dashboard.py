@@ -1103,6 +1103,22 @@ function refreshCompareIndicators(preserveSelection = false) {
   setOptions(el("compare_indicator"), opts, target);
 }
 
+// Wire the country → indicator filter listeners exactly once. `boot()`
+// can run multiple times (the ↻ Refresh button calls `bustCache()` →
+// `boot()`), so registering via `addEventListener` inside
+// `populateSelects` would stack a fresh handler on every refresh and
+// each subsequent country change would fire 2×, 3×, … N× refreshes.
+// Guard with a module-level flag instead — a single registration
+// survives any number of re-populates.
+let _dropdownListenersWired = false;
+function _wireDropdownListeners() {
+  if (_dropdownListenersWired) return;
+  _dropdownListenersWired = true;
+  el("single_country").addEventListener("change", () => refreshSingleIndicators());
+  el("c1").addEventListener("change",            () => refreshCompareIndicators());
+  el("c2").addEventListener("change",            () => refreshCompareIndicators());
+}
+
 function populateSelects(matrix) {
   _matrixCache = matrix;
   const countries = matrix.countries.map(c => ({ value: c, label: c }));
@@ -1117,9 +1133,7 @@ function populateSelects(matrix) {
   refreshSingleIndicators();
   refreshCompareIndicators();
 
-  el("single_country").addEventListener("change", () => refreshSingleIndicators());
-  el("c1").addEventListener("change",            () => refreshCompareIndicators());
-  el("c2").addEventListener("change",            () => refreshCompareIndicators());
+  _wireDropdownListeners();
 }
 
 // ── Inventory table ────────────────────────────────
