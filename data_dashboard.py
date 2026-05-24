@@ -664,12 +664,17 @@ _DATA_DASHBOARD_HTML = r"""
 
     /* Main grid — row 1: Inventory (narrow) | Signal Charts (wider).
        Coverage Matrix lives on its own full-width row below so the
-       country × indicator table doesn't squeeze the chart column. */
+       country × indicator table doesn't squeeze the chart column.
+       `align-items: start` so the Inventory card sizes to its content
+       instead of stretching to match the (taller) Signal Charts
+       column — otherwise the inventory table looks like it has a big
+       blank area underneath it. */
     .main-grid {
       display: grid;
       grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
       gap: 16px;
       margin-bottom: 16px;
+      align-items: start;
     }
     .matrix-row { margin-bottom: 20px; }
 
@@ -743,15 +748,31 @@ _DATA_DASHBOARD_HTML = r"""
       border-radius: 4px;
     }
     .matrix-wrap table.tbl { font-size: 11px; }
-    .matrix-wrap thead th,
     .matrix-wrap tbody td {
       padding: 4px 8px;
       white-space: nowrap;
     }
+    /* Headers can wrap to 2 lines (long indicator names like "GDELT
+       Conflict (Light)" otherwise force ~150px column widths and
+       blow up the matrix). Cap width keeps the column compact;
+       `vertical-align: bottom` keeps wrapped + non-wrapped headers
+       baseline-aligned. */
     .matrix-wrap thead th {
+      padding: 4px 8px;
+      white-space: normal;
+      max-width: 90px;
+      vertical-align: bottom;
+      line-height: 1.2;
       position: sticky;
       top: 0;
       z-index: 2;
+    }
+    /* Country column (first th + td) shouldn't wrap or be cramped —
+       country names stay short and benefit from a comfortable width. */
+    .matrix-wrap thead th:first-child,
+    .matrix-wrap tbody td:first-child {
+      white-space: nowrap;
+      max-width: none;
     }
     .matrix-wrap thead th:first-child,
     .matrix-wrap tbody td:first-child {
@@ -1000,7 +1021,22 @@ function clearError(sectionId) {
 // ── Fetch helpers ──────────────────────────────────
 async function fetchJSON(url) {
   const r = await fetch(url);
-  const body = await r.json();
+  // Read the body once as text so a non-JSON 5xx (HTML Flask error
+  // page, gunicorn timeout text, etc.) doesn't bubble up as a
+  // cryptic "string doesn't match expected pattern" SyntaxError —
+  // which is what a raw `r.json()` does on HTML. Surface the HTTP
+  // status + a snippet of the body instead so the user knows it
+  // was a server error, not malformed code.
+  const text = await r.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch (_parseErr) {
+    if (!r.ok) {
+      throw new Error(`HTTP ${r.status} — ${text.slice(0, 200) || r.statusText}`);
+    }
+    throw new Error(`Bad JSON response (HTTP ${r.status}): ${text.slice(0, 200)}`);
+  }
   if (!r.ok) throw new Error(body.error || body.message || `HTTP ${r.status}`);
   return body;
 }
@@ -1017,15 +1053,73 @@ function setOptions(selectEl, options, selectedVal) {
   }
 }
 
-function populateSelects(matrix) {
-  const countries = matrix.countries.map(c => ({ value: c, label: c }));
-  const inds      = matrix.indicators.map(x => ({ value: x.key, label: x.label }));
+// Cached matrix snapshot — used by the dropdown-filter helpers
+// below to keep dropdowns in sync with what each country actually
+// has data for. Without this, the default load could pick a
+// (country × indicator) pair that doesn't exist (e.g. Australia +
+// 10-yr TIPS) and surface a "no data" error to the user on first
+// page render.
+let _matrixCache = null;
 
-  setOptions(el("single_country"),    countries, countries[0]?.value);
-  setOptions(el("single_indicator"),  inds,      inds[0]?.value);
-  setOptions(el("c1"),                countries, countries[0]?.value);
-  setOptions(el("c2"),                countries, countries[1]?.value ?? countries[0]?.value);
-  setOptions(el("compare_indicator"), inds,      inds[0]?.value);
+function _indicatorsForCountry(country) {
+  if (!_matrixCache) return [];
+  const row = _matrixCache.matrix.find(r => r.country === country);
+  if (!row) return [];
+  return _matrixCache.indicators.filter(i => row[i.key]);
+}
+
+function _indicatorsForBoth(country1, country2) {
+  // Compare-chart dropdown: only show indicators BOTH countries have,
+  // otherwise picking one is guaranteed to error on the chart.
+  if (!_matrixCache) return [];
+  const r1 = _matrixCache.matrix.find(r => r.country === country1);
+  const r2 = _matrixCache.matrix.find(r => r.country === country2);
+  if (!r1 || !r2) return [];
+  return _matrixCache.indicators.filter(i => r1[i.key] && r2[i.key]);
+}
+
+function refreshSingleIndicators(preserveSelection = false) {
+  const country = el("single_country").value;
+  const available = _indicatorsForCountry(country);
+  const opts = available.map(i => ({ value: i.key, label: i.label }));
+  const current = preserveSelection ? el("single_indicator").value : null;
+  // If the currently-selected indicator survives the filter, keep it;
+  // otherwise default to the first available.
+  const target = (current && opts.some(o => o.value === current))
+    ? current
+    : opts[0]?.value;
+  setOptions(el("single_indicator"), opts, target);
+}
+
+function refreshCompareIndicators(preserveSelection = false) {
+  const c1 = el("c1").value;
+  const c2 = el("c2").value;
+  const available = _indicatorsForBoth(c1, c2);
+  const opts = available.map(i => ({ value: i.key, label: i.label }));
+  const current = preserveSelection ? el("compare_indicator").value : null;
+  const target = (current && opts.some(o => o.value === current))
+    ? current
+    : opts[0]?.value;
+  setOptions(el("compare_indicator"), opts, target);
+}
+
+function populateSelects(matrix) {
+  _matrixCache = matrix;
+  const countries = matrix.countries.map(c => ({ value: c, label: c }));
+
+  setOptions(el("single_country"), countries, countries[0]?.value);
+  setOptions(el("c1"),             countries, countries[0]?.value);
+  setOptions(el("c2"),             countries, countries[1]?.value ?? countries[0]?.value);
+
+  // Defer indicator dropdowns to the per-country filters so the
+  // initial selection is guaranteed to be a (country × indicator)
+  // pair that actually has data on disk.
+  refreshSingleIndicators();
+  refreshCompareIndicators();
+
+  el("single_country").addEventListener("change", () => refreshSingleIndicators());
+  el("c1").addEventListener("change",            () => refreshCompareIndicators());
+  el("c2").addEventListener("change",            () => refreshCompareIndicators());
 }
 
 // ── Inventory table ────────────────────────────────
