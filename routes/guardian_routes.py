@@ -65,11 +65,6 @@ def get_guardian_dashboard():
     snapshot_ref      = ""
     prev_snapshot_obj = None
     data_source       = "local"
-    # Tracked separately from `snapshot_ref` because the precomputed
-    # score cache only lives next to the LOCAL snapshot file — GCS
-    # data is read-only from Argus's side so we never write a cache
-    # for it. None when GCS is used.
-    local_snapshot_path = None
     # True when the request served alerts straight from the
     # precomputed score cache (i.e. paid 0 ML cost). Surfaced in the
     # response meta so operators can monitor cache hit rate.
@@ -119,7 +114,6 @@ def get_guardian_dashboard():
         if cached is not None:
             snapshot          = cached
             snapshot_ref      = str(snapshot_path)
-            local_snapshot_path = snapshot_path
             used_score_cache  = True
             print(f"[dashboard] Used precomputed score cache "
                   f"({len(cached.get('alerts') or [])} alerts)")
@@ -127,7 +121,6 @@ def get_guardian_dashboard():
             try:
                 snapshot     = json.loads(snapshot_path.read_text(encoding="utf-8"))
                 snapshot_ref = str(snapshot_path)
-                local_snapshot_path = snapshot_path
             except Exception as e:
                 return jsonify({
                     "status":        "error",

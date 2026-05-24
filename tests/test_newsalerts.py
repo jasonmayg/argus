@@ -478,8 +478,10 @@ class TestScoredSnapshotCache:
         snap = tmp_path / "alerts_latest.json"
         scored = newsalerts._scored_path_for(snap)
         scored.parent.mkdir(parents=True, exist_ok=True)
-        scored.write_text('{"alerts": [], "_score_meta": {"source_mtime": 0}}',
-                          encoding="utf-8")
+        scored.write_text(
+            '{"alerts": [], "_score_meta": {"source_mtime": 0, "ml_used": false}}',
+            encoding="utf-8",
+        )
         assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
 
     def test_returns_none_when_cache_corrupt(self, force_rules_backend, tmp_path):
@@ -501,6 +503,54 @@ class TestScoredSnapshotCache:
         scored = newsalerts._scored_path_for(snap)
         scored.write_text(json.dumps({"alerts": []}), encoding="utf-8")
         assert newsalerts.load_scored_snapshot_if_fresh(snap) is None
+
+    def test_returns_none_when_ml_used_mismatches(self, monkeypatch, tmp_path):
+        """The dashboard process's `_ML_AVAILABLE` flag is the source
+        of truth for which backend it serves. If the cache was built
+        when ML was unavailable but the dashboard now has ML (e.g.,
+        bridge ran before model deploy + service restart picked up
+        the model), loading the cache would silently downgrade scoring.
+
+        Copilot review on PR #67 flagged this: source_mtime alone
+        isn't enough — we have to compare backends too. Cover both
+        directions: rules-built cache loaded by ML process, and
+        vice versa."""
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+
+        # Write cache as the rules backend (_ML_AVAILABLE=False).
+        monkeypatch.setattr(newsalerts, "_ML_AVAILABLE", False)
+        monkeypatch.setattr(newsalerts, "_scorer",       None)
+        newsalerts.write_scored_snapshot(snap)
+
+        # Now flip to ML available — cache must be rejected.
+        monkeypatch.setattr(newsalerts, "_ML_AVAILABLE", True)
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None, (
+            "Rules-built cache must NOT be served by an ML-enabled "
+            "process — would silently change scoring semantics."
+        )
+
+        # Reverse: write under ML, load under rules. Same problem.
+        monkeypatch.setattr(newsalerts, "_ML_AVAILABLE", True)
+        # `_scorer` doesn't need to be a real scorer here — the cache
+        # write path doesn't call it (rescore_news_alerts uses
+        # severity-based fallback when scoring fails, and the test
+        # alerts have severity set).
+        newsalerts.write_scored_snapshot(snap)
+        monkeypatch.setattr(newsalerts, "_ML_AVAILABLE", False)
+        assert newsalerts.load_scored_snapshot_if_fresh(snap) is None, (
+            "ML-built cache must NOT be served by a rules-only process."
+        )
+
+    def test_ml_used_match_serves_cache(self, force_rules_backend, tmp_path):
+        """Positive control for the ml_used check: when the flag
+        matches (rules wrote, rules reads), cache IS served."""
+        snap = tmp_path / "alerts_latest.json"
+        _write_snapshot(snap, [_alert(title="A", severity=0.6, body="x"*100)])
+        newsalerts.write_scored_snapshot(snap)
+        cached = newsalerts.load_scored_snapshot_if_fresh(snap)
+        assert cached is not None
+        assert cached["_score_meta"]["ml_used"] is False
 
     def test_write_skips_when_source_missing(self, tmp_path):
         """Bridge calls write_scored_snapshot in a try/except, but

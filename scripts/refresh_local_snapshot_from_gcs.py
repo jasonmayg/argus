@@ -340,20 +340,27 @@ def main() -> int:
 
     # Precompute the rescored snapshot so the dashboard doesn't pay the
     # ~30s ML cost on every request. Import is inside main() because
-    # `core.newsalerts` pulls in the ML scorer on import, and we want
-    # the bridge to keep working in environments without ML deps
-    # (it just won't generate the cache file there — the dashboard's
-    # fallback path handles that).
+    # `core.newsalerts` pulls in the ML scorer on import — it has a
+    # try/except that degrades to the rules backend without raising,
+    # so the cache file will still be generated in environments
+    # without ML deps (the rules backend just produces less-
+    # differentiated scores). The dashboard's
+    # `load_scored_snapshot_if_fresh()` checks `_score_meta.ml_used`
+    # on load and rejects a rules-built cache when the dashboard
+    # process has ML available — that keeps scoring semantics
+    # consistent across the bridge↔dashboard boundary.
     try:
         from core.newsalerts import write_scored_snapshot
         scored_path = write_scored_snapshot(LATEST_PATH)
         if scored_path is not None:
             LOG.info("wrote %s (precomputed dashboard scores)", scored_path)
-    except Exception as exc:
+    except Exception:
         # A failure here is non-fatal — the dashboard will fall back
-        # to live rescoring (slow but correct). Log loudly so
-        # operators notice the precompute regressed.
-        LOG.warning("precompute scored snapshot failed: %s", exc)
+        # to live rescoring (slow but correct). `exc_info=True`
+        # preserves the traceback in the log so operators have
+        # stack context when debugging the regression instead of
+        # just the error message.
+        LOG.warning("precompute scored snapshot failed", exc_info=True)
 
     return 0
 

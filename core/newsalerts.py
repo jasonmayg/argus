@@ -371,9 +371,18 @@ def _severity_to_news_score(row: dict[str, Any]) -> float:
 #   * Defaults-only cache: precomputed scores use `risk_weights={}`.
 #     The Weights Tuner path goes through `/api/guardian/news-alerts/rescore`
 #     with custom weights and stays live (rare action, slow is OK).
-#   * Cache miss is non-fatal: callers fall back to live rescore +
-#     write-through, so a corrupt / missing / stale cache only costs
-#     one slow request.
+#   * Cache miss is non-fatal: the dashboard's miss path live-rescores
+#     for that request only — there is NO write-through. The bridge
+#     is the single cache writer (simpler invariant; cache format never
+#     diverges between bridge and route). A corrupt / missing / stale
+#     cache only costs one slow request, then waits for the next
+#     bridge run to refresh.
+#   * ML/rules consistency: `_score_meta.ml_used` records whether the
+#     cache was built by the ML or rules backend. `load_scored_snapshot_if_fresh`
+#     rejects the cache when that flag disagrees with the current
+#     `_ML_AVAILABLE` — otherwise a process that gained ML after a
+#     rules-built cache would silently serve rules scores, or vice
+#     versa.
 # ─────────────────────────────────────────────────────────────────────────────
 
 _SCORED_SUFFIX = "_scored"
@@ -430,12 +439,17 @@ def load_scored_snapshot_if_fresh(snapshot_path: Path) -> dict[str, Any] | None:
       * the cache file exists,
       * the source snapshot file exists,
       * the cache's `_score_meta.source_mtime` matches the source
-        file's current mtime.
+        file's current mtime,
+      * the cache's `_score_meta.ml_used` matches the current
+        `_ML_AVAILABLE` — otherwise we'd serve rules-scored alerts
+        out of an ML-enabled process (or vice versa) and change
+        scoring semantics silently.
 
-    Otherwise return None — caller should live-rescore and (typically)
-    call `write_scored_snapshot` to refresh the cache. Any file-read
-    or JSON-parse error returns None too: cache is a perf hint, never
-    the authoritative source."""
+    Otherwise return None — caller should live-rescore. There's no
+    write-through; the bridge is the single cache writer, so the cache
+    stays in sync at the next bridge run. Any file-read or JSON-parse
+    error returns None too: cache is a perf hint, never the
+    authoritative source."""
     snapshot_path = Path(snapshot_path)
     scored_path   = _scored_path_for(snapshot_path)
     if not scored_path.exists() or not snapshot_path.exists():
@@ -449,6 +463,13 @@ def load_scored_snapshot_if_fresh(snapshot_path: Path) -> dict[str, Any] | None:
     current_mtime = os.path.getmtime(snapshot_path)
     if cached_mtime is None or cached_mtime != current_mtime:
         return None    # source has changed since cache was built
+    # `ml_used` must be present AND match the current backend. A
+    # missing key is treated as a mismatch so pre-this-PR cache files
+    # (without the flag) get invalidated cleanly. bool() coerce
+    # protects against a truthy non-bool slipping in.
+    cached_ml_used = meta.get("ml_used")
+    if cached_ml_used is None or bool(cached_ml_used) != bool(_ML_AVAILABLE):
+        return None
     return scored
 
 
