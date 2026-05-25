@@ -44,7 +44,22 @@ def _save_results(result: dict) -> None:
         print(f"[pipeline_routes] WARNING: could not save results to {RESULTS_PATH}: {e}")
 
 
+# Dashboard is a client-side SPA: one HTML, multiple `.page` panels
+# toggled by JS. Each user-facing tab gets its own server-side route
+# so the URL is bookmarkable / shareable / back-button friendly, but
+# every route renders the same template — actual tab activation is
+# wired in `static/js/navigation.js` via PATH_TO_PAGE on boot and
+# history.pushState on click. Keeping all routes here (rather than
+# scattering them across the per-feature blueprints) makes the SPA's
+# URL surface obvious in one place. /data and /admin stay on their
+# own blueprints; they are full server-rendered pages, not SPA tabs.
 @pipeline_bp.route("/")
+@pipeline_bp.route("/home")
+@pipeline_bp.route("/risk-monitor")
+@pipeline_bp.route("/decision-support")
+@pipeline_bp.route("/regulatory")
+@pipeline_bp.route("/cash-position")
+@pipeline_bp.route("/chat")
 def index():
     return render_template("dashboard.html")
 
