@@ -735,8 +735,13 @@ _DATA_DASHBOARD_HTML = r"""
     .pill.high { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
     .pill.med  { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
 
-    /* Scrollable table wrapper */
-    .tbl-wrap { max-height: 340px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; }
+    /* Table wrapper — no `max-height` cap on Inventory so every CSV
+       row is visible at once. The parent grid's `align-items: start`
+       lets the card grow to the table's natural height; if the row
+       count is very large, the browser handles overflow at the page
+       level instead of a tiny inner scrollbar. Coverage Matrix uses
+       its own `.matrix-wrap` rules below for the column-heavy case. */
+    .tbl-wrap { border: 1px solid var(--border); border-radius: 4px; }
 
     /* Coverage Matrix — full width, country×indicator grid can have
        15+ columns. Compact cells + horizontal scroll + sticky first
