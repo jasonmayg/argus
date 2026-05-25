@@ -857,30 +857,31 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
             loaded_object = name
             break
 
-    # Lazy `list_blobs`. On the common path `alerts_latest.json`
-    # (the first candidate) already loaded successfully, so listing
-    # the bucket to discover dated snapshots is wasted work — every
-    # call costs an extra GCS round-trip. Run it only when we still
-    # don't have a snapshot. The trade-off is losing the GCS-side
-    # `previous_snapshot` for trend comparison on the cache-miss
-    # path, but in production we run `live_gcs_raw` mode where the
-    # dashboard computes the trend from `raw_dt_segments` instead.
-    snapshot_candidates: list[str] = []
-    if loaded_snapshot is None:
-        try:
-            for blob in client.list_blobs(bucket_name, prefix=prefix or None):
-                nm = blob.name
-                base = nm.split("/")[-1]
-                if _ALERTS_SNAPSHOT_RE.fullmatch(base):
-                    snapshot_candidates.append(nm)
-        except Exception as e:
+    # List the bucket to discover dated snapshots. Used both as a
+    # fallback when `latest_candidates` didn't yield a snapshot, and
+    # to pick the `previous_snapshot` for trend comparison even when
+    # the latest pointer loaded fine. An earlier revision of this PR
+    # gated this on `loaded_snapshot is None` to save one GCS call,
+    # but that broke trend on non-raw `data_mode` deploys for the
+    # entire cache TTL window — the cache alone is the much bigger
+    # perf win, so always-list is the safer default here.
+    snapshot_candidates = []
+    try:
+        for blob in client.list_blobs(bucket_name, prefix=prefix or None):
+            nm = blob.name
+            base = nm.split("/")[-1]
+            if _ALERTS_SNAPSHOT_RE.fullmatch(base):
+                snapshot_candidates.append(nm)
+    except Exception as e:
+        if loaded_snapshot is None:
             return {"ok": False, "snapshot": None, "snapshot_ref": "", "previous_snapshot": None,
                     "message": f"GCS list failed: {str(e)}", "bucket": bucket_name, "prefix": prefix}
 
-        snapshot_candidates = sorted(set(snapshot_candidates), reverse=True)
-        if snapshot_candidates:
-            loaded_object = snapshot_candidates[0]
-            loaded_snapshot = _download_blob_json(loaded_object)
+    snapshot_candidates = sorted(set(snapshot_candidates), reverse=True)
+
+    if loaded_snapshot is None and snapshot_candidates:
+        loaded_object = snapshot_candidates[0]
+        loaded_snapshot = _download_blob_json(loaded_object)
 
     # Fallback: build snapshot from raw CSV partition
     if loaded_snapshot is None:
@@ -970,6 +971,13 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
     # Cache the successful payload — same TTL window covers the
     # whole result dict (snapshot + previous_snapshot + metadata) so
     # downstream readers don't need to know caching exists.
+    #
+    # NOTE: stored by reference, not deep-copied. Every code path that
+    # touches `gcs_result["snapshot"]` MUST treat it as immutable —
+    # filter/build new collections, never `.sort()`/`.pop()`/etc.
+    # in place. A mutation would persist across the TTL window and
+    # poison subsequent cache hits. Current callers (`_filter_guardian_alerts`,
+    # `build_alert_list`) already follow this convention; keep it that way.
     with _gcs_snapshot_cache_lock:
         _gcs_snapshot_cache[cache_key] = (time.time(), result)
     return result

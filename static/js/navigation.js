@@ -21,9 +21,10 @@ const PAGE_TITLES = {
 // paths live in `routes/pipeline_routes.py` — all render the
 // same dashboard.html; the actual tab activation happens here.
 //
-// `data` and `settings` deliberately have no path entries: the
-// Data Source nav-item embeds /data via iframe, and Persona
-// Settings is a modal — neither benefits from a top-level URL.
+// `settings` deliberately has no path entry — Persona Settings is
+// a modal, not a tab. `data` uses `/data-source` (distinct from
+// `/data`, which serves the standalone data-dashboard page that
+// the iframe inside `page-data` actually points to).
 const PATH_TO_PAGE = {
     '/':                 'home',
     '/home':             'home',
@@ -32,6 +33,7 @@ const PATH_TO_PAGE = {
     '/regulatory':       'news',
     '/cash-position':    'cash',
     '/chat':             'chat',
+    '/data-source':      'data',
 };
 const PAGE_TO_PATH = {
     home:    '/',
@@ -40,6 +42,7 @@ const PAGE_TO_PATH = {
     news:    '/regulatory',
     cash:    '/cash-position',
     chat:    '/chat',
+    data:    '/data-source',
 };
 
 // ── Page load cache — track last load time per page ───────
@@ -70,7 +73,9 @@ function showPage(pageId, navEl) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
     document.getElementById('page-' + pageId).classList.add('active');
-    document.getElementById('topbarTitle').textContent = PAGE_TITLES[pageId] || pageId;
+    const pageLabel = PAGE_TITLES[pageId] || pageId;
+    document.getElementById('topbarTitle').textContent = pageLabel;
+    document.title = `ARGUS — ${pageLabel}`;
 
     if (navEl) navEl.classList.add('active');
 

@@ -1140,13 +1140,16 @@ function populateSelects(matrix) {
 
   // Compare chart defaults to Australia vs China CPI when both
   // countries (and the CPI indicator) are present in the snapshot;
-  // otherwise fall back to the first two countries in the matrix
-  // and the first indicator they share.
+  // otherwise fall back to (c1Default, first-country-not-c1).
+  // The c2 fallback walks past c1 explicitly because if Australia
+  // happens to sit at countries[1], `countries[1]` would equal
+  // c1Default and the chart would default to comparing a country
+  // against itself.
   const has = (c) => matrix.countries.includes(c);
   const c1Default = has("Australia") ? "Australia" : countries[0]?.value;
   const c2Default = has("China")
     ? "China"
-    : (countries[1]?.value ?? countries[0]?.value);
+    : (countries.find(c => c.value !== c1Default)?.value ?? countries[0]?.value);
 
   setOptions(el("single_country"), countries, countries[0]?.value);
   setOptions(el("c1"),             countries, c1Default);

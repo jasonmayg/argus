@@ -60,6 +60,7 @@ def _save_results(result: dict) -> None:
 @pipeline_bp.route("/regulatory")
 @pipeline_bp.route("/cash-position")
 @pipeline_bp.route("/chat")
+@pipeline_bp.route("/data-source")
 def index():
     return render_template("dashboard.html")
 
