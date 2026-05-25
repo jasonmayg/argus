@@ -169,6 +169,34 @@ function toggleActionsSettings() {
     toggle.textContent  = show ? '▴ Hide' : '▾ Settings';
 }
 
+// ── Robust JSON fetch helper ──────────────────────────────
+// /api/actions/generate can take long enough that gunicorn / a
+// proxy times out and returns a plain-text or HTML error page
+// instead of JSON. A naive `r.json()` then surfaces as the
+// cryptic "Unexpected token '<'" SyntaxError, which made users
+// think the app itself was broken. Read the body as text first
+// and only `JSON.parse` if it looks parseable — otherwise throw
+// with the HTTP status + a snippet of the body so the failure
+// reads as a real server-side problem.
+async function _actionsFetchJSON(url, options) {
+    const r = await fetch(url, options);
+    const text = await r.text();
+    let body;
+    try {
+        body = text ? JSON.parse(text) : {};
+    } catch (_parseErr) {
+        // Non-JSON response (gunicorn timeout text, HTML error
+        // page, proxy 502/504). Pass on the status + a trimmed
+        // body so the user sees what actually went wrong.
+        const snippet = text.slice(0, 200).replace(/\s+/g, ' ').trim();
+        throw new Error(`HTTP ${r.status} — ${snippet || r.statusText || 'no response body'}`);
+    }
+    if (!r.ok) {
+        throw new Error(body.message || body.error || `HTTP ${r.status}`);
+    }
+    return body;
+}
+
 // ── Generate ──────────────────────────────────────────────
 async function generateActions() {
     if (actionsState.isGenerating) return;
@@ -191,11 +219,10 @@ async function generateActions() {
             exclude_categories: actionsState.settings.excludeCategories,
             sources:            actionsState.settings.sources,
         };
-        const r = await fetch('/api/actions/generate', {
+        const d = await _actionsFetchJSON('/api/actions/generate', {
             method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify(payload),
         });
-        const d = await r.json();
         if (d.status !== 'success') throw new Error(d.message || 'Generation failed');
 
         actionsState.data    = d;
@@ -208,10 +235,21 @@ async function generateActions() {
 
         renderActionsResult(d);
     } catch(e) {
+        // Persona-switch context: clear cached `data` so loadActions on
+        // the next tab return won't quietly resurrect the previous
+        // persona's suggestions as if they were valid for the current one.
+        actionsState.data = null;
+        console.warn('[actions] generation failed:', e);
         container.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--danger-text);">
             <div style="font-size:24px;margin-bottom:8px;">⚠</div>
             <div style="font-size:13px;font-weight:600;">Generation failed</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${e.message}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;
+                        max-width:520px;margin-left:auto;margin-right:auto;
+                        word-break:break-word;">${escapeHtml(e.message)}</div>
+            <button class="btn btn-primary" onclick="generateActions()"
+                style="margin-top:18px;padding:10px 24px;font-size:12px;letter-spacing:0.06em;">
+                ↻ Retry
+            </button>
         </div>`;
     }
 
@@ -231,31 +269,53 @@ async function regenerateActions() { await generateActions(); }
 // ── Load cached ───────────────────────────────────────────
 async function loadActions() {
     try {
-        const r = await fetch('/api/actions');
-        const d = await r.json();
-        if (d.status === 'success' && d.actions?.length) {
-            actionsState.data = d;
-            renderActionsResult(d);
-            const inner  = document.getElementById('actionsSettingsInner');
-            const toggle = document.getElementById('actionsSettingsToggle');
-            if (inner)  inner.style.display  = 'none';
-            if (toggle) toggle.textContent   = '▾ Settings';
-            _applyDeepLink();
-        } else {
+        const d = await _actionsFetchJSON('/api/actions');
+        if (d.status !== 'success' || !d.actions?.length) {
             renderActionsEmpty();
+            return;
         }
-    } catch { renderActionsEmpty(); }
+        // If the cached suggestions were generated for a different
+        // persona than the one currently selected, don't render them
+        // as if they're current — the user just switched persona and
+        // expects new output. Show the empty state with a hint so
+        // they hit Generate instead of being silently misled.
+        const activePersona = typeof currentPersona !== 'undefined'
+            ? currentPersona : null;
+        if (activePersona && d.persona && d.persona !== activePersona) {
+            renderActionsEmpty(
+                `Cached suggestions are for "${d.persona}"; generate fresh ones for "${activePersona}".`
+            );
+            return;
+        }
+        actionsState.data = d;
+        renderActionsResult(d);
+        const inner  = document.getElementById('actionsSettingsInner');
+        const toggle = document.getElementById('actionsSettingsToggle');
+        if (inner)  inner.style.display  = 'none';
+        if (toggle) toggle.textContent   = '▾ Settings';
+        _applyDeepLink();
+    } catch (e) {
+        // No more silent empty state — operators need a visible signal
+        // when /api/actions itself is broken (vs "no data yet").
+        console.warn('[actions] loadActions failed:', e);
+        renderActionsEmpty(`Could not load suggestions: ${e.message}`);
+    }
 }
 
-function renderActionsEmpty() {
+function renderActionsEmpty(hint) {
     const container = document.getElementById('actionsContainer');
     if (!container) return;
+    const sub = hint
+        ? escapeHtml(hint)
+        : 'Configure your settings above and generate treasury action suggestions.';
     container.innerHTML = `
     <div style="text-align:center;padding:60px 20px;">
         <div style="font-size:40px;margin-bottom:16px;opacity:0.3;">▶</div>
         <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:8px;">No suggestions yet</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;">
-            Configure your settings above and generate treasury action suggestions.
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;
+                    max-width:520px;margin-left:auto;margin-right:auto;
+                    word-break:break-word;">
+            ${sub}
         </div>
         <button id="actionsGenerateBtn" class="btn btn-primary" onclick="generateActions()"
             style="padding:12px 32px;font-size:13px;letter-spacing:0.08em;">
