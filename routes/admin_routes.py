@@ -367,6 +367,171 @@ def agent_recent_runs(agent_name: str):
 
 
 # ──────────────────────────────────────────────────────────────────
+# GET /api/admin/llm/stats — aggregations over llm_calls
+# ──────────────────────────────────────────────────────────────────
+# Same data the CLI `scripts/llm_usage_report.py --format json` exposes,
+# but reachable from the Admin SPA's LLM Usage tab without shell
+# access. The pricing table is reused from the script so the admin UI
+# and the CLI report identical dollar numbers.
+
+
+@admin_bp.get("/api/admin/llm/stats")
+def llm_stats():
+    """Per-task / per-provider / top-failure breakdown over the
+    trailing window, with cost numbers using the shared
+    `PROVIDER_PRICING` table from `scripts/llm_usage_report.py`.
+
+    Query params:
+      ?hours=<int>  — window size (default 24, clamped at 168)
+    """
+    auth = _require_admin_token()
+    if auth is not None:
+        return auth
+
+    hours, cutoff = _window_from_query(request.args)
+    try:
+        try:
+            conn = _connect()
+        except _DbMissingError as e:
+            return jsonify({
+                "window_hours": hours, "since": cutoff,
+                "totals":       _empty_llm_totals(),
+                "by_task":      [],
+                "by_provider":  [],
+                "top_failures": [],
+                "message":      f"{e} (no LLM calls recorded yet)",
+            })
+
+        with conn:
+            cur = conn.cursor()
+            # llm_calls is created lazily on first telemetry write —
+            # missing-table is just an empty result, not a 500.
+            if not _llm_table_exists(cur):
+                return jsonify({
+                    "window_hours": hours, "since": cutoff,
+                    "totals":       _empty_llm_totals(),
+                    "by_task":      [],
+                    "by_provider":  [],
+                    "top_failures": [],
+                    "message":      "llm_calls table not yet created",
+                })
+
+            cur.execute("""
+                SELECT task, provider, status, latency_ms,
+                       tokens_in, tokens_out, error_short
+                  FROM llm_calls
+                 WHERE timestamp >= ?
+            """, (cutoff,))
+            rows = cur.fetchall()
+
+        # Pricing reused from the CLI script so admin and CLI report
+        # identical numbers. Import inside the handler — a minimal
+        # test env without scripts/ on path shouldn't take down the
+        # whole blueprint at module import.
+        try:
+            from scripts.llm_usage_report import (
+                PROVIDER_PRICING, BASELINE_PROVIDER,
+            )
+        except Exception:
+            PROVIDER_PRICING  = {}
+            BASELINE_PROVIDER = ""
+
+        def _row_cost(provider: str, tokens_in: int, tokens_out: int) -> float:
+            rate = PROVIDER_PRICING.get(provider) or {}
+            return (
+                (tokens_in  or 0) / 1_000_000.0 * float(rate.get("input",  0.0)) +
+                (tokens_out or 0) / 1_000_000.0 * float(rate.get("output", 0.0))
+            )
+
+        def _baseline_cost(tokens_in: int, tokens_out: int) -> float:
+            if not BASELINE_PROVIDER:
+                return 0.0
+            return _row_cost(BASELINE_PROVIDER, tokens_in, tokens_out)
+
+        by_task:         Dict[str, Dict[str, Any]] = {}
+        by_provider:     Dict[str, Dict[str, Any]] = {}
+        failure_buckets: Dict[tuple, int]          = {}
+
+        total_calls      = 0
+        total_ok         = 0
+        total_tokens_in  = 0
+        total_tokens_out = 0
+        total_cost       = 0.0
+        total_baseline   = 0.0
+        all_latencies: List[int] = []
+
+        for r in rows:
+            task     = r["task"]     or "(unknown)"
+            provider = r["provider"] or "(unknown)"
+            ok       = r["status"] == "ok"
+            t_in     = int(r["tokens_in"]  or 0)
+            t_out    = int(r["tokens_out"] or 0)
+            lat      = int(r["latency_ms"] or 0)
+            cost     = _row_cost(provider, t_in, t_out)
+            baseline = _baseline_cost(t_in, t_out)
+
+            total_calls      += 1
+            total_ok         += int(ok)
+            total_tokens_in  += t_in
+            total_tokens_out += t_out
+            total_cost       += cost
+            total_baseline   += baseline
+            if lat:
+                all_latencies.append(lat)
+
+            t_slot = by_task.setdefault(task, _empty_agg())
+            _accumulate(t_slot, ok=ok, lat=lat, tin=t_in, tout=t_out,
+                        cost=cost, baseline=baseline)
+
+            p_slot = by_provider.setdefault(provider, _empty_agg())
+            _accumulate(p_slot, ok=ok, lat=lat, tin=t_in, tout=t_out,
+                        cost=cost, baseline=baseline)
+
+            if not ok:
+                # Bucket failures by (task, provider, truncated error)
+                # so transient blips don't dominate the top-failures
+                # list with hundreds of near-identical strings.
+                key = (task, provider, (r["error_short"] or "")[:120])
+                failure_buckets[key] = failure_buckets.get(key, 0) + 1
+
+        all_lats_sorted = sorted(all_latencies)
+        totals = {
+            "calls":             total_calls,
+            "ok":                total_ok,
+            "fail":              total_calls - total_ok,
+            "success_rate":      round(total_ok / total_calls, 3) if total_calls else 0.0,
+            "tokens_in":         total_tokens_in,
+            "tokens_out":        total_tokens_out,
+            "cost_usd":          round(total_cost,    5),
+            "baseline_cost_usd": round(total_baseline, 5),
+            "savings_usd":       round(total_baseline - total_cost, 5),
+            "latency_p50":       _percentile(all_lats_sorted, 0.5),
+            "latency_p95":       _percentile(all_lats_sorted, 0.95),
+        }
+
+        top_failures = [
+            {"task": k[0], "provider": k[1], "error": k[2], "count": n}
+            for k, n in sorted(failure_buckets.items(), key=lambda x: -x[1])[:10]
+        ]
+
+        return jsonify({
+            "window_hours": hours,
+            "since":        cutoff,
+            "totals":       totals,
+            "by_task":      _shape_llm_breakdown("task",     by_task),
+            "by_provider":  _shape_llm_breakdown("provider", by_provider),
+            "top_failures": top_failures,
+        })
+
+    except Exception as exc:
+        logger.exception("admin llm_stats failed")
+        return jsonify({
+            "status":  "error",
+            "message": f"{type(exc).__name__}: {str(exc)[:200]}",
+        }), 500
+
+
+# ──────────────────────────────────────────────────────────────────
 # GET /api/admin/pipeline/history — daily-monitor run history
 # ──────────────────────────────────────────────────────────────────
 # `daily_monitor.py` writes one JSON file per day under `data/logs/`
@@ -543,3 +708,73 @@ def _percentile(sorted_samples: List[int], p: float) -> int:
     n = len(sorted_samples)
     idx = max(0, min(n - 1, int(round(p * n - 0.5))))
     return sorted_samples[idx]
+
+
+def _llm_table_exists(cur) -> bool:
+    """llm_calls is created lazily on first telemetry write. Check
+    before SELECT so a brand-new deploy doesn't 500 the admin page."""
+    cur.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='llm_calls'"
+    )
+    return cur.fetchone() is not None
+
+
+def _empty_agg() -> Dict[str, Any]:
+    """Slot init for the llm_stats per-task / per-provider buckets."""
+    return {
+        "calls": 0, "ok": 0,
+        "tokens_in": 0, "tokens_out": 0,
+        "cost": 0.0, "baseline": 0.0,
+        "_latencies": [],
+    }
+
+
+def _accumulate(slot: Dict[str, Any], *,
+                ok: bool, lat: int, tin: int, tout: int,
+                cost: float, baseline: float) -> None:
+    slot["calls"]      += 1
+    slot["ok"]         += int(ok)
+    slot["tokens_in"]  += tin
+    slot["tokens_out"] += tout
+    slot["cost"]       += cost
+    slot["baseline"]   += baseline
+    if lat:
+        slot["_latencies"].append(lat)
+
+
+def _shape_llm_breakdown(
+    name_key: str,
+    agg_dict: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Flatten the bucket-by-name dict into a list shape the frontend
+    table renders directly. Mutates `agg_dict` slots (pops the
+    private `_latencies` field once we've computed percentiles)."""
+    out: List[Dict[str, Any]] = []
+    for name, slot in agg_dict.items():
+        lats = sorted(slot.pop("_latencies"))
+        out.append({
+            name_key:       name,
+            "calls":        slot["calls"],
+            "ok":           slot["ok"],
+            "fail":         slot["calls"] - slot["ok"],
+            "success_rate": round(slot["ok"] / slot["calls"], 3) if slot["calls"] else 0.0,
+            "tokens_in":    slot["tokens_in"],
+            "tokens_out":   slot["tokens_out"],
+            "cost_usd":     round(slot["cost"], 5),
+            "latency_p50":  _percentile(lats, 0.5),
+            "latency_p95":  _percentile(lats, 0.95),
+        })
+    out.sort(key=lambda x: -x["calls"])
+    return out
+
+
+def _empty_llm_totals() -> Dict[str, Any]:
+    """Zero-row fallback so the LLM tab renders cleanly on a fresh
+    deploy with no telemetry yet — KPI strip shows zeros instead of
+    nullish dashes or 500ing on the missing-field render path."""
+    return {
+        "calls": 0, "ok": 0, "fail": 0, "success_rate": 0.0,
+        "tokens_in": 0, "tokens_out": 0,
+        "cost_usd": 0.0, "baseline_cost_usd": 0.0, "savings_usd": 0.0,
+        "latency_p50": 0, "latency_p95": 0,
+    }

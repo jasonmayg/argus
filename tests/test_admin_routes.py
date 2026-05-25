@@ -429,6 +429,148 @@ class TestAdminPage:
 
 
 # ──────────────────────────────────────────────────────────────────
+# /api/admin/llm/stats — LLM Usage tab data
+# ──────────────────────────────────────────────────────────────────
+
+def _seed_llm_calls(path: Path, rows: list[dict]) -> None:
+    """Insert llm_calls rows. Schema is already created by _seed_db
+    (which makes all three tables), so this just appends rows."""
+    conn = sqlite3.connect(str(path))
+    for r in rows:
+        conn.execute("""
+            INSERT INTO llm_calls
+              (timestamp, task, provider, model, status, latency_ms,
+               tokens_in, tokens_out, error_short, fallback_index, request_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            r.get("timestamp",   _now_iso()),
+            r.get("task",        "guardian_chat"),
+            r.get("provider",    "anthropic_sonnet"),
+            r.get("model",       "claude-sonnet-4-6"),
+            r.get("status",      "ok"),
+            r.get("latency_ms",  100),
+            r.get("tokens_in",   1000),
+            r.get("tokens_out",  200),
+            r.get("error_short", None),
+            r.get("fallback_index", 0),
+            r.get("request_id",  "r0"),
+        ))
+    conn.commit()
+    conn.close()
+
+
+class TestLlmStats:
+    """`/api/admin/llm/stats` — the data backing the Admin SPA's LLM
+    Usage tab. Pins the JSON shape, per-task / per-provider
+    aggregation, cost math against the shared `PROVIDER_PRICING`
+    table, and the no-data / no-table fallbacks."""
+
+    def test_returns_zero_totals_when_db_missing(self, client):
+        """Pre-first-run state: db file doesn't exist. Endpoint
+        returns the zero-shape, not a 500."""
+        r = client.get("/api/admin/llm/stats")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["totals"]["calls"] == 0
+        assert d["by_task"] == []
+        assert d["by_provider"] == []
+        assert "telemetry db not present" in d.get("message", "")
+
+    def test_returns_zero_totals_when_table_missing(self, client):
+        """db exists (other code created it) but llm_calls table
+        hasn't been written to yet. Same zero-shape, not a 500."""
+        _seed_db(client._db_path, [])
+        # _seed_db creates the llm_calls table — drop it to simulate
+        # a pre-PR-0 db that predates llm telemetry.
+        conn = sqlite3.connect(str(client._db_path))
+        conn.execute("DROP TABLE llm_calls")
+        conn.commit()
+        conn.close()
+
+        r = client.get("/api/admin/llm/stats")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["totals"]["calls"] == 0
+        assert d.get("message") == "llm_calls table not yet created"
+
+    def test_aggregates_by_task_and_provider(self, client):
+        _seed_db(client._db_path, [])  # creates schemas
+        _seed_llm_calls(client._db_path, [
+            {"task": "guardian_chat",    "provider": "anthropic_sonnet",
+             "tokens_in": 1000, "tokens_out": 500, "latency_ms": 200},
+            {"task": "guardian_chat",    "provider": "anthropic_sonnet",
+             "tokens_in": 2000, "tokens_out": 800, "latency_ms": 300},
+            {"task": "regulatory_classify", "provider": "openai_4o_mini",
+             "tokens_in": 500,  "tokens_out": 100, "latency_ms": 150},
+            {"task": "regulatory_classify", "provider": "openai_4o_mini",
+             "status": "failed", "error_short": "timeout",
+             "tokens_in": 0,    "tokens_out": 0,   "latency_ms": 30000},
+        ])
+
+        r = client.get("/api/admin/llm/stats?hours=24")
+        assert r.status_code == 200
+        d = r.get_json()
+
+        # Totals
+        assert d["totals"]["calls"] == 4
+        assert d["totals"]["ok"]    == 3
+        assert d["totals"]["fail"]  == 1
+        assert d["totals"]["success_rate"] == 0.75
+
+        # By task — sorted by calls desc, so guardian_chat (2) first
+        tasks = {t["task"]: t for t in d["by_task"]}
+        assert tasks["guardian_chat"]["calls"]      == 2
+        assert tasks["regulatory_classify"]["calls"] == 2
+        assert tasks["regulatory_classify"]["fail"]  == 1
+
+        # By provider
+        providers = {p["provider"]: p for p in d["by_provider"]}
+        assert providers["anthropic_sonnet"]["calls"]   == 2
+        assert providers["openai_4o_mini"]["calls"]     == 2
+
+    def test_top_failures_buckets_by_task_provider_error(self, client):
+        _seed_db(client._db_path, [])
+        _seed_llm_calls(client._db_path, [
+            {"task": "t1", "provider": "p1", "status": "failed",
+             "error_short": "rate limit"},
+            {"task": "t1", "provider": "p1", "status": "failed",
+             "error_short": "rate limit"},
+            {"task": "t1", "provider": "p1", "status": "failed",
+             "error_short": "different err"},
+        ])
+        d = client.get("/api/admin/llm/stats?hours=24").get_json()
+        # Same (task, provider, error) collapse into one bucket with count
+        rate_limit_bucket = [
+            f for f in d["top_failures"]
+            if f["task"] == "t1" and f["error"] == "rate limit"
+        ]
+        assert rate_limit_bucket and rate_limit_bucket[0]["count"] == 2
+
+    def test_window_excludes_old_calls(self, client):
+        """24h window must skip rows from 100h ago."""
+        _seed_db(client._db_path, [])
+        _seed_llm_calls(client._db_path, [
+            {"timestamp": _now_iso(0),    "task": "fresh"},
+            {"timestamp": _now_iso(-100), "task": "stale"},
+        ])
+        d = client.get("/api/admin/llm/stats?hours=24").get_json()
+        tasks = {t["task"] for t in d["by_task"]}
+        assert tasks == {"fresh"}, f"window leak: {tasks}"
+
+    def test_cost_uses_pricing_table(self, client):
+        """Spot-check cost math against PROVIDER_PRICING from the
+        CLI script. anthropic_sonnet is $3/M in + $15/M out per the
+        script; 1M in + 1M out = $18."""
+        _seed_db(client._db_path, [])
+        _seed_llm_calls(client._db_path, [
+            {"task": "x", "provider": "anthropic_sonnet",
+             "tokens_in": 1_000_000, "tokens_out": 1_000_000},
+        ])
+        d = client.get("/api/admin/llm/stats?hours=24").get_json()
+        assert d["totals"]["cost_usd"] == pytest.approx(18.00, abs=0.01)
+
+
+# ──────────────────────────────────────────────────────────────────
 # /api/admin/pipeline/history — daily-monitor JSON log scan
 # ──────────────────────────────────────────────────────────────────
 
