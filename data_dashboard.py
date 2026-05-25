@@ -735,13 +735,23 @@ _DATA_DASHBOARD_HTML = r"""
     .pill.high { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
     .pill.med  { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
 
-    /* Table wrapper — no `max-height` cap on Inventory so every CSV
-       row is visible at once. The parent grid's `align-items: start`
-       lets the card grow to the table's natural height; if the row
-       count is very large, the browser handles overflow at the page
-       level instead of a tiny inner scrollbar. Coverage Matrix uses
-       its own `.matrix-wrap` rules below for the column-heavy case. */
-    .tbl-wrap { border: 1px solid var(--border); border-radius: 4px; }
+    /* Inventory table wrapper — capped height with internal scroll so
+       a long source list doesn't sprawl down the page; sticky header
+       keeps column titles visible while the user scans the rows. The
+       parent grid's `align-items: start` still lets the card shrink
+       to the table's natural height when there are few rows, so
+       short inventories don't show a giant empty scroll area. */
+    .tbl-wrap {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      max-height: 480px;
+      overflow: auto;
+    }
+    .tbl-wrap thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
 
     /* Coverage Matrix — full width, country×indicator grid can have
        15+ columns. Compact cells + horizontal scroll + sticky first
@@ -760,13 +770,13 @@ _DATA_DASHBOARD_HTML = r"""
     /* Headers can wrap to 2 lines (long indicator names like "GDELT
        Conflict (Light)" otherwise force ~150px column widths and
        blow up the matrix). Cap width keeps the column compact;
-       `vertical-align: bottom` keeps wrapped + non-wrapped headers
-       baseline-aligned. */
+       `vertical-align: top` anchors wrapped + non-wrapped headers
+       to the same top line so the header row reads as one strip. */
     .matrix-wrap thead th {
       padding: 4px 8px;
       white-space: normal;
       max-width: 90px;
-      vertical-align: bottom;
+      vertical-align: top;
       line-height: 1.2;
       position: sticky;
       top: 0;
@@ -1128,15 +1138,30 @@ function populateSelects(matrix) {
   _matrixCache = matrix;
   const countries = matrix.countries.map(c => ({ value: c, label: c }));
 
+  // Compare chart defaults to Australia vs China CPI when both
+  // countries (and the CPI indicator) are present in the snapshot;
+  // otherwise fall back to the first two countries in the matrix
+  // and the first indicator they share.
+  const has = (c) => matrix.countries.includes(c);
+  const c1Default = has("Australia") ? "Australia" : countries[0]?.value;
+  const c2Default = has("China")
+    ? "China"
+    : (countries[1]?.value ?? countries[0]?.value);
+
   setOptions(el("single_country"), countries, countries[0]?.value);
-  setOptions(el("c1"),             countries, countries[0]?.value);
-  setOptions(el("c2"),             countries, countries[1]?.value ?? countries[0]?.value);
+  setOptions(el("c1"),             countries, c1Default);
+  setOptions(el("c2"),             countries, c2Default);
 
   // Defer indicator dropdowns to the per-country filters so the
   // initial selection is guaranteed to be a (country × indicator)
   // pair that actually has data on disk.
   refreshSingleIndicators();
   refreshCompareIndicators();
+
+  const compareEl = el("compare_indicator");
+  if (Array.from(compareEl.options).some(o => o.value === "cpi")) {
+    compareEl.value = "cpi";
+  }
 
   _wireDropdownListeners();
 }
@@ -1324,6 +1349,13 @@ async function boot() {
     buildInventoryTable();
     buildMatrix(matData);
     populateSelects(matData);
+
+    // Pre-render both charts so users land on populated panels
+    // instead of empty canvases. Fire-and-forget — a series-level
+    // failure surfaces in each chart's own error slot, it shouldn't
+    // hold up the "Ready" status for the rest of the page.
+    loadSingle();
+    loadCompare();
 
     setStatus("Ready", false);
   } catch (e) {
