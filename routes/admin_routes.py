@@ -376,7 +376,16 @@ def agent_recent_runs(agent_name: str):
 # the same data in the Admin SPA's Pipeline tab.
 
 
-_PIPELINE_LOG_DIR     = Path(os.getenv("ARGUS_DAILY_LOG_DIR", "data/logs"))
+# Anchor the log dir to the repo root rather than the process cwd —
+# gunicorn launches from the repo root today, but a future systemd
+# unit or container with WorkingDirectory=/ would silently resolve
+# `data/logs` to `/data/logs` and the endpoint would report "no
+# runs yet" forever. The env var still wins when set explicitly.
+_REPO_ROOT            = Path(__file__).resolve().parent.parent
+_PIPELINE_LOG_DIR     = Path(
+    os.getenv("ARGUS_DAILY_LOG_DIR")
+    or (_REPO_ROOT / "data" / "logs")
+)
 _PIPELINE_LOG_GLOB    = "daily_monitor_*.json"
 _PIPELINE_DEFAULT_LIMIT = 20
 _PIPELINE_MAX_LIMIT     = 100
@@ -520,10 +529,6 @@ def _truncated_detail(body: Dict[str, Any], max_bytes: int = 32_000) -> Dict[str
         "status":      body.get("status"),
     }
 
-
-# ──────────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────────
 
 def _percentile(sorted_samples: List[int], p: float) -> int:
     """Nearest-rank percentile for an already-sorted int list.
