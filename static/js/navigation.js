@@ -13,6 +13,38 @@ const PAGE_TITLES = {
     settings: 'Persona Settings',
 };
 
+// ── URL ↔ tab map ────────────────────────────────────────
+// Every SPA tab gets a real URL so users can bookmark / share /
+// back-button to a specific view (and so navigating away to
+// /data or /admin and coming back lands on the right tab instead
+// of always resetting to Home). Server-side routes for these
+// paths live in `routes/pipeline_routes.py` — all render the
+// same dashboard.html; the actual tab activation happens here.
+//
+// `settings` deliberately has no path entry — Persona Settings is
+// a modal, not a tab. `data` uses `/data-source` (distinct from
+// `/data`, which serves the standalone data-dashboard page that
+// the iframe inside `page-data` actually points to).
+const PATH_TO_PAGE = {
+    '/':                 'home',
+    '/home':             'home',
+    '/risk-monitor':     'risk',
+    '/decision-support': 'actions',
+    '/regulatory':       'news',
+    '/cash-position':    'cash',
+    '/chat':             'chat',
+    '/data-source':      'data',
+};
+const PAGE_TO_PATH = {
+    home:    '/',
+    risk:    '/risk-monitor',
+    actions: '/decision-support',
+    news:    '/regulatory',
+    cash:    '/cash-position',
+    chat:    '/chat',
+    data:    '/data-source',
+};
+
 // ── Page load cache — track last load time per page ───────
 const _pageLoadedAt = {};
 const PAGE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in ms
@@ -41,7 +73,9 @@ function showPage(pageId, navEl) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
     document.getElementById('page-' + pageId).classList.add('active');
-    document.getElementById('topbarTitle').textContent = PAGE_TITLES[pageId] || pageId;
+    const pageLabel = PAGE_TITLES[pageId] || pageId;
+    document.getElementById('topbarTitle').textContent = pageLabel;
+    document.title = `ARGUS — ${pageLabel}`;
 
     if (navEl) navEl.classList.add('active');
 
@@ -72,7 +106,46 @@ function showPage(pageId, navEl) {
         if (_shouldReload('cash')) { renderCashPage(); _markLoaded('cash'); }
     }
     if (pageId === 'settings') loadPersonaSettings();
+
+    // Keep URL in step with the active tab so reloads / back-forward
+    // land where the user expects. Skip the push when the URL already
+    // matches — this is the path on initial boot and on popstate
+    // (browser already changed the URL by the time we re-render).
+    const targetPath = PAGE_TO_PATH[pageId];
+    if (targetPath && window.location.pathname !== targetPath) {
+        history.pushState({ pageId }, '', targetPath);
+    }
 }
+
+// ── URL → tab boot + back/forward handling ──────────────
+// On a fresh page load (or hard refresh of /risk-monitor etc.)
+// the server returned dashboard.html with `page-home.active`
+// hard-coded in the HTML. Read the URL and activate the right
+// tab. Skip when we're already on /home so we don't double-fire
+// the Home loaders.
+window.addEventListener('DOMContentLoaded', () => {
+    const initialPage = PATH_TO_PAGE[window.location.pathname];
+    if (initialPage && initialPage !== 'home') {
+        const navEl = document.querySelector(
+            `.nav-item[onclick*="showPage('${initialPage}'"]`
+        );
+        showPage(initialPage, navEl);
+    }
+});
+
+// Browser back/forward — `popstate` fires after the URL has
+// already changed, so just re-derive the active tab from it.
+// showPage's URL-sync check will be a no-op (paths already match).
+window.addEventListener('popstate', (e) => {
+    const pageId =
+        (e.state && e.state.pageId) ||
+        PATH_TO_PAGE[window.location.pathname] ||
+        'home';
+    const navEl = document.querySelector(
+        `.nav-item[onclick*="showPage('${pageId}'"]`
+    );
+    showPage(pageId, navEl);
+});
 
 function toggleSection(id) {
     const el = document.getElementById(id);

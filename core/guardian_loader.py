@@ -13,6 +13,8 @@ import re
 import subprocess
 import argparse
 import importlib.util
+import threading
+import time
 from collections import Counter
 from datetime import datetime
 from functools import lru_cache
@@ -46,6 +48,21 @@ DEFAULT_GUARDIAN_GCS_BUCKET = "your-gcs-bucket"
 _BOOL_FALSE_SET = {"0", "false", "no", "off"}
 _ALERTS_SNAPSHOT_RE = re.compile(r"alerts_\d{8}_\d{6}\.json$")
 _RAW_DT_SEGMENT_RE = re.compile(r"^dt=\d{4}-\d{2}-\d{2}$")
+
+# ---------------------------------------------------------------------------
+# GCS snapshot cache
+# ---------------------------------------------------------------------------
+# The /api/guardian/dashboard endpoint hits `_load_guardian_snapshot_from_gcs`
+# on every request. Without a cache that's one GCS round-trip per request
+# (downloading a multi-MB snapshot JSON), which dominates the dashboard's
+# perceived latency — the KPI strip can't render until the whole payload
+# arrives. A short in-process TTL turns subsequent calls in the same TTL
+# window into a dict lookup. 60s is the default, tunable via
+# GUARDIAN_GCS_CACHE_TTL — long enough to absorb autorefresh + multi-tab
+# bursts, short enough that fresh snapshots show up within a minute.
+_GCS_CACHE_TTL: int = int(os.getenv("GUARDIAN_GCS_CACHE_TTL", "60"))
+_gcs_snapshot_cache: dict[tuple, tuple[float, dict]] = {}
+_gcs_snapshot_cache_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # Environment helpers
@@ -788,6 +805,21 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         return {"ok": False, "snapshot": None, "snapshot_ref": "", "previous_snapshot": None,
                 "message": "missing GUARDIAN_GCS_BUCKET", "bucket": "", "prefix": prefix}
 
+    # Cache fast-path. Successful loads served from a TTL'd module-level
+    # dict so /api/guardian/dashboard requests inside the window skip
+    # the GCS round-trip entirely (the dominant contributor to KPI
+    # latency). Cache key is the (bucket, prefix, explicit_latest)
+    # triple so env switches still pick up a fresh load. Failures are
+    # never cached — a transient GCS hiccup shouldn't get stuck for a
+    # full TTL window.
+    cache_key = (bucket_name, prefix, explicit_latest)
+    with _gcs_snapshot_cache_lock:
+        entry = _gcs_snapshot_cache.get(cache_key)
+        if entry is not None:
+            cached_ts, cached_result = entry
+            if time.time() - cached_ts < _GCS_CACHE_TTL:
+                return cached_result
+
     try:
         from google.cloud import storage  # type: ignore
     except Exception as e:
@@ -825,6 +857,14 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
             loaded_object = name
             break
 
+    # List the bucket to discover dated snapshots. Used both as a
+    # fallback when `latest_candidates` didn't yield a snapshot, and
+    # to pick the `previous_snapshot` for trend comparison even when
+    # the latest pointer loaded fine. An earlier revision of this PR
+    # gated this on `loaded_snapshot is None` to save one GCS call,
+    # but that broke trend on non-raw `data_mode` deploys for the
+    # entire cache TTL window — the cache alone is the much bigger
+    # perf win, so always-list is the safer default here.
     snapshot_candidates = []
     try:
         for blob in client.list_blobs(bucket_name, prefix=prefix or None):
@@ -919,7 +959,7 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         elif len(snapshot_candidates) >= 2:
             previous_snapshot = _download_blob_json(snapshot_candidates[1])
 
-    return {
+    result = {
         "ok": True,
         "snapshot": loaded_snapshot,
         "snapshot_ref": f"gs://{bucket_name}/{loaded_object}",
@@ -928,6 +968,19 @@ def _load_guardian_snapshot_from_gcs() -> dict[str, Any]:
         "bucket": bucket_name,
         "prefix": prefix,
     }
+    # Cache the successful payload — same TTL window covers the
+    # whole result dict (snapshot + previous_snapshot + metadata) so
+    # downstream readers don't need to know caching exists.
+    #
+    # NOTE: stored by reference, not deep-copied. Every code path that
+    # touches `gcs_result["snapshot"]` MUST treat it as immutable —
+    # filter/build new collections, never `.sort()`/`.pop()`/etc.
+    # in place. A mutation would persist across the TTL window and
+    # poison subsequent cache hits. Current callers (`_filter_guardian_alerts`,
+    # `build_alert_list`) already follow this convention; keep it that way.
+    with _gcs_snapshot_cache_lock:
+        _gcs_snapshot_cache[cache_key] = (time.time(), result)
+    return result
 
 
 def _resolve_guardian_snapshot_path() -> Path:
