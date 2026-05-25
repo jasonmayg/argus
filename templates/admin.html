@@ -690,6 +690,11 @@ async function loadLlmStats() {
     try {
         const r = await fetch(`/api/admin/llm/stats?hours=${hours}`);
         const d = await r.json();
+        // Backend's outer except returns 200-ish JSON in most paths,
+        // but a hard 500 (e.g. werkzeug-level crash) still serialises
+        // to JSON — surface it as a real error rather than silently
+        // rendering zeros across the KPI strip.
+        if (!r.ok) throw new Error(d.message || `HTTP ${r.status}`);
         const t = d.totals || {};
         generatedEl.textContent =
             `Window ${d.window_hours || hours} h` +
@@ -764,7 +769,18 @@ async function loadLlmStats() {
 
     } catch (e) {
         generatedEl.textContent = `Failed to load: ${e.message}`;
-        // Reset KPI strip rather than leaving "Loading…" stuck.
+        // Reset KPI strip too — otherwise stale numbers from a
+        // previous successful window load contradict the failure
+        // banner above and confuse operators ("is it actually
+        // broken or do those numbers still apply?").
+        for (const id of ['llmTotalCalls', 'llmSuccessRate', 'llmCost', 'llmLatency']) {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = '—'; el.className = 'kpi-value'; }
+        }
+        for (const id of ['llmTotalCallsSub', 'llmSuccessRateSub', 'llmCostSub', 'llmLatencySub']) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        }
         document.querySelector('#tblLlmTask tbody').innerHTML =
             `<tr><td class="empty pct-bad" colspan="7">Failed to load LLM telemetry: ${_escape(e.message)}</td></tr>`;
         document.querySelector('#tblLlmProvider tbody').innerHTML =
