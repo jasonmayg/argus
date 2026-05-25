@@ -568,3 +568,141 @@ class TestLlmStats:
         ])
         d = client.get("/api/admin/llm/stats?hours=24").get_json()
         assert d["totals"]["cost_usd"] == pytest.approx(18.00, abs=0.01)
+
+
+# ──────────────────────────────────────────────────────────────────
+# /api/admin/pipeline/history — daily-monitor JSON log scan
+# ──────────────────────────────────────────────────────────────────
+
+import json as _json     # noqa: E402  — needed only by these tests
+
+
+@pytest.fixture
+def pipeline_log_dir(tmp_path, monkeypatch):
+    """Redirect the pipeline log dir to a tmp path so each test gets
+    a clean slate. Returns the tmp Path."""
+    log_dir = tmp_path / "logs"
+    monkeypatch.setattr(admin_routes, "_PIPELINE_LOG_DIR", log_dir)
+    return log_dir
+
+
+def _write_pipeline_log(log_dir: Path, name: str, body: dict) -> Path:
+    """Helper: write a synthetic daily_monitor JSON file."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / name
+    path.write_text(_json.dumps(body), encoding="utf-8")
+    return path
+
+
+class TestPipelineHistory:
+    """`/api/admin/pipeline/history` — backs the Admin SPA's Pipeline
+    tab. Pins shape, sort order, and the corrupt-file / missing-dir
+    no-500 contracts."""
+
+    def test_missing_log_dir_returns_empty(self, client, pipeline_log_dir):
+        # log_dir fixture doesn't create the directory.
+        r = client.get("/api/admin/pipeline/history")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["runs"] == []
+        assert "log directory not present" in d["message"]
+
+    def test_empty_log_dir_returns_empty_runs(self, client, pipeline_log_dir):
+        pipeline_log_dir.mkdir()    # dir exists, no files
+        r = client.get("/api/admin/pipeline/history")
+        assert r.status_code == 200
+        assert r.get_json()["runs"] == []
+
+    def test_runs_sorted_newest_first(self, client, pipeline_log_dir):
+        """mtime, not filename — operators occasionally manually
+        re-run on the same day and we want the latest mtime first."""
+        old = _write_pipeline_log(
+            pipeline_log_dir, "daily_monitor_20260101.json",
+            {"timestamp": "2026-01-01T00:00:00", "status": "success"},
+        )
+        new = _write_pipeline_log(
+            pipeline_log_dir, "daily_monitor_20260523.json",
+            {"timestamp": "2026-05-23T00:00:00", "status": "success"},
+        )
+        # Force `new` mtime ahead so we're testing mtime-based sort,
+        # not filename luck.
+        import os as _os, time as _time
+        _os.utime(old, (1700000000, 1700000000))
+        _time.sleep(0.01)
+        _os.utime(new, (1800000000, 1800000000))
+
+        d = client.get("/api/admin/pipeline/history").get_json()
+        assert d["runs"][0]["filename"] == "daily_monitor_20260523.json"
+        assert d["runs"][1]["filename"] == "daily_monitor_20260101.json"
+
+    def test_projects_expected_fields(self, client, pipeline_log_dir):
+        """The tab table renders specific nested fields — pin the
+        projection so future schema additions don't accidentally
+        drop news_count / guardian / gcs_bridge keys."""
+        _write_pipeline_log(
+            pipeline_log_dir, "daily_monitor_20260523.json",
+            {
+                "timestamp":  "2026-05-23T17:39:38",
+                "status":     "success",
+                "news_count": 32,
+                "guardian":   {
+                    "status": "success", "alerts_count": 31,
+                    "events_count": 142, "triggered_count": 0,
+                },
+                "gcs_bridge": {
+                    "status": "success", "alerts_count": 518,
+                    "events_count": 280, "triggered_count": 194,
+                    "chroma_mirrored": 518,
+                },
+            },
+        )
+        run = client.get("/api/admin/pipeline/history").get_json()["runs"][0]
+        assert run["status"] == "success"
+        assert run["news_count"] == 32
+        assert run["guardian"]["alerts_count"] == 31
+        assert run["gcs_bridge"]["alerts_count"] == 518
+        assert run["gcs_bridge"]["chroma_mirrored"] == 518
+
+    def test_corrupt_file_surfaces_parse_error(self, client, pipeline_log_dir):
+        """One half-written / hand-edited file mustn't blank out the
+        whole list. It should appear as `status=parse_error` so
+        operators see something's wrong."""
+        pipeline_log_dir.mkdir(parents=True, exist_ok=True)
+        (pipeline_log_dir / "daily_monitor_20260523.json").write_text(
+            "{not valid json", encoding="utf-8")
+        _write_pipeline_log(
+            pipeline_log_dir, "daily_monitor_20260522.json",
+            {"timestamp": "2026-05-22T...", "status": "success"},
+        )
+
+        d = client.get("/api/admin/pipeline/history").get_json()
+        statuses = {r["status"]: r for r in d["runs"]}
+        # Both rows show up, one healthy, one explicitly bad.
+        assert "parse_error" in statuses
+        assert "success"     in statuses
+
+    def test_limit_clamps_to_max(self, client, pipeline_log_dir):
+        """?limit=99999 must clamp to _PIPELINE_MAX_LIMIT (100) so a
+        pathological caller can't read every log file ever written."""
+        pipeline_log_dir.mkdir()
+        # Just need 1 file to confirm the limit is read + clamped.
+        _write_pipeline_log(
+            pipeline_log_dir, "daily_monitor_20260523.json",
+            {"status": "success"},
+        )
+        d = client.get("/api/admin/pipeline/history?limit=99999").get_json()
+        assert d["limit"] == 100
+
+    def test_truncates_huge_payload_in_detail(self, client, pipeline_log_dir):
+        """A pathologically large daily-monitor JSON (say someone
+        attached a stack trace) shouldn't bloat the API response.
+        The full body lives on disk; the drill-down shows a sentinel."""
+        huge = {
+            "status":    "success",
+            "timestamp": "2026-05-23T...",
+            "big":       "x" * 100_000,   # well above the 32k cap
+        }
+        _write_pipeline_log(pipeline_log_dir, "daily_monitor_20260523.json", huge)
+        run = client.get("/api/admin/pipeline/history").get_json()["runs"][0]
+        assert run["detail"].get("_truncated") is True
+        assert run["detail"]["_size_bytes"] > 32_000

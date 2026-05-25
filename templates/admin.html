@@ -306,13 +306,58 @@
             </div>
         </div>
 
-        <!-- ─────────────────────────────── Pipeline tab placeholder ────────────────────── -->
+        <!-- ─────────────────────────────── Pipeline tab ─────────────────────────────────── -->
         <div class="tab-panel" id="panel-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" hidden>
-            <div class="empty-soon">
-                <strong>Pipeline</strong>
-                Coming in the next admin iteration — daily-monitor run history with stage status,
-                Fed crawler success / failure, GCS bridge counts. For now check
-                <code>data/logs/daily_monitor_*.json</code> on the server.
+            <div class="ctrl">
+                <label for="pipelineLimit">Show</label>
+                <select id="pipelineLimit" onchange="loadPipelineHistory()">
+                    <option value="10">Last 10 runs</option>
+                    <option value="20" selected>Last 20 runs</option>
+                    <option value="50">Last 50 runs</option>
+                    <option value="100">Last 100 runs</option>
+                </select>
+                <span class="sub" id="pipelineGeneratedAt" style="margin: 0;">—</span>
+            </div>
+
+            <div class="grid-kpi">
+                <div class="kpi-card">
+                    <div class="kpi-label">Runs in View</div>
+                    <div class="kpi-value" id="pipTotalRuns">—</div>
+                    <div class="kpi-sub" id="pipTotalRunsSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" id="pipSuccessRate">—</div>
+                    <div class="kpi-sub" id="pipSuccessRateSub">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Latest Run</div>
+                    <div class="kpi-value" id="pipLatestStatus" style="font-size:16px;padding-top:4px;">—</div>
+                    <div class="kpi-sub" id="pipLatestTs">—</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Latest Bridge</div>
+                    <div class="kpi-value" id="pipLatestAlerts">—</div>
+                    <div class="kpi-sub" id="pipLatestAlertsSub">scored alerts</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Recent runs · click a row for the raw stage payload</div>
+                <table id="tblPipeline">
+                    <thead>
+                        <tr>
+                            <th>When (UTC)</th>
+                            <th>Overall</th>
+                            <th>Fed news</th>
+                            <th>Guardian (legacy)</th>
+                            <th>GCS bridge</th>
+                            <th>Chroma</th>
+                            <th>File</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td class="empty" colspan="7">—</td></tr></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -356,7 +401,7 @@ const _TAB_LOADERS = {
     rag:      () => loadRagStats(),
     agents:   () => loadAgentsSummary(),
     llm:      () => loadLlmStats(),
-    pipeline: () => { /* placeholder */ },
+    pipeline: () => loadPipelineHistory(),
 };
 const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false };
 
@@ -675,7 +720,6 @@ function _recentRunRow(run) {
     </tr>`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────
 // LLM Usage tab loader — aggregates /api/admin/llm/stats into the KPI
 // strip + per-task / per-provider / top-failures tables. Cost numbers
 // come from the same `PROVIDER_PRICING` table the CLI script uses, so
@@ -789,6 +833,175 @@ async function loadLlmStats() {
             `<tr><td class="empty pct-bad" colspan="4">—</td></tr>`;
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Pipeline tab loader — reads /api/admin/pipeline/history and renders the
+// recent daily-monitor runs. Click a row to expand the raw stage JSON.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Cache the runs list so the drill-down toggle doesn't have to refetch
+// (same pattern as the Agents tab — see Copilot review on PR #68).
+let _pipelineRunsCache = [];
+const _pipelineDrillOpen = new Set();
+
+async function loadPipelineHistory() {
+    const limit = document.getElementById('pipelineLimit').value;
+    const genEl = document.getElementById('pipelineGeneratedAt');
+    genEl.textContent = 'Loading…';
+
+    try {
+        const r = await fetch(`/api/admin/pipeline/history?limit=${limit}`);
+        const d = await r.json();
+        const runs = d.runs || [];
+        _pipelineRunsCache = runs;
+
+        genEl.textContent =
+            `${runs.length} run${runs.length === 1 ? '' : 's'}` +
+            (d.message ? ` · ${d.message}` : ` · log dir ${d.log_dir}`);
+
+        const okCount     = runs.filter(r => r.status === 'success').length;
+        const totalRuns   = runs.length;
+        const latest      = runs[0] || null;
+        const latestBridge = (latest && latest.gcs_bridge) || {};
+
+        document.getElementById('pipTotalRuns').textContent = totalRuns;
+        document.getElementById('pipTotalRunsSub').textContent =
+            totalRuns ? `from ${d.log_dir}` : 'no daily runs yet';
+
+        const srEl = document.getElementById('pipSuccessRate');
+        if (totalRuns) {
+            const pct = Math.round((okCount / totalRuns) * 1000) / 10;
+            srEl.textContent = `${pct}%`;
+            srEl.className = 'kpi-value ' + _hitRateColor(pct);
+            document.getElementById('pipSuccessRateSub').textContent =
+                `${okCount} of ${totalRuns} status=success`;
+        } else {
+            srEl.textContent = '—';
+            srEl.className = 'kpi-value';
+            document.getElementById('pipSuccessRateSub').textContent = '—';
+        }
+
+        const lsEl = document.getElementById('pipLatestStatus');
+        if (latest) {
+            lsEl.innerHTML = _statusPillHtml(latest.status);
+            document.getElementById('pipLatestTs').textContent =
+                (latest.timestamp || latest.mtime || '—').substr(0, 19).replace('T', ' ');
+        } else {
+            lsEl.textContent = '—';
+            document.getElementById('pipLatestTs').textContent = '—';
+        }
+
+        const alerts = latestBridge.alerts_count;
+        document.getElementById('pipLatestAlerts').textContent =
+            (alerts === null || alerts === undefined) ? '—' : alerts;
+        document.getElementById('pipLatestAlertsSub').textContent =
+            latestBridge.triggered_count != null
+                ? `${latestBridge.triggered_count} triggered`
+                : 'scored alerts';
+
+        _renderPipelineTable(runs);
+    } catch (e) {
+        genEl.textContent = `Failed to load: ${e.message}`;
+        document.querySelector('#tblPipeline tbody').innerHTML =
+            `<tr><td class="empty pct-bad" colspan="7">Failed to load pipeline history: ${_escape(e.message)}</td></tr>`;
+    }
+}
+
+function _statusPillHtml(status) {
+    const cls = (status === 'success' || status === 'ok')   ? 'ok'   :
+                (status === 'parse_error' || status === 'error') ? 'bad'  :
+                (status === 'running' || status === 'skipped')   ? 'warn' :
+                'idle';
+    return `<span class="pill ${cls}">${_escape(status || '—')}</span>`;
+}
+
+function _renderPipelineTable(runs) {
+    const tbody = document.querySelector('#tblPipeline tbody');
+    if (!runs.length) {
+        tbody.innerHTML = `<tr><td class="empty" colspan="7">No daily-monitor runs found yet.</td></tr>`;
+        return;
+    }
+
+    const rows = [];
+    runs.forEach((run, i) => {
+        const guardian = run.guardian   || {};
+        const bridge   = run.gcs_bridge || {};
+        const stamp    = (run.timestamp || run.mtime || '').substr(0, 19).replace('T', ' ');
+        const isOpen   = _pipelineDrillOpen.has(i);
+        const fedTxt   = run.news_count == null
+            ? (run.status === 'error' && (run.error || '').toLowerCase().includes('fetch') ? '⚠ failed' : '—')
+            : `${run.news_count} items`;
+        const guardTxt = (guardian.alerts_count != null)
+            ? `${guardian.alerts_count} alerts`
+            : (guardian.status || '—');
+        const bridgeTxt = (bridge.alerts_count != null)
+            ? `${bridge.alerts_count} alerts · ${bridge.triggered_count ?? 0} triggered`
+            : (bridge.status || '—');
+        const chromaTxt = bridge.chroma_mirrored != null ? `${bridge.chroma_mirrored} upserted` : '—';
+
+        rows.push(`<tr class="row-click ${isOpen ? 'row-expanded' : ''}" data-run-idx="${i}">
+            <td class="ts">${_escape(stamp)}</td>
+            <td>${_statusPillHtml(run.status)}</td>
+            <td>${_escape(fedTxt)}</td>
+            <td>${_escape(guardTxt)}</td>
+            <td>${_escape(bridgeTxt)}</td>
+            <td>${_escape(chromaTxt)}</td>
+            <td><span class="req-id">${_escape(run.filename || '')}</span></td>
+        </tr>`);
+        if (isOpen) {
+            rows.push(`<tr id="pipdrill-${i}"><td colspan="7" class="recent-runs">
+                ${_renderPipelineDetail(run)}
+            </td></tr>`);
+        }
+    });
+    tbody.innerHTML = rows.join('');
+
+    // Bind via JS (no inline onclick) — same XSS-safe pattern as the
+    // Agents tab. data-run-idx is an integer so even if filename has
+    // weird chars, the handler reads a safe int.
+    tbody.querySelectorAll('tr.row-click').forEach(tr => {
+        tr.addEventListener('click', () => togglePipelineDrill(parseInt(tr.dataset.runIdx, 10)));
+    });
+}
+
+function togglePipelineDrill(idx) {
+    if (Number.isNaN(idx)) return;
+    if (_pipelineDrillOpen.has(idx)) {
+        _pipelineDrillOpen.delete(idx);
+    } else {
+        _pipelineDrillOpen.add(idx);
+    }
+    _renderPipelineTable(_pipelineRunsCache);
+}
+
+function _renderPipelineDetail(run) {
+    // If the backend truncated the body (very large log), surface the
+    // sentinel so operators know to ssh in for the full file instead
+    // of assuming the run had little data.
+    const detail = run.detail || {};
+    if (detail._truncated) {
+        return `<div class="empty pct-warn">
+            Run payload is large (${detail._size_bytes} bytes) — body elided.
+            Inspect <code>${_escape(run.filename || '')}</code> on the server
+            for the full stage breakdown.
+        </div>`;
+    }
+    if (run.status === 'parse_error') {
+        return `<div class="empty pct-bad">
+            Log file failed to parse: ${_escape(run.error || 'unknown')}.
+            <code>${_escape(run.filename || '')}</code> may be partially written
+            or corrupt.
+        </div>`;
+    }
+    // Render pretty-printed JSON in a <pre>; preserves indentation and
+    // makes paths / counts copy-friendly.
+    const pretty = JSON.stringify(detail, null, 2);
+    return `<pre style="margin:0;font-family:var(--mono);font-size:10px;
+                       max-height:400px;overflow:auto;
+                       background:white;border:1px solid var(--border);
+                       border-radius:4px;padding:10px;">${_escape(pretty)}</pre>`;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // Boot: pick up the hash on initial load so /admin#agents lands on Agents.
