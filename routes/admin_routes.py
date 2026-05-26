@@ -628,6 +628,84 @@ def pipeline_history():
 
 
 # ──────────────────────────────────────────────────────────────────
+# GET /api/admin/persona-eval/latest — most-recent persona_eval report
+# ──────────────────────────────────────────────────────────────────
+# `scripts/persona_eval.py` is an offline CLI that writes a markdown +
+# JSON report pair to `data/persona_eval/<YYYY-MM-DD>.{md,json}`. Until
+# now operators had to ssh in and `cat` the files; the demo audience
+# (treasury managers, partners) couldn't see persona effectiveness at
+# all. This endpoint surfaces the latest JSON dump for the Admin SPA's
+# Persona Eval tab. Computation stays in the offline CLI — we just
+# expose its existing output.
+
+
+_PERSONA_EVAL_DIR  = _REPO_ROOT / "data" / "persona_eval"
+_PERSONA_EVAL_GLOB = "*.json"
+
+
+@admin_bp.get("/api/admin/persona-eval/latest")
+def persona_eval_latest():
+    """Return the most-recent persona_eval JSON report (by mtime).
+
+    Empty response when no report has been generated yet — same 200 +
+    explanatory message pattern as the pipeline endpoint, so the
+    admin UI renders a clean empty state instead of a 500.
+    """
+    auth = _require_admin_token()
+    if auth is not None:
+        return auth
+
+    eval_dir = _PERSONA_EVAL_DIR
+    if not eval_dir.exists():
+        return jsonify({
+            "eval_dir": str(eval_dir),
+            "report":   None,
+            "message":  f"persona_eval output directory not present: {eval_dir}",
+        })
+
+    try:
+        files = sorted(
+            eval_dir.glob(_PERSONA_EVAL_GLOB),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+    except Exception as exc:
+        logger.exception("admin persona_eval_latest listdir failed")
+        return jsonify({
+            "status":  "error",
+            "message": f"{type(exc).__name__}: {str(exc)[:200]}",
+        }), 500
+
+    if not files:
+        return jsonify({
+            "eval_dir": str(eval_dir),
+            "report":   None,
+            "message":  "no persona_eval reports generated yet",
+        })
+
+    newest = files[0]
+    try:
+        body = json.loads(newest.read_text(encoding="utf-8"))
+    except Exception as exc:
+        # Don't 500 — point operators at the corrupt file.
+        return jsonify({
+            "eval_dir": str(eval_dir),
+            "filename": newest.name,
+            "mtime":    _isoformat_mtime(newest),
+            "report":   None,
+            "status":   "parse_error",
+            "message":  f"{type(exc).__name__}: {str(exc)[:200]}",
+        })
+
+    return jsonify({
+        "eval_dir": str(eval_dir),
+        "filename": newest.name,
+        "mtime":    _isoformat_mtime(newest),
+        "report":   body,
+    })
+
+
+# ──────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────
 

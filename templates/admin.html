@@ -104,6 +104,7 @@
             <button class="tab"        data-tab="agents"   role="tab" id="tab-agents"   aria-controls="panel-agents"   aria-selected="false">Agents</button>
             <button class="tab"        data-tab="llm"      role="tab" id="tab-llm"      aria-controls="panel-llm"      aria-selected="false">LLM Usage</button>
             <button class="tab"        data-tab="pipeline" role="tab" id="tab-pipeline" aria-controls="panel-pipeline" aria-selected="false">Pipeline</button>
+            <button class="tab"        data-tab="persona"  role="tab" id="tab-persona"  aria-controls="panel-persona"  aria-selected="false">Persona Eval</button>
         </div>
 
         <!-- ─────────────────────────────── RAG Health tab ─────────────────────────────── -->
@@ -360,6 +361,55 @@
                 </table>
             </div>
         </div>
+
+        <!-- ─────────────────────────────── Persona Eval tab ─────────────────────────── -->
+        <div class="tab-panel" id="panel-persona" role="tabpanel" aria-labelledby="tab-persona" hidden>
+            <div class="ctrl">
+                <span class="sub" id="personaGeneratedAt" style="margin: 0;">—</span>
+            </div>
+
+            <div class="grid-kpi">
+                <div class="kpi-card">
+                    <div class="kpi-label">Window</div>
+                    <div class="kpi-value" id="personaWindow" style="font-size:14px;padding-top:6px;">—</div>
+                    <div class="kpi-sub" id="personaWindowSub">days</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Jaccard</div>
+                    <div class="kpi-value" id="personaAvgJaccard">—</div>
+                    <div class="kpi-sub" id="personaAvgJaccardSub">lower = more differentiation</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Max Jaccard</div>
+                    <div class="kpi-value" id="personaMaxJaccard">—</div>
+                    <div class="kpi-sub" id="personaMaxJaccardSub">most-similar pair</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Outlier Flags</div>
+                    <div class="kpi-value" id="personaFlagCount">—</div>
+                    <div class="kpi-sub" id="personaFlagSub">personas needing attention</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Differentiation matrix — Jaccard overlap of each persona pair's top-N alerts</div>
+                <table id="tblPersonaMatrix">
+                    <thead><tr><th>—</th></tr></thead>
+                    <tbody><tr><td class="empty">—</td></tr></tbody>
+                </table>
+                <div id="personaFlags" style="margin-top:10px;font-size:11px;color:var(--warning-text);font-family:var(--font-mono);"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">LLM judge — consensus weight adjustments per persona</div>
+                <div id="personaJudgeConsensus"><div class="empty">—</div></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">LLM judge — disagreement (raters split on these)</div>
+                <div id="personaJudgeDisagreement"><div class="empty">—</div></div>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -402,8 +452,9 @@ const _TAB_LOADERS = {
     agents:   () => loadAgentsSummary(),
     llm:      () => loadLlmStats(),
     pipeline: () => loadPipelineHistory(),
+    persona:  () => loadPersonaEval(),
 };
-const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false };
+const _TAB_LOADED = { rag: false, agents: false, llm: false, pipeline: false, persona: false };
 
 function setActiveTab(name) {
     if (!_TAB_LOADERS[name]) name = 'rag';
@@ -1000,6 +1051,191 @@ function _renderPipelineDetail(run) {
                        max-height:400px;overflow:auto;
                        background:white;border:1px solid var(--border);
                        border-radius:4px;padding:10px;">${_escape(pretty)}</pre>`;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Persona Eval tab loader — reads /api/admin/persona-eval/latest, which
+// just dumps the most-recent `scripts/persona_eval.py` JSON output. The
+// eval itself is offline (cron / on-demand); this tab is read-only.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function loadPersonaEval() {
+    const genEl = document.getElementById('personaGeneratedAt');
+    genEl.textContent = 'Loading…';
+
+    try {
+        const r = await fetch('/api/admin/persona-eval/latest');
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.message || `HTTP ${r.status}`);
+
+        const report = d.report;
+        if (!report) {
+            // No runs yet OR parse error — clean empty state with hint.
+            const hint = d.message || 'No persona_eval reports generated yet.';
+            genEl.textContent = hint;
+            _resetPersonaKpis();
+            document.getElementById('personaJudgeConsensus').innerHTML =
+                `<div class="empty">${_escape(hint)} Run <code>python scripts/persona_eval.py</code> to generate the first report.</div>`;
+            document.getElementById('personaJudgeDisagreement').innerHTML = `<div class="empty">—</div>`;
+            return;
+        }
+
+        // Header — when the report was generated + file + model.
+        const stamp = (report.run_at || d.mtime || '').substr(0, 19).replace('T', ' ');
+        const model = report.llm_model ? ` · judge=${report.llm_model}` : '';
+        genEl.textContent = `Generated ${stamp} · ${_escape(d.filename || '')}${model}`;
+
+        // KPI strip.
+        const win = report.window || {};
+        document.getElementById('personaWindow').textContent =
+            (win.window_start && win.window_end)
+                ? `${win.window_start.slice(0,10)} → ${win.window_end.slice(0,10)}`
+                : '—';
+        document.getElementById('personaWindowSub').textContent =
+            (win.kept_count != null && win.raw_count != null)
+                ? `${win.kept_count} kept / ${win.raw_count} raw alerts`
+                : 'window data missing';
+
+        const diff = report.differentiation || {};
+        const avg = diff.avg_jaccard, max = diff.max_jaccard;
+        document.getElementById('personaAvgJaccard').textContent =
+            (avg != null) ? avg.toFixed(2) : '—';
+        document.getElementById('personaAvgJaccard').className =
+            'kpi-value ' + _jaccardColor(avg);
+        document.getElementById('personaMaxJaccard').textContent =
+            (max != null) ? max.toFixed(2) : '—';
+        document.getElementById('personaMaxJaccard').className =
+            'kpi-value ' + _jaccardColor(max);
+
+        const flags = diff.flags || [];
+        document.getElementById('personaFlagCount').textContent = flags.length;
+        document.getElementById('personaFlagCount').className =
+            'kpi-value ' + (flags.length === 0 ? 'pct-ok' : 'pct-warn');
+        document.getElementById('personaFlagSub').textContent =
+            flags.length === 0 ? 'all personas differentiated' : 'see notes below';
+
+        // Matrix table — symmetric NxN of Jaccard values.
+        _renderPersonaMatrix(diff.matrix || {});
+
+        // Outlier flag list.
+        const flagsEl = document.getElementById('personaFlags');
+        flagsEl.innerHTML = flags.length
+            ? flags.map(f => `⚠ ${_escape(f)}`).join('<br>')
+            : '';
+
+        // Judge sections — consensus & disagreement per persona.
+        _renderPersonaJudge(report.judge || {});
+
+    } catch (e) {
+        console.warn('[persona-eval] load failed:', e);
+        genEl.textContent = `Failed to load: ${e.message}`;
+        _resetPersonaKpis();
+        document.getElementById('personaJudgeConsensus').innerHTML =
+            `<div class="empty pct-bad">Could not load persona_eval report: ${_escape(e.message)}</div>`;
+        document.getElementById('personaJudgeDisagreement').innerHTML = `<div class="empty">—</div>`;
+    }
+}
+
+function _resetPersonaKpis() {
+    for (const id of ['personaWindow','personaAvgJaccard','personaMaxJaccard','personaFlagCount']) {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = '—'; el.className = 'kpi-value'; }
+    }
+    for (const id of ['personaWindowSub','personaAvgJaccardSub','personaMaxJaccardSub','personaFlagSub']) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+    }
+    const mat = document.querySelector('#tblPersonaMatrix thead');
+    if (mat) mat.innerHTML = '<tr><th>—</th></tr>';
+    const matBody = document.querySelector('#tblPersonaMatrix tbody');
+    if (matBody) matBody.innerHTML = '<tr><td class="empty">—</td></tr>';
+    document.getElementById('personaFlags').innerHTML = '';
+}
+
+// Jaccard intuition: 0 = totally different (good), 1 = identical (bad).
+// Color thresholds mirror the existing pct-ok / warn / bad palette but
+// inverted (lower is better here).
+function _jaccardColor(j) {
+    if (j == null) return '';
+    if (j < 0.4) return 'pct-ok';
+    if (j < 0.7) return 'pct-warn';
+    return 'pct-bad';
+}
+
+function _renderPersonaMatrix(matrix) {
+    const personas = Object.keys(matrix).sort();
+    const thead = document.querySelector('#tblPersonaMatrix thead');
+    const tbody = document.querySelector('#tblPersonaMatrix tbody');
+    if (!personas.length) {
+        thead.innerHTML = '<tr><th>—</th></tr>';
+        tbody.innerHTML = '<tr><td class="empty">No differentiation data in this report.</td></tr>';
+        return;
+    }
+    thead.innerHTML = '<tr><th></th>' +
+        personas.map(p => `<th>${_escape(p)}</th>`).join('') + '</tr>';
+    tbody.innerHTML = personas.map(row => {
+        const cells = personas.map(col => {
+            const v = (matrix[row] || {})[col];
+            if (v == null) return '<td class="num">—</td>';
+            // Diagonal is always 1.00 (self-overlap) — dim it so the eye
+            // skips over it and focuses on off-diagonal pairs.
+            if (row === col) {
+                return `<td class="num" style="color:var(--text-muted);">${v.toFixed(2)}</td>`;
+            }
+            return `<td class="num ${_jaccardColor(v)}">${v.toFixed(2)}</td>`;
+        }).join('');
+        return `<tr><td><strong>${_escape(row)}</strong></td>${cells}</tr>`;
+    }).join('');
+}
+
+function _renderPersonaJudge(judge) {
+    const personas = Object.keys(judge).sort();
+    const consensusEl    = document.getElementById('personaJudgeConsensus');
+    const disagreementEl = document.getElementById('personaJudgeDisagreement');
+
+    if (!personas.length) {
+        consensusEl.innerHTML    = '<div class="empty">LLM judge not run (or all calls failed). Re-run with the LLM enabled to populate this section.</div>';
+        disagreementEl.innerHTML = '<div class="empty">—</div>';
+        return;
+    }
+
+    const renderAdjList = (adjs, emptyMsg) => {
+        if (!adjs || !adjs.length) return `<div class="empty" style="text-align:left;padding:8px 4px;">${emptyMsg}</div>`;
+        return `<table>
+            <thead><tr><th>Category</th><th>Direction</th><th>Current</th><th>Suggested</th><th>Confidence</th><th>Rationale</th></tr></thead>
+            <tbody>${adjs.map(a => `
+                <tr>
+                    <td>${_escape(a.category || '')}</td>
+                    <td>${_escape(a.direction || '')}</td>
+                    <td class="num">${a.current == null ? '—' : Number(a.current).toFixed(2)}</td>
+                    <td class="num">${a.suggested == null ? '—' : Number(a.suggested).toFixed(2)}</td>
+                    <td>${_escape(a.confidence || '')}</td>
+                    <td style="font-size:10px;color:var(--text-muted);">${_escape((a.rationale || '').slice(0, 240))}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+    };
+
+    consensusEl.innerHTML = personas.map(p => `
+        <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);
+                        color:var(--text-main);margin-bottom:6px;">${_escape(p)}</div>
+            ${renderAdjList(judge[p].consensus_adjustments, 'No consensus adjustments — judge agrees the current weights are reasonable.')}
+        </div>`).join('');
+
+    disagreementEl.innerHTML = personas.map(p => {
+        // disagreement_adjustments is `list[str]` per the report schema —
+        // it's a list of category names where the two runs disagreed.
+        const items = judge[p].disagreement_adjustments || [];
+        return `<div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);
+                        color:var(--text-main);margin-bottom:4px;">${_escape(p)}</div>
+            ${items.length
+                ? `<div style="font-size:11px;color:var(--text-muted);">${items.map(_escape).join(', ')}</div>`
+                : '<div class="empty" style="text-align:left;padding:4px 0;">No disagreements between runs.</div>'}
+        </div>`;
+    }).join('');
 }
 
 

@@ -426,6 +426,7 @@ class TestAdminPage:
         assert "panel-agents"   in body
         assert "panel-llm"      in body
         assert "panel-pipeline" in body
+        assert "panel-persona"  in body
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -706,3 +707,111 @@ class TestPipelineHistory:
         run = client.get("/api/admin/pipeline/history").get_json()["runs"][0]
         assert run["detail"].get("_truncated") is True
         assert run["detail"]["_size_bytes"] > 32_000
+
+
+# ──────────────────────────────────────────────────────────────────
+# /api/admin/persona-eval/latest — most-recent persona_eval JSON dump
+# ──────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def persona_eval_dir(tmp_path, monkeypatch):
+    """Redirect the persona_eval output dir to a tmp path so each test
+    gets a clean slate. Returns the tmp Path."""
+    eval_dir = tmp_path / "persona_eval"
+    monkeypatch.setattr(admin_routes, "_PERSONA_EVAL_DIR", eval_dir)
+    return eval_dir
+
+
+def _write_persona_eval(eval_dir: Path, name: str, body: dict) -> Path:
+    """Helper: write a synthetic persona_eval JSON report."""
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    path = eval_dir / name
+    path.write_text(_json.dumps(body), encoding="utf-8")
+    return path
+
+
+class TestPersonaEvalLatest:
+    """`/api/admin/persona-eval/latest` — backs the Admin SPA's Persona
+    Eval tab. Pins the missing-dir / empty-dir no-500 contract, newest
+    selection by mtime, and the parse-error sentinel."""
+
+    def test_missing_dir_returns_empty(self, client, persona_eval_dir):
+        # Fixture intentionally doesn't create the dir.
+        r = client.get("/api/admin/persona-eval/latest")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["report"] is None
+        assert "not present" in d["message"]
+
+    def test_empty_dir_returns_empty(self, client, persona_eval_dir):
+        persona_eval_dir.mkdir()
+        r = client.get("/api/admin/persona-eval/latest")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["report"] is None
+        assert "no persona_eval reports" in d["message"]
+
+    def test_returns_newest_by_mtime(self, client, persona_eval_dir):
+        """Operators sometimes manually re-run with --since on the same
+        day — mtime, not filename, decides which one the UI shows."""
+        old = _write_persona_eval(
+            persona_eval_dir, "2026-04-01.json",
+            {"run_at": "2026-04-01T00:00:00", "top_n": 20},
+        )
+        new = _write_persona_eval(
+            persona_eval_dir, "2026-05-19.json",
+            {"run_at": "2026-05-19T00:00:00", "top_n": 20},
+        )
+        # Force `new` to have a later mtime regardless of filesystem order.
+        import os as _os, time as _time
+        _os.utime(old, (1700000000, 1700000000))
+        _time.sleep(0.01)
+        _os.utime(new, (1800000000, 1800000000))
+
+        d = client.get("/api/admin/persona-eval/latest").get_json()
+        assert d["filename"] == "2026-05-19.json"
+        assert d["report"]["run_at"] == "2026-05-19T00:00:00"
+
+    def test_corrupt_file_surfaces_parse_error(self, client, persona_eval_dir):
+        """Half-written JSON shouldn't 500. The endpoint reports the
+        broken file so operators know to look at it."""
+        persona_eval_dir.mkdir()
+        (persona_eval_dir / "2026-05-19.json").write_text("{not valid", encoding="utf-8")
+        r = client.get("/api/admin/persona-eval/latest")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["report"] is None
+        assert d.get("status") == "parse_error"
+        assert d["filename"] == "2026-05-19.json"
+
+    def test_projects_expected_top_level_fields(self, client, persona_eval_dir):
+        """Pin the high-level shape so future schema additions don't
+        accidentally drop window / differentiation / judge — those are
+        the three sections the tab renders."""
+        _write_persona_eval(persona_eval_dir, "2026-05-19.json", {
+            "run_at": "2026-05-19T00:00:00",
+            "window": {
+                "window_start": "2026-04-19",
+                "window_end":   "2026-05-19",
+                "kept_count":   142,
+                "raw_count":    162,
+            },
+            "top_n": 20,
+            "differentiation": {
+                "matrix": {
+                    "cash_manager": {"cash_manager": 1.0, "fx_manager": 0.4},
+                    "fx_manager":   {"cash_manager": 0.4, "fx_manager": 1.0},
+                },
+                "avg_jaccard": 0.4,
+                "max_jaccard": 0.4,
+                "flags": [],
+                "pairs": [],
+            },
+            "judge": {},
+            "llm_model": "claude-sonnet-4-6",
+        })
+        d = client.get("/api/admin/persona-eval/latest").get_json()
+        rep = d["report"]
+        assert rep["window"]["kept_count"] == 142
+        assert rep["differentiation"]["avg_jaccard"] == 0.4
+        assert rep["llm_model"] == "claude-sonnet-4-6"
