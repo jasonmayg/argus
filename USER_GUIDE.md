@@ -14,7 +14,7 @@
 6. [Risk Monitor](#6-risk-monitor)
 7. [Geospatial Heatmap](#7-geospatial-heatmap)
 8. [Intelligence Brief](#8-intelligence-brief)
-9. [Actions](#9-actions)
+9. [Decision Support](#9-decision-support)
 10. [Cash Position](#10-cash-position)
 11. [Regulatory Tracker](#11-regulatory-tracker)
 12. [Guardian Chat (Beta)](#12-guardian-chat-beta)
@@ -51,14 +51,18 @@ The left sidebar contains the main navigation. Use **Ctrl+B** to collapse or exp
 |------|---------------|
 | **Home** | KPI summary cards, risk category overview, geospatial map, intelligence brief |
 | **Risk Monitor** | 5×5 risk matrix, Guardian multi-country alerts, data-threshold alerts |
-| **Guardian Chat** | Conversational chatbot for natural-language risk queries |
-| **Cash Position** | Multi-currency cash holdings, regional KPIs, historical trend chart |
+| **Decision Support** | AI-recommended treasury actions based on current risk posture |
 | **Regulatory** | Classified regulatory change notices with severity and action items |
-| **Actions** | AI-recommended treasury actions based on current risk posture |
+| **Cash Position** | Multi-currency cash holdings, regional KPIs, historical trend chart |
+| **Guardian Chat** | Conversational chatbot for natural-language risk queries |
 | **Data Source** | Pipeline execution controls, agent status, raw logs |
 | **Persona Settings** | Full weight editor with per-region overrides for all 13 risk categories |
 
 The **topbar** always shows the current page title, a live clock (UTC), and the active role name.
+
+### Shareable URLs
+
+Every tab has its own URL — `/risk-monitor`, `/decision-support`, `/regulatory`, `/cash-position`, `/chat`, `/data-source` — so you can bookmark a specific view or send a colleague a direct link. The browser's back / forward buttons walk through the tabs you visited. Clicking through the sidebar updates the URL without reloading the page, so any open chat or filter state on other tabs is preserved.
 
 ---
 
@@ -253,7 +257,7 @@ Click **Regenerate** to produce a new brief using the latest pipeline data. This
 
 ---
 
-## 9. Actions
+## 9. Decision Support
 
 The Actions page translates current risk alerts into concrete, role-specific treasury recommendations.
 
