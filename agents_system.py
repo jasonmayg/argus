@@ -44,11 +44,19 @@ class Agent(ABC):
 
 
 class NewsGathererAgent(Agent):
-    """Multi-source news and events gatherer backed by the unified DataAgent."""
+    """Multi-source news and events gatherer backed by the unified DataAgent.
 
-    SOURCE_FEDERAL_RESERVE = "federal_reserve"
+    Acquisition was moved upstream in PR #78 — AI_Treasury_Project crawls
+    every source and writes raw CSVs to GCS; this agent now reads from
+    that GCS snapshot rather than scraping anything directly. The legacy
+    `federal_reserve` source key is preserved on `SOURCE_FEDERAL_RESERVE`
+    for callers that still pass it, but `fetch()` routes it to "skipped"
+    instead of invoking the retired Crawl4AI/Playwright path.
+    """
+
+    SOURCE_FEDERAL_RESERVE = "federal_reserve"  # legacy, accepted but no-op
     SOURCE_GCS = "gcs"
-    DEFAULT_SOURCES = [SOURCE_FEDERAL_RESERVE]
+    DEFAULT_SOURCES = [SOURCE_GCS]
 
     def __init__(self):
         super().__init__("NewsGatherer")

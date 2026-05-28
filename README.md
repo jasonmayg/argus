@@ -125,8 +125,7 @@ Argus is a **multi-agent, persona-driven treasury risk platform**. It ingests si
 | **Primary AI** | OpenAI GPT-4o (`gpt-4o`) | Intelligence briefs, Guardian Chat, action generation |
 | **Secondary AI** | Anthropic Claude (`claude-haiku-4-5-20251001`) | Risk matrix scoring (probability + impact axes) |
 | **Database** | SQLite (`data/fed_news/argus_news.db`) | News items, keyword matches, risk analysis, regulatory data |
-| **Live data** | Google Cloud Storage | Guardian daily snapshots (`alerts_latest.json`) |
-| **Web crawler** | crawl4ai (Playwright-based) | Federal Reserve press release extraction |
+| **Live data** | Google Cloud Storage (bucket `your-gcs-bucket`) | Raw CSVs from the upstream `AI_Treasury_Project` repo (Fed press, central bank RSS, GDELT, USGS, FRED, …) + Guardian daily snapshots (`alerts_latest.json`) |
 | **Config** | YAML (`personas/defaults.yaml`) + JSON profiles | Persona weight baselines and user-saved overrides |
 | **Process manager** | Gunicorn (production) / Flask dev server (local) | WSGI application serving |
 
@@ -997,7 +996,7 @@ Expected response: `{"is_running": false, "current_stage": null, "agents_status"
 | Guardian dashboard returns `status: "missing"` | No snapshot in GCS or local | Run `python guardian_poc/src/daily_job.py` |
 | `TypeError: '<' not supported` on `/api/results` | `None` values in JSON sort | Use `sanitize_for_json()` before `jsonify()` |
 | Port 5050 already in use | Another process bound to port | macOS/Linux: `lsof -i :5050` → `kill <PID>`. Windows: `netstat -ano | findstr :5050` → `taskkill /PID <PID> /F`. Or set `PORT=5051` in `.env` |
-| `ModuleNotFoundError: crawl4ai` | Dependencies not installed | `pip install -r requirements.txt` |
+| `ModuleNotFoundError: crawl4ai` on an upgraded deploy | `crawl4ai` was removed in PR #78 — data acquisition is now upstream in AI_Treasury_Project / GCS. The error means you're running pre-#78 code that still references the legacy module, or your venv was built from an old requirements pin. | `git pull` + `pip install -r requirements.txt`. If something downstream still imports `crawl4ai`, search for `_crawl_fed_url` / `AsyncWebCrawler` — those are the historical entry points. |
 | Cash positions show `"Error loading cash data"` | `pandas`/`openpyxl` missing | `pip install pandas openpyxl` |
 | Bridge: `Connection refused` on `/api/analyze` | Flask server not running | Start `frontend_app.py` before `bridge_manager.py` |
 | GCS data loads but shows zero scored alerts | Snapshot has unscored data | Guardian loader auto-falls back to local; check daily job logs |

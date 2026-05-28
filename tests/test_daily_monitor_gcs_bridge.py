@@ -32,16 +32,16 @@ from daily_monitor import DailyMonitor
 def monitor(tmp_path):
     """DailyMonitor with paths redirected to tmp so tests don't
     mutate the real `guardian_poc/data/alerts_latest.json`."""
-    # DataAgent's constructor pulls in crawler config we don't need;
-    # patch it out for these unit tests.
-    with patch("daily_monitor.DataAgent"):
-        m = DailyMonitor()
-        # Redirect the snapshot path so reads during the test land
-        # on a tmp file we control.
-        m.snapshot_path = tmp_path / "alerts_latest.json"
-        # Bridge script path stays real; missing-script tests
-        # override it explicitly when needed.
-        yield m
+    # DailyMonitor no longer instantiates DataAgent (PR #78 retired the
+    # Fed crawl step) — constructor is now pure path setup, nothing to
+    # patch.
+    m = DailyMonitor()
+    # Redirect the snapshot path so reads during the test land on a
+    # tmp file we control.
+    m.snapshot_path = tmp_path / "alerts_latest.json"
+    # Bridge script path stays real; missing-script tests override
+    # it explicitly when needed.
+    yield m
 
 
 def _completed(returncode=0, stdout="", stderr=""):
