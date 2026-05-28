@@ -1065,9 +1065,25 @@ async function loadPersonaEval() {
     genEl.textContent = 'Loading…';
 
     try {
+        // Text-first parse: the backend always returns JSON in its
+        // happy and known-error paths, but a werkzeug-level crash
+        // (or a misconfigured reverse proxy) can still emit an HTML
+        // 500 page that `r.json()` would choke on with the cryptic
+        // `Unexpected token '<'` SyntaxError. Read the body as text
+        // first, only `JSON.parse` if it parses, otherwise raise
+        // with the HTTP status + a snippet so the operator sees
+        // what actually went wrong. Same shape as PR #74's
+        // `_actionsFetchJSON` helper on the Decision Support side.
         const r = await fetch('/api/admin/persona-eval/latest');
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.message || `HTTP ${r.status}`);
+        const text = await r.text();
+        let d;
+        try {
+            d = text ? JSON.parse(text) : {};
+        } catch (_parseErr) {
+            const snippet = text.slice(0, 200).replace(/\s+/g, ' ').trim();
+            throw new Error(`HTTP ${r.status} — ${snippet || r.statusText || 'no response body'}`);
+        }
+        if (!r.ok) throw new Error(d.message || d.error || `HTTP ${r.status}`);
 
         const report = d.report;
         if (!report) {
@@ -1200,16 +1216,31 @@ function _renderPersonaJudge(judge) {
         return;
     }
 
+    // Numeric weight cells need to survive a schema drift: today
+    // `current` / `suggested` are `Optional[float]` from the
+    // persona_eval dataclass, but if the report ever serialises them
+    // as a categorical (e.g. "high"), `Number("high").toFixed(2)`
+    // returns the literal string "NaN" into the DOM. Guard with
+    // `Number.isFinite` so the cell falls back to "—" instead.
+    const fmtNum = (v) => {
+        if (v == null) return '—';
+        const n = Number(v);
+        return Number.isFinite(n) ? n.toFixed(2) : '—';
+    };
     const renderAdjList = (adjs, emptyMsg) => {
-        if (!adjs || !adjs.length) return `<div class="empty" style="text-align:left;padding:8px 4px;">${emptyMsg}</div>`;
+        // `emptyMsg` is hardcoded by callers today so no XSS risk,
+        // but escape anyway to stay consistent with the rest of the
+        // file — every other string interpolated into innerHTML
+        // goes through `_escape`.
+        if (!adjs || !adjs.length) return `<div class="empty" style="text-align:left;padding:8px 4px;">${_escape(emptyMsg)}</div>`;
         return `<table>
             <thead><tr><th>Category</th><th>Direction</th><th>Current</th><th>Suggested</th><th>Confidence</th><th>Rationale</th></tr></thead>
             <tbody>${adjs.map(a => `
                 <tr>
                     <td>${_escape(a.category || '')}</td>
                     <td>${_escape(a.direction || '')}</td>
-                    <td class="num">${a.current == null ? '—' : Number(a.current).toFixed(2)}</td>
-                    <td class="num">${a.suggested == null ? '—' : Number(a.suggested).toFixed(2)}</td>
+                    <td class="num">${fmtNum(a.current)}</td>
+                    <td class="num">${fmtNum(a.suggested)}</td>
                     <td>${_escape(a.confidence || '')}</td>
                     <td style="font-size:10px;color:var(--text-muted);">${_escape((a.rationale || '').slice(0, 240))}</td>
                 </tr>`).join('')}
