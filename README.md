@@ -147,7 +147,9 @@ argus/
 ├── config.py                # Env vars + shared_storage path constants (ONLY place for these)
 ├── state.py                 # Shared AgentOrchestrator instance + execution_state dict
 ├── bridge_manager.py        # File-drop bridge: watches raw/ → POST /api/analyze → analyzed/
-├── daily_monitor.py         # Cron-scheduled job: Fed crawl + Guardian POC snapshot
+├── daily_monitor.py         # Cron-scheduled job: legacy Guardian POC snapshot + GCS bridge refresh.
+│                            #   The Fed-press crawl step was retired in PR #78 — Fed data now
+│                            #   arrives via AI_Treasury_Project / GCS like every other source.
 ├── generate_actions.py      # Standalone action-generation script (calls pipeline output)
 ├── risk_matrix.py           # 5×5 P×I matrix helpers (calculate_risk_level, score_to_*)
 ├── risk_classifier.py       # Keyword-based risk taxonomy (0–100 scoring, 13 categories)
