@@ -12,6 +12,7 @@
 #   0  ok
 #   1  db not found
 #   2  table not present (run classify_regulatory.py first)
+#   3  sqlite3 itself failed (db locked, corrupt, permissions, etc.)
 
 set -euo pipefail
 
@@ -23,9 +24,21 @@ if [[ ! -f "$DB" ]]; then
     exit 1
 fi
 
-# Verify the table exists before SELECTing — otherwise sqlite3 errors
-# out with a stack trace that obscures the actual diagnosis.
-if ! sqlite3 "$DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='regulatory_changes';" | grep -q regulatory_changes; then
+# Verify the table exists before SELECTing. Done in two steps —
+# capture sqlite's exit + stderr separately so a real DB-side failure
+# (locked, corrupt, permissions denied) gets surfaced as exit 3 with
+# the driver's actual message, instead of getting collapsed into the
+# "table not present" diagnosis and pointing operators at the wrong
+# fix. The earlier `if ! sqlite3 ... | grep -q` form had this trap
+# because `set -euo pipefail` lets the failing pipe propagate but
+# `if !` catches it, so an empty stdout looked indistinguishable
+# from "table missing".
+table_check=$(sqlite3 "$DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='regulatory_changes';" 2>&1) || {
+    echo "ERROR: sqlite3 failed on $DB:" >&2
+    echo "  $table_check" >&2
+    exit 3
+}
+if [[ "$table_check" != *regulatory_changes* ]]; then
     echo "ERROR: table 'regulatory_changes' not present in $DB" >&2
     echo "  Run: python classify_regulatory.py" >&2
     exit 2
