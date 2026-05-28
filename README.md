@@ -147,7 +147,9 @@ argus/
 ├── config.py                # Env vars + shared_storage path constants (ONLY place for these)
 ├── state.py                 # Shared AgentOrchestrator instance + execution_state dict
 ├── bridge_manager.py        # File-drop bridge: watches raw/ → POST /api/analyze → analyzed/
-├── daily_monitor.py         # Cron-scheduled job: Fed crawl + Guardian POC snapshot
+├── daily_monitor.py         # Cron-scheduled job: legacy Guardian POC snapshot + GCS bridge refresh.
+│                            #   The Fed-press crawl step was retired in PR #78 — Fed data now
+│                            #   arrives via AI_Treasury_Project / GCS like every other source.
 ├── generate_actions.py      # Standalone action-generation script (calls pipeline output)
 ├── risk_matrix.py           # 5×5 P×I matrix helpers (calculate_risk_level, score_to_*)
 ├── risk_classifier.py       # Keyword-based risk taxonomy (0–100 scoring, 13 categories)
@@ -502,11 +504,13 @@ A file-watcher that decouples external data producers from the Flask server. Dro
 
 All endpoints are prefixed with no base path. CORS is enabled globally for all origins in `create_app()`.
 
-### Pipeline
+### Pipeline & SPA shell
+
+The dashboard is a single-page app served at `/`. Each sidebar tab also has its own server-side route that renders the same `dashboard.html` — the client-side `navigation.js::PATH_TO_PAGE` map picks which `<div class="page">` to activate. Deep links and browser back/forward work because of this; bookmarks survive reloads.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Serve `dashboard.html` |
+| `GET` | `/`, `/home`, `/risk-monitor`, `/decision-support`, `/regulatory`, `/cash-position`, `/chat`, `/data-source` | All render the same SPA shell; the active tab is derived from `window.location.pathname` |
 | `GET` | `/api/status` | Pipeline running state, current stage, agent summary |
 | `POST` | `/api/execute` | Start full 9-stage pipeline (async, poll `/api/status`) |
 | `POST` | `/api/analyze` | Synchronous classify + score (used by bridge; accepts bridge contract JSON) |
@@ -568,6 +572,21 @@ All endpoints are prefixed with no base path. CORS is enabled globally for all o
 |---|---|---|
 | `GET` | `/api/actions` | Return latest actions (pipeline output preferred; cache fallback) |
 | `POST` | `/api/actions/generate` | Force GPT-4o action regeneration with optional custom weights body |
+
+### Admin (operator-only)
+
+All endpoints under `/api/admin/*` are read-only and gated behind `ARGUS_ADMIN_TOKEN` (see Section 8) when set — leave the env var unset for local / private deploys and the gate is a no-op. The `/admin` HTML page is intentionally **ungated** so a browser navigation works; the JSON it loads from `/api/admin/*` is gated separately.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/admin` | Multi-tab Admin SPA shell. Hash routes: `#rag` / `#agents` / `#llm` / `#pipeline` / `#persona` |
+| `GET` | `/api/admin/agents?hours=24` | Per-agent aggregated stats (success rate, p95 turns, cost, top error classes) |
+| `GET` | `/api/admin/agents/<name>/recent?limit=25` | Recent runs for a named agent — drill-down with tool_calls_json, error_message, etc. |
+| `GET` | `/api/admin/rag/stats?hours=24` | Aggregations over `rag_queries` telemetry (queries by endpoint, hit rate, top errors) |
+| `GET` | `/api/admin/health/rag` | Vector-store deployment probe: chromadb installed?, persist dir state, per-collection counts, embedder readiness |
+| `GET` | `/api/admin/llm/stats?hours=24` | Aggregations over `llm_calls` (cost · window vs all-GPT-4o baseline, latency p50/p95, top failures bucketed by task+provider+error) |
+| `GET` | `/api/admin/pipeline/history?limit=20` | Daily-monitor run history; reads `data/logs/daily_monitor_*.json` |
+| `GET` | `/api/admin/persona-eval/latest` | Most-recent `data/persona_eval/*.json` report (run `scripts/persona_eval.py` to generate) |
 
 ---
 
@@ -636,6 +655,20 @@ GOOGLE_APPLICATION_CREDENTIALS=service-account.json
 GUARDIAN_GCS_BUCKET=your-gcs-bucket
 GUARDIAN_GCS_PREFIX=                  # Optional GCS path prefix
 GUARDIAN_GCS_ENABLED=true            # Set to false to force local-only mode
+GUARDIAN_GCS_CACHE_TTL=60            # Seconds. In-process cache TTL for the Guardian
+                                     # snapshot loaded from GCS. Successful loads only
+                                     # — failures are never cached. Set to 0 to disable.
+                                     # Default 60s; tune up for steadier traffic / down
+                                     # for fresher snapshots at higher GCS cost.
+
+# ── Admin surface (off by default) ────────────────────────────────
+ARGUS_ADMIN_TOKEN=                  # When set, every /api/admin/* request must carry
+                                    # X-Admin-Token: <value>. Leave unset for local/
+                                    # private deploys (no auth). Set when exposing
+                                    # the API to the public internet.
+ARGUS_DAILY_LOG_DIR=                # Optional. Override for daily_monitor JSON log
+                                    # dir (default: <repo-root>/data/logs). Used by
+                                    # /api/admin/pipeline/history.
 
 # ── External APIs ─────────────────────────────────────────────────
 FRED_API_KEY=                      # Required only for FRED economic indicator source
@@ -1002,6 +1035,9 @@ Expected response: `{"is_running": false, "current_stage": null, "agents_status"
 | Bridge: `Connection refused` on `/api/analyze` | Flask server not running | Start `frontend_app.py` before `bridge_manager.py` |
 | GCS data loads but shows zero scored alerts | Snapshot has unscored data | Guardian loader auto-falls back to local; check daily job logs |
 | `psDraft` weight changes not reflected in actions | Actions cache is stale | Click **Re-generate** — actions are cached; weight changes do not auto-refresh them |
+| Decision Support shows `Could not load suggestions: HTTP 504` or `Unexpected token '<'` | nginx `proxy_read_timeout` (default 60s) shorter than the LLM call. Frontend used to surface this as the cryptic JSON SyntaxError before PR #74 hardened the parser. | Edit the nginx server block (see Section 9.5) so `proxy_read_timeout 120s;` matches Gunicorn. `sudo nginx -t && sudo systemctl reload nginx`. |
+| Regulatory page search always shows `(no semantic match)` regardless of query | Two flavours, in increasing order of severity: (1) `chromadb` not installed in the venv — `_semantic_regulatory_search` swallows the `ImportError` and silently falls back to SQL LIKE; (2) collection exists but vectors were written by an older embedder (e.g. sentence-transformers) while the live embedder is OpenAI — every distance ends up above `max_distance=1.2` and all candidates get filtered out. | (1) `pip install -r requirements.txt` in the venv gunicorn uses, then restart the service. (2) Reset the collection so it gets re-embedded with the current model: `python scripts/chroma_backfill.py --reset news --reset alerts --reset regulatory`, then **restart gunicorn** (see next row). Verify with `curl localhost:5050/api/admin/health/rag` — collection counts should be non-zero. |
+| `/api/admin/health/rag` returns `InvalidCollectionException: Collection <uuid> does not exist` for every collection right after running `chroma_backfill.py --reset` | `VectorStore._collections` caches collection handles per-process. `--reset` deletes + recreates with a new UUID from a separate Python process, but the live gunicorn workers still hold the old UUID and never re-resolve. | `sudo systemctl restart argus`. Chromadb is file-backed so workers see the new collection on the next request after restart. |
 
 ---
 
