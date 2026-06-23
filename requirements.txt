@@ -40,10 +40,13 @@ Werkzeug>=3.0.0           # WSGI utilities
 # ============================================================================
 # Web Scraping & Data Extraction
 # ============================================================================
-crawl4ai>=0.3.0           # Advanced web scraping with JavaScript rendering
-requests>=2.31.0          # HTTP library (used by crawl4ai and others)
-beautifulsoup4>=4.12.0    # HTML/XML parsing
-lxml>=4.9.0               # Fast XML processing
+# crawl4ai removed in PR #78 — data acquisition moved upstream to the
+# AI_Treasury_Project repo, which writes raw CSVs to GCS. Argus reads
+# from GCS via google-cloud-storage below; no JS-rendering crawler
+# dependency remains here.
+requests>=2.31.0          # HTTP library (bridge_manager, classify_news, etc.)
+beautifulsoup4>=4.12.0    # HTML/XML parsing — used by GuardianEngine adapters
+lxml>=4.9.0               # Fast XML processing — bs4 backend
 
 # ============================================================================
 # AI & API Integration

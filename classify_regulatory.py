@@ -52,6 +52,13 @@ GCS_BUCKET = "your-gcs-bucket"
 # items in different files with the same id never collide.
 EXTERNAL_NEWS_SOURCES: List[Tuple[str, str]] = [
     ("google_radar",   "news_google_macro_radar.csv"),
+    # US Federal Reserve press releases. Sourced from AI_Treasury_Project's
+    # `news_fed_press` RSS fetcher (federalreserve.gov/feeds/press_all.xml).
+    # Added when the legacy local Playwright/Crawl4AI crawler was retired —
+    # Fed data now arrives via GCS like every other central bank, classified
+    # under the new `fed_press` source_type. Historical rows produced by the
+    # old crawler keep their `fed_news` source_type and remain queryable.
+    ("fed_press",      "news_fed_press.csv"),
     # US Treasury press releases (OFAC / sanctions / policy announcements).
     # AI_Treasury_Project ships this as `type: treasury_press_releases_html`,
     # not RSS, but the output CSV has the same column shape — title, link,

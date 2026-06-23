@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
 ARGUS: Daily Monitoring Job
-Fetches Federal Reserve news and runs the Guardian POC daily snapshot.
-All data is written to shared_storage/raw/ via the unified DataAgent.
+Runs the legacy Guardian POC daily job and the GCS bridge refresh so
+`alerts_latest.json` stays in sync with the upstream `your-gcs-bucket`
+bucket. Data acquisition (Fed press, central bank RSS, GDELT, USGS, FRED, …)
+is owned by the separate AI_Treasury_Project repo — all sources land in GCS;
+Argus reads from there. The local Playwright/Crawl4AI crawler that used to
+fetch federalreserve.gov directly was retired in PR #78; Fed press releases
+now arrive via `news_fed_press.csv` like every other central-bank RSS.
 """
 
 import asyncio
@@ -13,14 +18,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-from core.data_agent import DataAgent
-
 
 class DailyMonitor:
     """Daily monitoring system for ARGUS."""
 
     def __init__(self):
-        self._data_agent = DataAgent()
         self.guardian_poc_path = (
             Path(__file__).parent / "guardian_poc" / "src" / "daily_job.py"
         )
@@ -247,15 +249,21 @@ class DailyMonitor:
         """Execute daily monitoring.
 
         Steps:
-            1. Fetch Federal Reserve news via DataAgent → shared_storage/raw/
-            2. Run legacy Guardian POC daily job (external subprocess) —
+            1. Run legacy Guardian POC daily job (external subprocess) —
                kept around for now but mostly a no-op since its adapters
                stopped producing data; will be retired once the
                core/guardian_loader integration lands.
-            3. Refresh snapshot from GCS via the bridge script — this
+            2. Refresh snapshot from GCS via the bridge script — this
                is the path that actually keeps alerts_latest.json fresh
                with today's classified alerts.
-            4. Save monitoring log to data/logs/
+            3. Print summary + save log to data/logs/
+
+        Fed press release crawling used to live here as a "[1/5] Fetch
+        Federal Reserve news" step that drove Crawl4AI/Playwright against
+        federalreserve.gov. That step was removed in PR #78 — Fed press
+        is now picked up by AI_Treasury_Project's `news_fed_press` RSS
+        fetcher and arrives in GCS like every other central bank, where
+        `classify_regulatory.py` reads it alongside ECB/BoE/BoJ/etc.
         """
         if verbose:
             print("\n" + "=" * 70)
@@ -265,51 +273,29 @@ class DailyMonitor:
         result: Dict = {"timestamp": datetime.now().isoformat(), "status": "running"}
 
         try:
-            # Step 1 — Crawl Federal Reserve news
+            # Step 1 — Legacy Guardian POC daily job
             if verbose:
-                print("\n[1/5] Fetching Federal Reserve news...")
-
-            fetch_result = await self._data_agent.fetch(
-                sources=["federal_reserve"],
-                write_raw=True,
-            )
-
-            if fetch_result["status"] == "failed":
-                result["status"] = "error"
-                result["error"] = "DataAgent failed to fetch federal_reserve"
-                return result
-
-            items = fetch_result["items"]
-            paths = fetch_result["paths"]
-
-            if verbose:
-                print(f"  Found {len(items)} news items")
-                for p in paths:
-                    print(f"  Wrote → {p}")
-
-            result["news_count"] = len(items)
-            result["raw_paths"] = [str(p) for p in paths]
-
-            # Step 2 — Legacy Guardian POC daily job
+                print("\n[1/3] Legacy Guardian POC job...")
             guardian_result = self._run_guardian_job(verbose=verbose)
             result["guardian"] = guardian_result
 
-            # Step 3 — GCS bridge refresh (the path that actually
+            # Step 2 — GCS bridge refresh (the path that actually
             # keeps the snapshot fresh; runs after the legacy step
             # so its output wins if both ran).
+            if verbose:
+                print("\n[2/3] GCS bridge refresh...")
             gcs_bridge_result = self._run_gcs_bridge(verbose=verbose)
             result["gcs_bridge"] = gcs_bridge_result
 
-            # Step 4 — Summary
+            # Step 3 — Summary + save log
             if verbose:
-                print("\n[4/5] Summary...")
+                print("\n[3/3] Summary...")
 
             result["status"] = "success"
 
             if verbose:
                 self._print_summary(result)
 
-            # Step 5 — Save log
             self._save_log(result, verbose=verbose)
 
             return result
@@ -326,10 +312,6 @@ class DailyMonitor:
         print("Monitoring Summary")
         print("=" * 70)
         print(f"Status: {result['status']}")
-        print(f"\nFederal Reserve News:")
-        print(f"  News items fetched : {result.get('news_count', 0)}")
-        for p in result.get("raw_paths", []):
-            print(f"  Raw file written   : {p}")
 
         guardian = result.get("guardian", {})
         if guardian:

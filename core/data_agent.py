@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """
 ARGUS: Unified Data Agent
-Crawls all configured data sources and writes raw payloads to shared_storage/raw/
-so the bridge pipeline and AnalysisAgent process every source identically.
+Reads classified payloads from GCS / Guardian adapters and writes them to
+shared_storage/raw/ so the bridge pipeline and AnalysisAgent process every
+source identically.
+
+The legacy Federal Reserve press-release crawler (Crawl4AI / Playwright)
+was retired in PR #78. Fed data is now picked up by AI_Treasury_Project's
+`news_fed_press` RSS fetcher and arrives in GCS like every other source.
+The `federal_reserve` and arbitrary http(s):// source keys are still
+accepted by `fetch()` for backwards compatibility but route to a "skipped"
+status with a hint pointing at GCS — no crawler is invoked.
 
 Supported source keys
 ---------------------
-federal_reserve  - Fed Reserve press releases (crawl4ai, markdown link extraction)
 gcs              - Google Cloud Storage Guardian snapshot (alerts_latest.json)
 gdelt            - GDELT global conflict/macro news  (GuardianEngine adapter)
 usgs             - USGS significant earthquake feed  (GuardianEngine adapter)
@@ -18,7 +25,6 @@ bank_of_canada   - Bank of Canada daily FX rates     (GuardianEngine adapter)
 fiscal_data      - US Treasury auction data          (GuardianEngine adapter)
 sec_edgar        - SEC EDGAR corporate filings       (GuardianEngine adapter)
 fred             - FRED economic indicators          (GuardianEngine adapter, requires FRED_API_KEY)
-<https://...>    - Any custom URL (auto-crawled via crawl4ai)
 """
 
 import asyncio
@@ -28,82 +34,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
-from urllib.parse import urljoin
 
 from config import RAW_DIR
-
-# ── Federal Reserve crawler constants ────────────────────────────────────────
-_FED_BASE_URL = "https://www.federalreserve.gov/newsevents/pressreleases.htm"
-_FED_LINK_RE = re.compile(r'\[_?([^]_]+)_?\]\(([^)]+)\)')
-
-_FED_KEYWORDS = [
-    "Payment", "Payments", "Regulation", "Regulatory",
-    "Bank", "Banking", "Banks", "Interest", "Rate", "Rates",
-    "Treasury", "Monetary", "Financial", "Risk", "Stability", "Crisis",
-]
-
-# ── Date normalisation ────────────────────────────────────────────────────────
-_DATE_FORMATS = ["%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%m/%d/%Y"]
-
-
-def _normalize_date(date_str: str) -> str:
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(date_str.strip(), fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    return date_str.strip()
-
-
-# ── Fed press-release crawler (embedded, no external module dependency) ───────
-
-async def _crawl_fed_url(url: str) -> List[Dict]:
-    """Fetch a Fed press-release page and return normalised news items."""
-    from crawl4ai import AsyncWebCrawler  # noqa: PLC0415 — optional heavy dep
-
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(
-            url=url,
-            bypass_cache=True,
-            wait_for="body",
-            wait_until="networkidle",
-            delay_before_return_ms=2000,
-        )
-
-    if not result.success:
-        raise RuntimeError(f"crawl4ai failed for {url}: {result.error_message}")
-
-    markdown = result.markdown or ""
-    items: List[Dict] = []
-    lines = markdown.split("\n")
-
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if not re.match(r"^\d{1,2}/\d{1,2}/\d{4}$", line):
-            continue
-        date_str = line
-        for j in range(i + 1, len(lines)):
-            next_line = lines[j].strip()
-            if not next_line:
-                continue
-            m = _FED_LINK_RE.search(next_line)
-            if m:
-                title = m.group(1).strip()
-                link = m.group(2).strip()
-                if link.startswith("/"):
-                    link = urljoin(_FED_BASE_URL, link)
-                # keyword filter
-                title_lower = title.lower()
-                if any(kw.lower() in title_lower for kw in _FED_KEYWORDS):
-                    items.append({
-                        "date": _normalize_date(date_str),
-                        "title": title,
-                        "link": link,
-                        "source": "federal_reserve",
-                    })
-            break  # only examine the next non-empty line per date entry
-
-    return items
 
 
 # ── GCS snapshot loader ────────────────────────────────────────────────────────
@@ -243,11 +175,15 @@ class DataAgent:
         url: Optional[str] = None,
         write_raw: bool = True,
     ) -> Dict:
+        # `url` is a legacy parameter from when Crawl4AI/Playwright could
+        # fetch arbitrary URLs. The crawler was retired in PR #78
+        # (AI_Treasury_Project now owns acquisition end-to-end via GCS),
+        # so the only remaining sources are `gcs` and the GuardianEngine
+        # adapters in GUARDIAN_API_SOURCES. The signature is preserved so
+        # existing callers (NewsGathererAgent, daily_monitor before
+        # cleanup) keep working — the legacy paths just route to GCS now.
         if not sources:
-            if url and (url.startswith("http://") or url.startswith("https://")):
-                sources = [url]
-            else:
-                sources = ["federal_reserve"]
+            sources = ["gcs"]
 
         all_items: List[Dict] = []
         source_stats: Dict = {}
@@ -255,28 +191,25 @@ class DataAgent:
 
         for source_key in sources:
             try:
-                if source_key == "federal_reserve":
-                    # ★ Restored: only crawl current year for daily pipeline speed
-                    fed_url = url or (
-                        f"https://www.federalreserve.gov/newsevents/pressreleases/"
-                        f"{datetime.now().year}-press.htm"
-                    )
-                    items = await _crawl_fed_url(fed_url)
-
-                elif source_key == "gcs":
+                if source_key == "gcs":
                     items = _load_gcs_snapshot()
 
                 elif source_key in GUARDIAN_API_SOURCES:
                     items = _fetch_guardian_source(source_key)
 
-                elif source_key.startswith("http://") or source_key.startswith("https://"):
-                    items = await _crawl_fed_url(source_key)
-                    for item in items:
-                        item["source"] = source_key
-
                 else:
-                    source_stats[source_key] = {"count": 0, "status": "skipped",
-                                                "error": "unknown source key"}
+                    # Includes the legacy `federal_reserve` source key and
+                    # any http(s):// URL — both used to be Crawl4AI paths.
+                    # We accept them silently so old callers don't 500 but
+                    # log a hint pointing at the real data path.
+                    source_stats[source_key] = {
+                        "count":  0,
+                        "status": "skipped",
+                        "error":  (
+                            "crawler retired; this source now arrives via GCS "
+                            "(AI_Treasury_Project). Use source_key='gcs'."
+                        ),
+                    }
                     continue
 
                 stat: Dict = {"count": len(items), "status": "success"}
