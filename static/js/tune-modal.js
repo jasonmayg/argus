@@ -279,7 +279,7 @@ async function tunePreviewLive() {
     if (window._lastScoredItems && window._lastScoredItems.length) {
         const weights = cfg.risk_weights || {};
         const recolored = window._lastScoredItems.map(item => {
-            const wKey = TUNE_CAT_MAP[(item.risk_category || '').toLowerCase().trim()] || '';
+            const wKey = TUNE_CAT_MAP[String(item.risk_category || '').toLowerCase().trim()] || '';
             const w    = typeof weights[wKey] === 'number' ? weights[wKey] : 1.0;
             const eff  = Math.min(100, parseFloat(item.risk_score || 0) * w);
             let lvl = 'Low';

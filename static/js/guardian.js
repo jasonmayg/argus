@@ -3,6 +3,7 @@
    ============================================================ */
 
 let guardianTopAlerts      = [];
+let guardianBaseAlerts     = [];   // baseline alerts before live re-weighting (used by the Weights Tuner)
 let _guardianCountryFilter = null;   // country name string or null = show all
 let _guardianCategoryFilter = null;  // ★ category filter from Home cards
 

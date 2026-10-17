@@ -7,6 +7,11 @@
 Python · Flask · GPT-4o · Claude · RAG (ChromaDB) · scikit-learn · Google Cloud Storage · 37+ public data sources
 
 <p align="center">
+  <a href="docs/demo.mp4"><img src="docs/demo.gif" alt="Walkthrough: risk matrix → decision support with SWOT per action → cash position → role-weighted risk tuner (simulated data)" width="92%"></a><br>
+  <sub>Walkthrough: risk matrix → decision support with SWOT per action → cash position → role-weighted risk tuner (simulated data). ▶ <a href="docs/demo.mp4">Full video with captions (MP4, 80 s)</a></sub>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/1-risk-matrix.png" alt="Risk monitor with 5x5 probability-impact matrix" width="85%"><br>
   <sub>Risk Monitor — every event placed on a 5×5 Probability × Impact matrix</sub>
 </p>

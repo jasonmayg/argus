@@ -51,6 +51,12 @@ def _download_excel_bytes() -> bytes:
         print(f"[CashRoutes] Downloaded {GCS_CASH_PATH} from gs://{GCS_BUCKET} ({len(data)} bytes)")
         return data
     except Exception as e:
+        # Local fallback so the dashboard runs without cloud credentials (demo / offline development).
+        for p in (os.getenv("ARGUS_CASH_XLSX"), "data/cash_positions.xlsx", "cash_positions.xlsx"):
+            if p and os.path.isfile(p):
+                print(f"[CashRoutes] GCS unavailable ({e.__class__.__name__}); using local {p}")
+                with open(p, "rb") as fh:
+                    return fh.read()
         raise RuntimeError(f"Failed to download from GCS gs://{GCS_BUCKET}/{GCS_CASH_PATH}: {e}")
 
 
