@@ -1,6 +1,6 @@
 # Argus — Persona-Driven Risk Intelligence for Corporate Treasury
 
-> **Portfolio copy.** Argus was built by a student team at Santa Clara University for a corporate treasury team. All cash, entity and position figures in this repository are **simulated**. This is not an official product of any company. Shared for portfolio review only — see [License](#license).
+> **Portfolio copy.** Argus was built by a graduate student team for a corporate treasury team. All cash, entity and position figures in this repository are **simulated**. This is not an official product of any company. Shared for portfolio review only — see [License](#license).
 
 **Argus turns hundreds of daily market, policy and world events into a short, role-specific list of treasury risks — each scored on a Probability × Impact matrix and paired with concrete next actions.**
 

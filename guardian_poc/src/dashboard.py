@@ -155,7 +155,6 @@ latest_path = st.sidebar.text_input("Latest JSON", "guardian_poc/data/alerts_lat
 history_dir = st.sidebar.text_input("History Dir", "guardian_poc/data/snapshots")
 countries_cfg = st.sidebar.text_input("Countries Config", "guardian_poc/config/countries.yaml")
 alphabet_logo_path = st.sidebar.text_input("Alphabet Logo", "guardian_poc/assets/alphabet_logo.png")
-scu_logo_path = st.sidebar.text_input("SCU Logo", "guardian_poc/assets/scu_logo.png")
 min_score = st.sidebar.slider("Min score", 0, 100, 40, 1)
 
 logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
@@ -166,8 +165,6 @@ with logo_col2:
         "<div style='text-align:center;padding-top:10px;'><h1 style='margin-bottom:0;'>Alphabet Treasury Guardian</h1></div>",
         unsafe_allow_html=True,
     )
-with logo_col3:
-    render_logo(scu_logo_path, width=140, fallback_label="SCU Logo")
 st.markdown("---")
 
 snapshot = load_latest(latest_path)

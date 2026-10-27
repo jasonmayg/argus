@@ -36,7 +36,7 @@ This audit documents the integration points, architecture, data flow, and indepe
 | **Guardian Models** | `/guardian_poc/models/` | Binary/JSON | ML Models | - google_downside_risk_model.joblib<br>- google_downside_risk_metrics.json |
 | **Guardian Reports** | `/guardian_poc/reports/` | Markdown | Output | Daily reports organized by date folders<br>Country-specific risk assessments |
 | **Guardian Scripts** | `/guardian_poc/scripts/` | Shell | Automation | - run_daily_guardian.sh (cron job script) |
-| **Guardian Assets** | `/guardian_poc/assets/` | Images | Resources | - alphabet_logo.png<br>- scu_logo.png |
+| **Guardian Assets** | `/guardian_poc/assets/` | Images | Resources | - alphabet_logo.png |
 
 ---
 
